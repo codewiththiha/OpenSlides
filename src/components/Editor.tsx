@@ -16,6 +16,8 @@ import {
 import {
   Home,
   MonitorPlay,
+  Play,
+  Pause,
   Settings2,
   Download,
   Focus,
@@ -76,6 +78,9 @@ export function Editor() {
     setCurrentSlideId,
     isPresenting,
     setIsPresenting,
+    isAutoPlaying,
+    setIsAutoPlaying,
+    toggleAutoPlaying,
     isZenMode,
     toggleZenMode,
     isSettingsOpen,
@@ -183,14 +188,51 @@ export function Editor() {
   const goNextSlide = useCallback(() => {
     if (currentIndex < slides.length - 1) {
       setCurrentSlideId(slides[currentIndex + 1].id);
+      return true;
     }
+    return false;
   }, [currentIndex, slides, setCurrentSlideId]);
 
   const goPrevSlide = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentSlideId(slides[currentIndex - 1].id);
+      return true;
     }
+    return false;
   }, [currentIndex, slides, setCurrentSlideId]);
+
+  // Auto-play: advance after each slide's duration (ms)
+  useEffect(() => {
+    if (!isAutoPlaying || !project) return;
+    if (slides.length === 0 || currentIndex < 0) return;
+
+    // Last slide: stop autoplay when its duration elapses
+    const current = slides[currentIndex];
+    const ms = Math.max(500, current?.duration ?? 3000);
+
+    const timer = window.setTimeout(() => {
+      if (currentIndex >= slides.length - 1) {
+        setIsAutoPlaying(false);
+        return;
+      }
+      setCurrentSlideId(slides[currentIndex + 1].id);
+    }, ms);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    isAutoPlaying,
+    project,
+    slides,
+    currentIndex,
+    setCurrentSlideId,
+    setIsAutoPlaying,
+  ]);
+
+  // Stop autoplay when leaving the editor / starting present is fine to keep;
+  // stop when presentation exits is handled in exitPresent.
+  useEffect(() => {
+    return () => setIsAutoPlaying(false);
+  }, [setIsAutoPlaying]);
 
   /** True when focus is in a text field where arrows should move the caret, not slides. */
   const isTypingTarget = (target: EventTarget | null) => {
@@ -203,6 +245,7 @@ export function Editor() {
 
   const exitPresent = useCallback(async () => {
     setIsPresenting(false);
+    setIsAutoPlaying(false);
     // Exit browser fullscreen if we entered it
     try {
       if (document.fullscreenElement) {
@@ -220,7 +263,7 @@ export function Editor() {
     } catch {
       /* ignore */
     }
-  }, [setIsPresenting]);
+  }, [setIsPresenting, setIsAutoPlaying]);
 
   const tryEnterFullscreen = useCallback(async () => {
     // Prefer video-style element fullscreen, then native window fullscreen.
@@ -265,10 +308,16 @@ export function Editor() {
           void exitPresent();
         } else if (e.key === "ArrowRight" || e.key === " ") {
           e.preventDefault();
+          // Manual nav pauses autoplay so timers don't fight the user
+          setIsAutoPlaying(false);
           goNextSlide();
         } else if (e.key === "ArrowLeft") {
           e.preventDefault();
+          setIsAutoPlaying(false);
           goPrevSlide();
+        } else if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          toggleAutoPlaying();
         }
         return;
       }
@@ -316,6 +365,7 @@ export function Editor() {
         !isShortcutsOpen
       ) {
         e.preventDefault();
+        setIsAutoPlaying(false);
         if (e.key === "ArrowRight") goNextSlide();
         else goPrevSlide();
       }
@@ -332,6 +382,8 @@ export function Editor() {
       toggleZenMode,
       setIsShortcutsOpen,
       toggleShortcutsOpen,
+      setIsAutoPlaying,
+      toggleAutoPlaying,
     ],
   );
 
@@ -600,6 +652,23 @@ export function Editor() {
               <Button
                 variant="ghost"
                 size="icon"
+                className={cn("h-8 w-8", isAutoPlaying && "bg-primary/15 text-primary")}
+                title={
+                  isAutoPlaying
+                    ? "Pause autoplay"
+                    : "Play slides (uses each slide’s duration)"
+                }
+                onClick={() => toggleAutoPlaying()}
+              >
+                {isAutoPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8"
                 title={`Command palette (${mod}K)`}
                 onClick={() => setIsCommandOpen(true)}
@@ -660,15 +729,34 @@ export function Editor() {
           id="openslides-present-root"
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
         >
-          <button
-            type="button"
-            className="absolute right-4 top-4 z-[110] flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
-            onClick={() => void exitPresent()}
-          >
-            Press{" "}
-            <kbd className="rounded bg-white/20 px-2 py-0.5 font-mono text-xs">ESC</kbd>{" "}
-            to exit
-          </button>
+          <div className="absolute right-4 top-4 z-[110] flex items-center gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
+              onClick={() => toggleAutoPlaying()}
+              title={isAutoPlaying ? "Pause autoplay" : "Play (auto-advance)"}
+            >
+              {isAutoPlaying ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {isAutoPlaying ? "Pause" : "Play"}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
+              onClick={() => void exitPresent()}
+            >
+              Press{" "}
+              <kbd className="rounded bg-white/20 px-2 py-0.5 font-mono text-xs">
+                ESC
+              </kbd>{" "}
+              to exit
+            </button>
+          </div>
           {/* Full-bleed stage (true fullscreen when API available) */}
           <div className="flex h-full w-full items-center justify-center p-0 sm:p-4">
             <div className="aspect-video h-full max-h-full w-full max-w-full">

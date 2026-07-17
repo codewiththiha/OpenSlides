@@ -8,6 +8,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 interface UiState {
   currentSlideId: string | null;
   isPresenting: boolean;
+  /** Auto-advance slides using each slide's duration. */
+  isAutoPlaying: boolean;
   isZenMode: boolean;
   isBottomPanelCollapsed: boolean;
   isCodePanelCollapsed: boolean;
@@ -25,6 +27,8 @@ interface UiState {
 
   setCurrentSlideId: (id: string | null) => void;
   setIsPresenting: (v: boolean) => void;
+  setIsAutoPlaying: (v: boolean) => void;
+  toggleAutoPlaying: () => void;
   setIsZenMode: (v: boolean) => void;
   toggleZenMode: () => void;
   setIsBottomPanelCollapsed: (v: boolean) => void;
@@ -51,6 +55,7 @@ export const useUiStore = create<UiState>()(
     (set) => ({
       currentSlideId: null,
       isPresenting: false,
+      isAutoPlaying: false,
       isZenMode: false,
       isBottomPanelCollapsed: false,
       isCodePanelCollapsed: false,
@@ -66,6 +71,8 @@ export const useUiStore = create<UiState>()(
 
       setCurrentSlideId: (id) => set({ currentSlideId: id }),
       setIsPresenting: (v) => set({ isPresenting: v }),
+      setIsAutoPlaying: (v) => set({ isAutoPlaying: v }),
+      toggleAutoPlaying: () => set((s) => ({ isAutoPlaying: !s.isAutoPlaying })),
       setIsZenMode: (v) => set({ isZenMode: v }),
       toggleZenMode: () => set((s) => ({ isZenMode: !s.isZenMode })),
       setIsBottomPanelCollapsed: (v) => set({ isBottomPanelCollapsed: v }),
@@ -97,6 +104,7 @@ export const useUiStore = create<UiState>()(
         set({
           currentSlideId: null,
           isPresenting: false,
+          isAutoPlaying: false,
           isZenMode: false,
           isSettingsOpen: false,
           isShortcutsOpen: false,

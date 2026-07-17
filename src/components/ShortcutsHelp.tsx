@@ -26,10 +26,17 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
     ],
   },
   {
+    title: "Playback",
+    items: [
+      { keys: ["Play"], desc: "Toolbar play — auto-advance by slide duration" },
+      { keys: ["P"], desc: "Toggle autoplay in presentation mode" },
+    ],
+  },
+  {
     title: "Presentation",
     items: [
       { keys: ["mod", "Shift", "P"], desc: "Start presentation (menu)" },
-      { keys: ["←", "→", "Space"], desc: "Navigate slides" },
+      { keys: ["←", "→", "Space"], desc: "Navigate slides (pauses autoplay)" },
       { keys: ["Esc"], desc: "Exit presentation / fullscreen" },
     ],
   },
