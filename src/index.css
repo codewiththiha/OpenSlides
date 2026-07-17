@@ -132,56 +132,129 @@
   opacity: 0.5;
 }
 
-/* Sonner toasts — body uses theme card color; accent only on border + glow */
+/* Sonner toasts — refined layout: text left, action right, close centered */
 .toast-openslides {
   background: hsl(var(--card)) !important;
   color: hsl(var(--card-foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
+  /* Sonner puts icon / content / action as flex children; keep them centered */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.75rem !important;
+}
+
+/* Icon (if any) sits flush with text block */
+.toast-openslides [data-icon] {
+  flex-shrink: 0;
+  margin: 0 !important;
+  align-self: center !important;
+}
+
+/* Title + description column takes remaining space */
+.toast-openslides [data-content] {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 0.125rem !important;
+}
+
+/* Action (Undo) pinned to the trailing edge with clear breathing room */
+.toast-openslides [data-button],
+.toast-openslides button[data-button] {
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  align-self: center !important;
+}
+
+/* Close (X) absolutely centered on the right edge — never misaligned */
+.toast-openslides [data-close-button],
+.toast-openslides button[data-close-button],
+.toast-openslides .toast-close {
+  position: absolute !important;
+  right: 0.5rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+  left: auto !important;
+  inset-inline-end: 0.5rem !important;
+  inset-block-start: 50% !important;
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  background: transparent !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border-radius: 0.375rem !important;
+  cursor: pointer !important;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.toast-openslides [data-close-button]:hover,
+.toast-openslides button[data-close-button]:hover,
+.toast-openslides .toast-close:hover {
+  opacity: 1;
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Give action room so it doesn't collide with close */
+.toast-openslides:has([data-close-button]),
+.toast-openslides:has(button[data-close-button]),
+.toast-openslides:has(.toast-close) {
+  padding-right: 2.5rem !important;
 }
 
 .toast-success-glow {
   border-color: hsl(142 70% 45%) !important;
   box-shadow:
-    0 0 0 1px hsl(142 70% 45% / 0.35),
-    0 0 18px hsl(142 70% 45% / 0.35),
-    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+    0 0 0 1px hsl(142 70% 45% / 0.3),
+    0 0 16px hsl(142 70% 45% / 0.28),
+    0 8px 20px hsl(0 0% 0% / 0.22) !important;
 }
 
 .toast-error-glow {
   border-color: hsl(0 72% 55%) !important;
   box-shadow:
-    0 0 0 1px hsl(0 72% 55% / 0.35),
-    0 0 18px hsl(0 72% 55% / 0.35),
-    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+    0 0 0 1px hsl(0 72% 55% / 0.3),
+    0 0 16px hsl(0 72% 55% / 0.28),
+    0 8px 20px hsl(0 0% 0% / 0.22) !important;
 }
 
 .toast-warning-glow {
   border-color: hsl(38 92% 50%) !important;
   box-shadow:
-    0 0 0 1px hsl(38 92% 50% / 0.35),
-    0 0 18px hsl(38 92% 50% / 0.3),
-    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+    0 0 0 1px hsl(38 92% 50% / 0.3),
+    0 0 16px hsl(38 92% 50% / 0.25),
+    0 8px 20px hsl(0 0% 0% / 0.22) !important;
 }
 
 .toast-info-glow {
   border-color: hsl(217 91% 60%) !important;
   box-shadow:
-    0 0 0 1px hsl(217 91% 60% / 0.35),
-    0 0 18px hsl(217 91% 60% / 0.3),
-    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+    0 0 0 1px hsl(217 91% 60% / 0.3),
+    0 0 16px hsl(217 91% 60% / 0.25),
+    0 8px 20px hsl(0 0% 0% / 0.22) !important;
 }
 
 .light .toast-success-glow {
   box-shadow:
-    0 0 0 1px hsl(142 70% 40% / 0.4),
-    0 0 16px hsl(142 70% 40% / 0.25),
-    0 8px 20px hsl(0 0% 0% / 0.08) !important;
+    0 0 0 1px hsl(142 70% 40% / 0.35),
+    0 0 14px hsl(142 70% 40% / 0.2),
+    0 6px 16px hsl(0 0% 0% / 0.06) !important;
 }
 .light .toast-error-glow {
   box-shadow:
-    0 0 0 1px hsl(0 72% 50% / 0.4),
-    0 0 16px hsl(0 72% 50% / 0.22),
-    0 8px 20px hsl(0 0% 0% / 0.08) !important;
+    0 0 0 1px hsl(0 72% 50% / 0.35),
+    0 0 14px hsl(0 72% 50% / 0.18),
+    0 6px 16px hsl(0 0% 0% / 0.06) !important;
 }
 
 

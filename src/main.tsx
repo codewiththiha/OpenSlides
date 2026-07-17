@@ -42,19 +42,24 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         theme="system"
         position="bottom-right"
         closeButton
+        gap={10}
+        offset={16}
         toastOptions={{
           unstyled: true,
           classNames: {
             toast:
-              "group toast-openslides flex w-[356px] items-start gap-3 rounded-lg border bg-card px-4 py-3 text-sm text-card-foreground shadow-lg",
-            title: "font-medium text-foreground",
-            description: "text-xs text-muted-foreground",
+              "group toast-openslides relative flex w-[min(380px,calc(100vw-2rem))] items-center gap-3 rounded-xl border bg-card py-3 pl-3.5 pr-10 text-sm text-card-foreground shadow-lg",
+            title: "text-sm font-medium leading-snug text-foreground",
+            description: "mt-0.5 text-xs leading-snug text-muted-foreground",
+            // Content column grows; action sits at the far end
+            content: "flex min-w-0 flex-1 flex-col justify-center gap-0.5",
             actionButton:
-              "rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground",
+              "ml-auto shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90",
             cancelButton:
-              "rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground",
+              "ml-2 shrink-0 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80",
+            // Absolutely positioned so it doesn't skew the flex baseline
             closeButton:
-              "rounded-md border border-border bg-card text-muted-foreground hover:text-foreground",
+              "toast-close absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
             success: "toast-success-glow",
             error: "toast-error-glow",
             warning: "toast-warning-glow",
