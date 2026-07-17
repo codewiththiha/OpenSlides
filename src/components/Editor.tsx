@@ -27,6 +27,7 @@ import {
   Command as CommandIcon,
   ChevronLeft,
   Code2,
+  Pencil,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TitleBar } from "./TitleBar";
@@ -43,12 +44,14 @@ import {
   useCreateSlide,
   useUpdateTheme,
   useCreateProject,
+  useUpdateSlideSettings,
 } from "@/hooks/useProjectQueries";
 import { api } from "@/lib/tauri-api";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { slideDisplayName } from "@/types";
 
 /** Below this % of the horizontal group, code panel auto-collapses. */
 const CODE_COLLAPSE_THRESHOLD = 14;
@@ -100,7 +103,10 @@ export function Editor() {
   const createSlide = useCreateSlide(projectId ?? "");
   const updateTheme = useUpdateTheme(projectId ?? "");
   const createProject = useCreateProject();
+  const updateSlideSettings = useUpdateSlideSettings(projectId ?? "");
   const [editorExpanded, setEditorExpanded] = useState(false);
+  const [editingSlideName, setEditingSlideName] = useState(false);
+  const [slideNameDraft, setSlideNameDraft] = useState("");
 
   const codePanelRef = useRef<ImperativePanelHandle>(null);
   const slidesPanelRef = useRef<ImperativePanelHandle>(null);
@@ -383,6 +389,8 @@ export function Editor() {
         if (projectId) createSlide.mutate({});
       },
       "menu://toggle-theme": () => toggleTheme(),
+      "menu://about": () => setIsShortcutsOpen(true),
+      "menu://shortcuts": () => setIsShortcutsOpen(true),
     }),
     [
       createProject,
@@ -395,6 +403,7 @@ export function Editor() {
       setIsCommandOpen,
       createSlide,
       toggleTheme,
+      setIsShortcutsOpen,
     ],
   );
   useAppMenu(menuHandlers);
@@ -507,11 +516,33 @@ export function Editor() {
   }[saveStatus];
 
   const mod = modKeyLabel();
+  const activeSlide =
+    project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
+  const activeSlideIndex = Math.max(
+    0,
+    project.slides.findIndex((s) => s.id === activeSlide?.id),
+  );
+  const activeSlideName = activeSlide
+    ? slideDisplayName(activeSlide, activeSlideIndex)
+    : "";
+
+  const commitSlideName = () => {
+    if (!activeSlide) {
+      setEditingSlideName(false);
+      return;
+    }
+    const name = slideNameDraft.trim() || `Slide ${activeSlideIndex + 1}`;
+    updateSlideSettings.mutate(
+      { slideId: activeSlide.id, payload: { name } },
+      { onSettled: () => setEditingSlideName(false) },
+    );
+  };
 
   return (
     <div className="flex h-full flex-col bg-background">
       {!isZenMode && !isPresenting && (
         <TitleBar
+          className="relative"
           leading={
             <>
               <Button
@@ -536,6 +567,35 @@ export function Editor() {
           }
           trailing={
             <>
+              <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center px-40">
+                {editingSlideName ? (
+                  <input
+                    className="pointer-events-auto h-7 max-w-[16rem] truncate rounded-md border border-input bg-background px-2 text-center text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
+                    value={slideNameDraft}
+                    autoFocus
+                    onChange={(e) => setSlideNameDraft(e.target.value)}
+                    onBlur={commitSlideName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitSlideName();
+                      if (e.key === "Escape") setEditingSlideName(false);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="group/name pointer-events-auto inline-flex max-w-[16rem] items-center gap-1.5 truncate rounded-md px-2.5 py-1 text-center text-xs font-medium text-foreground/90 transition-colors hover:bg-muted/70"
+                    title="Rename current slide"
+                    onClick={() => {
+                      setSlideNameDraft(activeSlideName);
+                      setEditingSlideName(true);
+                    }}
+                  >
+                    <span className="truncate">{activeSlideName}</span>
+                    <Pencil className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/name:opacity-100" />
+                  </button>
+                )}
+              </div>
+
               {saveBadge}
               <Button
                 variant="ghost"

@@ -3,15 +3,14 @@
  */
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { toast } from "sonner";
 import type { AppMenuEvent } from "@/lib/app-menu";
 
-type Handlers = Partial<Record<AppMenuEvent | "menu://about", () => void>>;
+type Handlers = Partial<Record<AppMenuEvent, () => void>>;
 
 export function useAppMenu(handlers: Handlers) {
   useEffect(() => {
     const unsubs: Array<() => void> = [];
-    const events: Array<AppMenuEvent | "menu://about"> = [
+    const events: AppMenuEvent[] = [
       "menu://new-project",
       "menu://open-dashboard",
       "menu://export",
@@ -22,6 +21,7 @@ export function useAppMenu(handlers: Handlers) {
       "menu://add-slide",
       "menu://toggle-theme",
       "menu://about",
+      "menu://shortcuts",
     ];
 
     let cancelled = false;
@@ -30,12 +30,6 @@ export function useAppMenu(handlers: Handlers) {
       for (const ev of events) {
         try {
           const un = await listen(ev, () => {
-            if (ev === "menu://about" && !handlers[ev]) {
-              toast.message("OpenSlides", {
-                description: "Offline-first code presentations · Tauri + Rust + SQLite",
-              });
-              return;
-            }
             handlers[ev]?.();
           });
           if (cancelled) un();
@@ -50,6 +44,5 @@ export function useAppMenu(handlers: Handlers) {
       cancelled = true;
       unsubs.forEach((u) => u());
     };
-    // handlers intentionally re-bound when identity changes
   }, [handlers]);
 }

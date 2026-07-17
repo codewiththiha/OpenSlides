@@ -2,7 +2,7 @@
  * Horizontal slide strip with smooth drag-and-drop reorder.
  * Slide titles: double-click label or right-click → Rename.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -66,6 +66,11 @@ function SlideCard({
   index,
   isOverlay = false,
   isActive = false,
+  isRenaming = false,
+  renameValue = "",
+  onRenameValueChange,
+  onCommitRename,
+  onCancelRename,
   onRemove,
   onRename,
   dragHandleProps,
@@ -76,6 +81,11 @@ function SlideCard({
   index: number;
   isOverlay?: boolean;
   isActive?: boolean;
+  isRenaming?: boolean;
+  renameValue?: string;
+  onRenameValueChange?: (v: string) => void;
+  onCommitRename?: () => void;
+  onCancelRename?: () => void;
   onRemove?: (id: string) => void;
   onRename?: (id: string, current: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
@@ -92,7 +102,10 @@ function SlideCard({
     <div
       ref={setNodeRef}
       style={{ width: ITEM_WIDTH, ...style }}
-      onClick={() => !isOverlay && setCurrentSlideId(slide.id)}
+      onClick={() => {
+        if (isOverlay || isRenaming) return;
+        setCurrentSlideId(slide.id);
+      }}
       onContextMenu={(e) => {
         if (isOverlay || !onRename) return;
         e.preventDefault();
@@ -120,19 +133,35 @@ function SlideCard({
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
-          <span
-            className="truncate text-xs font-medium"
-            title={`${title} — double-click or right-click to rename`}
-            onDoubleClick={(e) => {
-              if (!onRename) return;
-              e.stopPropagation();
-              onRename(slide.id, title);
-            }}
-          >
-            {title}
-          </span>
+          {isRenaming ? (
+            <input
+              autoFocus
+              className="h-5 min-w-0 flex-1 rounded border border-input bg-background px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
+              value={renameValue}
+              onChange={(e) => onRenameValueChange?.(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={() => onCommitRename?.()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === "Enter") onCommitRename?.();
+                if (e.key === "Escape") onCancelRename?.();
+              }}
+            />
+          ) : (
+            <span
+              className="truncate text-xs font-medium"
+              title={`${title} — double-click or right-click to rename`}
+              onDoubleClick={(e) => {
+                if (!onRename) return;
+                e.stopPropagation();
+                onRename(slide.id, title);
+              }}
+            >
+              {title}
+            </span>
+          )}
         </div>
-        {!isOverlay && (
+        {!isOverlay && !isRenaming && (
           <div className="flex shrink-0 items-center gap-0.5">
             {onRename && (
               <button
@@ -184,12 +213,22 @@ function SortableSlideItem({
   onRemove,
   onRename,
   isDraggingId,
+  isRenaming,
+  renameValue,
+  onRenameValueChange,
+  onCommitRename,
+  onCancelRename,
 }: {
   slide: Slide;
   index: number;
   onRemove: (id: string) => void;
   onRename: (id: string, current: string) => void;
   isDraggingId: string | null;
+  isRenaming: boolean;
+  renameValue: string;
+  onRenameValueChange: (v: string) => void;
+  onCommitRename: () => void;
+  onCancelRename: () => void;
 }) {
   const {
     attributes,
@@ -201,6 +240,7 @@ function SortableSlideItem({
   } = useSortable({
     id: slide.id,
     animateLayoutChanges: () => false,
+    disabled: isRenaming,
   });
 
   const style: React.CSSProperties = {
@@ -214,6 +254,11 @@ function SortableSlideItem({
       slide={slide}
       index={index}
       isActive={isDraggingId === slide.id}
+      isRenaming={isRenaming}
+      renameValue={renameValue}
+      onRenameValueChange={onRenameValueChange}
+      onCommitRename={onCommitRename}
+      onCancelRename={onCancelRename}
       onRemove={onRemove}
       onRename={onRename}
       setNodeRef={setNodeRef}
@@ -253,7 +298,6 @@ export function BottomSlidesPanel({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const activeSlide = useMemo(
     () => ordered.find((s) => s.id === activeId) ?? null,
@@ -306,21 +350,21 @@ export function BottomSlidesPanel({
   const startRename = useCallback((id: string, current: string) => {
     setRenamingId(id);
     setRenameValue(current);
-    requestAnimationFrame(() => renameInputRef.current?.select());
   }, []);
 
   const commitRename = useCallback(() => {
     if (!renamingId) return;
     const name = renameValue.trim() || "Untitled slide";
+    const id = renamingId;
     updateSettings.mutate(
-      { slideId: renamingId, payload: { name } },
+      { slideId: id, payload: { name } },
       {
         onSuccess: () => {
           setOrdered((items) =>
-            items.map((s) => (s.id === renamingId ? { ...s, name } : s)),
+            items.map((s) => (s.id === id ? { ...s, name } : s)),
           );
-          setRenamingId(null);
         },
+        onSettled: () => setRenamingId(null),
       },
     );
   }, [renamingId, renameValue, updateSettings]);
@@ -416,26 +460,6 @@ export function BottomSlidesPanel({
         </div>
       </div>
 
-      {renamingId && (
-        <div
-          className="flex items-center gap-2 border-b px-3 py-1.5"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="shrink-0 text-[11px] text-muted-foreground">Rename</span>
-          <input
-            ref={renameInputRef}
-            className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitRename();
-              if (e.key === "Escape") setRenamingId(null);
-            }}
-            onBlur={() => commitRename()}
-            autoFocus
-          />
-        </div>
-      )}
 
       <DndContext
         sensors={sensors}
@@ -457,6 +481,11 @@ export function BottomSlidesPanel({
                 onRemove={handleRemove}
                 onRename={startRename}
                 isDraggingId={activeId}
+                isRenaming={renamingId === slide.id}
+                renameValue={renameValue}
+                onRenameValueChange={setRenameValue}
+                onCommitRename={commitRename}
+                onCancelRename={() => setRenamingId(null)}
               />
             ))}
           </div>

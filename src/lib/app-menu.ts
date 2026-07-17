@@ -15,7 +15,9 @@ export type AppMenuEvent =
   | "menu://settings"
   | "menu://command-palette"
   | "menu://add-slide"
-  | "menu://toggle-theme";
+  | "menu://toggle-theme"
+  | "menu://about"
+  | "menu://shortcuts";
 
 async function item(
   id: AppMenuEvent,
@@ -43,7 +45,6 @@ export async function installAppMenu(): Promise<void> {
       await PredefinedMenuItem.new({ item: "CloseWindow", text: "Close" }),
     ];
 
-    // On macOS, Quit lives under the app menu via defaults; keep Exit on others.
     if (!isMacOS()) {
       fileItems.push(await PredefinedMenuItem.new({ item: "Separator" }));
       fileItems.push(await PredefinedMenuItem.new({ item: "Quit", text: "Quit OpenSlides" }));
@@ -75,13 +76,8 @@ export async function installAppMenu(): Promise<void> {
     ];
 
     const helpItems = [
-      await MenuItem.new({
-        id: "menu://about",
-        text: "About OpenSlides",
-        action: () => {
-          void emit("menu://about");
-        },
-      }),
+      await item("menu://shortcuts", "Keyboard Shortcuts"),
+      await item("menu://about", "About OpenSlides"),
     ];
 
     const submenus = [
@@ -92,18 +88,11 @@ export async function installAppMenu(): Promise<void> {
       await Submenu.new({ text: "Help", items: helpItems }),
     ];
 
-    // macOS app menu with About / Services / Hide / Quit
     if (isMacOS()) {
       const appMenu = await Submenu.new({
         text: "OpenSlides",
         items: [
-          await MenuItem.new({
-            id: "menu://about",
-            text: "About OpenSlides",
-            action: () => {
-              void emit("menu://about");
-            },
-          }),
+          await item("menu://about", "About OpenSlides"),
           await PredefinedMenuItem.new({ item: "Separator" }),
           await PredefinedMenuItem.new({ item: "Services" }),
           await PredefinedMenuItem.new({ item: "Separator" }),
@@ -120,7 +109,6 @@ export async function installAppMenu(): Promise<void> {
     const menu = await Menu.new({ items: submenus });
     await menu.setAsAppMenu();
   } catch (err) {
-    // Browser-only / non-tauri preview — ignore
     console.warn("[OpenSlides] native menu unavailable:", err);
   }
 }

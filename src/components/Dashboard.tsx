@@ -155,8 +155,17 @@ export function Dashboard() {
       "menu://export": () => {
         if (projects[0]) exportMutation.mutate(projects[0].id);
       },
+      "menu://about": () => setIsShortcutsOpen(true),
+      "menu://shortcuts": () => setIsShortcutsOpen(true),
     }),
-    [navigate, setIsCommandOpen, toggleTheme, projects, exportMutation],
+    [
+      navigate,
+      setIsCommandOpen,
+      toggleTheme,
+      projects,
+      exportMutation,
+      setIsShortcutsOpen,
+    ],
   );
   useAppMenu(menuHandlers);
 
