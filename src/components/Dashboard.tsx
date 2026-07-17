@@ -30,6 +30,7 @@ import {
 import { Input } from "./ui/input";
 import { TitleBar } from "./TitleBar";
 import { CommandPalette } from "./CommandPalette";
+import { ShortcutsHelp } from "./ShortcutsHelp";
 import {
   useProjects,
   useCreateProject,
@@ -56,7 +57,14 @@ export function Dashboard() {
   const [newName, setNewName] = useState("Untitled Deck");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const { setIsCommandOpen, isDarkUi, setIsDarkUi } = useUiStore();
+  const {
+    setIsCommandOpen,
+    isDarkUi,
+    setIsDarkUi,
+    isShortcutsOpen,
+    setIsShortcutsOpen,
+    toggleShortcutsOpen,
+  } = useUiStore();
 
   useEffect(() => {
     document.title = "OpenSlides — Projects";
@@ -70,6 +78,28 @@ export function Dashboard() {
     document.documentElement.classList.toggle("dark", isDarkUi);
     document.documentElement.classList.toggle("light", !isDarkUi);
   }, [isDarkUi]);
+
+  // Global `?` shortcuts help on dashboard
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing =
+        t &&
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.tagName === "SELECT" ||
+          t.isContentEditable);
+      if (e.key === "?" && !typing && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        toggleShortcutsOpen();
+      }
+      if (e.key === "Escape" && isShortcutsOpen) {
+        setIsShortcutsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isShortcutsOpen, setIsShortcutsOpen, toggleShortcutsOpen]);
 
   const handleCreate = async (name?: string) => {
     try {
@@ -386,6 +416,7 @@ export function Dashboard() {
       </div>
 
       <CommandPalette />
+      <ShortcutsHelp />
     </div>
   );
 }

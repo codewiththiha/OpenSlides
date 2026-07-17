@@ -141,8 +141,13 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
             } as React.CSSProperties
           }
         >
+          {/*
+            key includes slide.id so switching slides remounts (clean transition)
+            instead of morphing unrelated codebases character-by-character.
+            Magic-move only runs when `code` changes on the *same* slide (typing).
+          */}
           <ShikiMagicMove
-            key={`${theme}-${settings.showLineNumbers}-${settings.fontSize}-${language}`}
+            key={`${slide.id}-${theme}-${settings.showLineNumbers}-${settings.fontSize}-${language}`}
             lang={language}
             theme={theme}
             highlighter={highlighter}

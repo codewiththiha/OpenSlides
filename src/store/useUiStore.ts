@@ -17,6 +17,7 @@ interface UiState {
   slidesPanelSize: number;
   isSettingsOpen: boolean;
   isCommandOpen: boolean;
+  isShortcutsOpen: boolean;
   isDarkUi: boolean;
   editorShowLineNumbers: boolean;
   localCode: Record<string, string>;
@@ -32,6 +33,8 @@ interface UiState {
   setSlidesPanelSize: (v: number) => void;
   setIsSettingsOpen: (v: boolean) => void;
   setIsCommandOpen: (v: boolean) => void;
+  setIsShortcutsOpen: (v: boolean) => void;
+  toggleShortcutsOpen: () => void;
   setIsDarkUi: (v: boolean) => void;
   setEditorShowLineNumbers: (v: boolean) => void;
   setLocalCode: (slideId: string, code: string) => void;
@@ -55,6 +58,7 @@ export const useUiStore = create<UiState>()(
       slidesPanelSize: DEFAULT_SLIDES_SIZE,
       isSettingsOpen: false,
       isCommandOpen: false,
+      isShortcutsOpen: false,
       isDarkUi: true,
       editorShowLineNumbers: true,
       localCode: {},
@@ -76,6 +80,8 @@ export const useUiStore = create<UiState>()(
         }),
       setIsSettingsOpen: (v) => set({ isSettingsOpen: v }),
       setIsCommandOpen: (v) => set({ isCommandOpen: v }),
+      setIsShortcutsOpen: (v) => set({ isShortcutsOpen: v }),
+      toggleShortcutsOpen: () => set((s) => ({ isShortcutsOpen: !s.isShortcutsOpen })),
       setIsDarkUi: (v) => set({ isDarkUi: v }),
       setEditorShowLineNumbers: (v) => set({ editorShowLineNumbers: v }),
       setLocalCode: (slideId, code) =>
@@ -93,6 +99,7 @@ export const useUiStore = create<UiState>()(
           isPresenting: false,
           isZenMode: false,
           isSettingsOpen: false,
+          isShortcutsOpen: false,
           localCode: {},
           saveStatus: "idle",
           // keep panel collapse prefs / sizes / theme across navigations

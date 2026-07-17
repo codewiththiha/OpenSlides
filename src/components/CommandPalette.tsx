@@ -12,6 +12,7 @@ import {
   Moon,
   Sun,
   Plus,
+  Keyboard,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUiStore } from "@/store/useUiStore";
@@ -38,6 +39,7 @@ export function CommandPalette({
     setIsCommandOpen,
     setIsPresenting,
     setIsSettingsOpen,
+    setIsShortcutsOpen,
     toggleZenMode,
     isDarkUi,
     setIsDarkUi,
@@ -135,6 +137,11 @@ export function CommandPalette({
                   document.documentElement.classList.toggle("light", !next);
                 })
               }
+            />
+            <Item
+              icon={<Keyboard className="h-4 w-4" />}
+              label="Keyboard shortcuts"
+              onSelect={() => run(() => setIsShortcutsOpen(true))}
             />
           </Command.Group>
 

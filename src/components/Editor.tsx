@@ -35,6 +35,7 @@ import { CodeEditor } from "./CodeEditor";
 import { BottomSlidesPanel } from "./BottomSlidesPanel";
 import { SettingsDrawer } from "./SettingsDrawer";
 import { CommandPalette } from "./CommandPalette";
+import { ShortcutsHelp } from "./ShortcutsHelp";
 import { useUiStore } from "@/store/useUiStore";
 import {
   useProject,
@@ -78,6 +79,9 @@ export function Editor() {
     setIsSettingsOpen,
     isCommandOpen,
     setIsCommandOpen,
+    isShortcutsOpen,
+    setIsShortcutsOpen,
+    toggleShortcutsOpen,
     isDarkUi,
     setIsDarkUi,
     saveStatus,
@@ -263,14 +267,35 @@ export function Editor() {
         return;
       }
 
-      if (e.key === "Escape" && isZenMode) {
-        e.preventDefault();
-        toggleZenMode();
+      if (e.key === "Escape") {
+        if (isShortcutsOpen) {
+          e.preventDefault();
+          setIsShortcutsOpen(false);
+          return;
+        }
+        if (isZenMode) {
+          e.preventDefault();
+          toggleZenMode();
+        }
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleZenMode();
+      }
+
+      // `?` opens shortcuts help (Shift+/). Ignore when typing.
+      if (
+        e.key === "?" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !isTypingTarget(e.target) &&
+        !isCommandOpen
+      ) {
+        e.preventDefault();
+        toggleShortcutsOpen();
+        return;
       }
 
       // Normal / zen: arrow keys navigate slides when not typing in an input
@@ -281,7 +306,8 @@ export function Editor() {
         !e.ctrlKey &&
         !e.altKey &&
         !isSettingsOpen &&
-        !isCommandOpen
+        !isCommandOpen &&
+        !isShortcutsOpen
       ) {
         e.preventDefault();
         if (e.key === "ArrowRight") goNextSlide();
@@ -293,10 +319,13 @@ export function Editor() {
       isZenMode,
       isSettingsOpen,
       isCommandOpen,
+      isShortcutsOpen,
       exitPresent,
       goNextSlide,
       goPrevSlide,
       toggleZenMode,
+      setIsShortcutsOpen,
+      toggleShortcutsOpen,
     ],
   );
 
@@ -822,6 +851,8 @@ export function Editor() {
         onAddSlide={() => createSlide.mutate({})}
         onTheme={(theme) => updateTheme.mutate(theme)}
       />
+
+      <ShortcutsHelp />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, type SettingsPatch, type SlideSettingsPatch } from "../lib/tauri-api";
+import { useUiStore } from "../store/useUiStore";
 import type { Project, Slide } from "../types";
 
 export const projectKeys = {
@@ -90,9 +91,28 @@ export function useUpdateTheme(projectId: string) {
 }
 
 export function useUpdateSlideCode() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ slideId, code }: { slideId: string; code: string }) =>
       api.updateSlideCode(slideId, code),
+    onSuccess: (_void, { slideId, code }) => {
+      // Patch React Query so slide.code matches what we just saved
+      qc.setQueriesData<Project>({ queryKey: ["project"] }, (old) => {
+        if (!old?.slides?.some((s) => s.id === slideId)) return old;
+        return {
+          ...old,
+          slides: old.slides.map((s) =>
+            s.id === slideId ? { ...s, code } : s,
+          ),
+        };
+      });
+
+      // Drop optimistic buffer only if user hasn't typed further since this save
+      const { localCode, clearLocalCode } = useUiStore.getState();
+      if (localCode[slideId] === undefined || localCode[slideId] === code) {
+        clearLocalCode(slideId);
+      }
+    },
     onError: (err: Error) => toast.error(`Auto-save failed: ${err.message}`),
   });
 }
@@ -163,7 +183,12 @@ export function useReorderSlides(projectId: string) {
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
     },
-    onError: (err: Error) => toast.error(`Reorder failed: ${err.message}`),
+    onError: (err: Error) => {
+      // Caller should also roll back optimistic local order
+      toast.error(`Reorder failed: ${err.message}`);
+      // Force refetch so UI matches SQLite
+      void qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+    },
   });
 }
 

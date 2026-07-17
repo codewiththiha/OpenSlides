@@ -174,28 +174,71 @@ export function CodeEditor({
 
   const lineCount = useMemo(() => Math.max(1, code.split("\n").length), [code]);
 
-  const highlighted = useMemo(() => {
-    if (!slide) return "";
-    if (highlighter) {
-      const loaded = highlighter.getLoadedLanguages().includes(language);
-      if (loaded) {
-        try {
-          const html = highlighter.codeToHtml(code, { lang: language, theme });
-          const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-          if (match) return match[1];
-        } catch {
-          /* fall through */
+  // Escape-only fallback (cheap) shown while Shiki runs
+  const plainEscaped = useMemo(
+    () =>
+      code
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;"),
+    [code],
+  );
+
+  const [highlighted, setHighlighted] = useState(plainEscaped);
+
+  // Debounce Shiki highlight so rapid keystrokes don't block the main thread
+  const runHighlight = useDebouncedCallback(
+    (
+      src: string,
+      lang: string,
+      th: string,
+      dark: boolean,
+      h: Highlighter | null,
+    ) => {
+      if (h) {
+        const loaded = h.getLoadedLanguages().includes(lang);
+        if (loaded) {
+          try {
+            const html = h.codeToHtml(src, { lang, theme: th });
+            const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
+            if (match) {
+              setHighlighted(match[1]);
+              return;
+            }
+          } catch {
+            /* fall through */
+          }
         }
       }
-    }
-    if (language === "merustmar") {
-      return highlightMerustmarCode(code, isDarkBg);
-    }
-    return code
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }, [code, highlighter, language, theme, isDarkBg, slide]);
+      if (lang === "merustmar") {
+        setHighlighted(highlightMerustmarCode(src, dark));
+        return;
+      }
+      setHighlighted(
+        src
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;"),
+      );
+    },
+    120,
+  );
+
+  useEffect(() => {
+    // Immediate cheap fallback so caret/overlay stay aligned while waiting
+    setHighlighted(plainEscaped);
+    if (!slide) return;
+    runHighlight(code, language, theme, isDarkBg, highlighter);
+  }, [
+    code,
+    language,
+    theme,
+    isDarkBg,
+    highlighter,
+    slide,
+    plainEscaped,
+    runHighlight,
+  ]);
 
   const syncScroll = () => {
     if (!textareaRef.current) return;

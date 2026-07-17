@@ -236,16 +236,23 @@ export function BottomSlidesPanel({
       setActiveId(null);
       if (!over || active.id === over.id) return;
 
-      setOrdered((items) => {
-        const oldIndex = items.findIndex((s) => s.id === active.id);
-        const newIndex = items.findIndex((s) => s.id === over.id);
-        if (oldIndex < 0 || newIndex < 0) return items;
-        const next = arrayMove(items, oldIndex, newIndex);
-        reorder.mutate(next.map((s) => s.id));
-        return next;
-      });
+      const oldIndex = ordered.findIndex((s) => s.id === active.id);
+      const newIndex = ordered.findIndex((s) => s.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return;
+
+      const previous = ordered;
+      const next = arrayMove(ordered, oldIndex, newIndex);
+      // Optimistic UI
+      setOrdered(next);
+      reorder.mutate(
+        next.map((s) => s.id),
+        {
+          // Roll back strip order if SQLite / IPC rejects the reorder
+          onError: () => setOrdered(previous),
+        },
+      );
     },
-    [reorder],
+    [ordered, reorder],
   );
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
