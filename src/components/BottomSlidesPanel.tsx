@@ -36,7 +36,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { slideDisplayName, type Project, type Slide } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
-import { toast } from "sonner";
+import { notify } from "@/lib/toast";
 import {
   useCreateSlide,
   useDeleteSlide,
@@ -383,7 +383,7 @@ export function BottomSlidesPanel({
               proj.settings.currentSlideId ?? proj.slides[0]?.id ?? null;
             setCurrentSlideId(fallback);
           }
-          toast.message("Slide deleted", {
+          notify.message("Slide deleted", {
             description: slideDisplayName(snapshot, index),
             action: {
               label: "Undo",
