@@ -1,5 +1,6 @@
 /**
  * Project dashboard — lists SQLite-backed projects via TanStack Query.
+ * Supports create, rename, import, export, delete.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,10 @@ import {
   ArrowRight,
   Loader2,
   Download,
+  Upload,
+  Pencil,
+  Check,
+  X,
   Command as CommandIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -30,6 +35,8 @@ import {
   useCreateProject,
   useDeleteProject,
   useExportProject,
+  useImportProject,
+  useRenameProject,
 } from "@/hooks/useProjectQueries";
 import { formatRelative } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
@@ -43,8 +50,12 @@ export function Dashboard() {
   const createMutation = useCreateProject();
   const deleteMutation = useDeleteProject();
   const exportMutation = useExportProject();
+  const importMutation = useImportProject();
+  const renameMutation = useRenameProject();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("Untitled Deck");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const { setIsCommandOpen, isDarkUi, setIsDarkUi } = useUiStore();
 
   useEffect(() => {
@@ -53,6 +64,12 @@ export function Dashboard() {
       .setTitle("OpenSlides — Projects")
       .catch(() => undefined);
   }, []);
+
+  // Apply persisted UI theme on mount
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDarkUi);
+    document.documentElement.classList.toggle("light", !isDarkUi);
+  }, [isDarkUi]);
 
   const handleCreate = async (name?: string) => {
     try {
@@ -64,6 +81,31 @@ export function Dashboard() {
       navigate(`/editor/${project.id}`);
     } catch {
       /* toast handled in mutation */
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const project = await importMutation.mutateAsync();
+      navigate(`/editor/${project.id}`);
+    } catch {
+      /* cancelled / toast */
+    }
+  };
+
+  const startRename = (id: string, current: string) => {
+    setRenamingId(id);
+    setRenameValue(current);
+  };
+
+  const commitRename = async () => {
+    if (!renamingId) return;
+    const name = renameValue.trim() || "Untitled Deck";
+    try {
+      await renameMutation.mutateAsync({ projectId: renamingId, name });
+      setRenamingId(null);
+    } catch {
+      /* toast */
     }
   };
 
@@ -111,6 +153,21 @@ export function Dashboard() {
               onClick={() => setIsCommandOpen(true)}
             >
               <CommandIcon className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void handleImport()}
+              disabled={importMutation.isPending}
+              title="Import project JSON"
+            >
+              {importMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+              Import
             </Button>
             <Button onClick={() => setCreating(true)} className="gap-2" size="sm">
               <Plus className="h-4 w-4" />
@@ -184,13 +241,18 @@ export function Dashboard() {
               </div>
               <h2 className="mb-2 text-xl font-semibold">No projects yet</h2>
               <p className="mb-5 max-w-sm text-muted-foreground">
-                Create your first presentation. Everything is saved offline in a local SQLite
-                database managed by Rust.
+                Create a deck or import a previously exported JSON file.
               </p>
-              <Button onClick={() => setCreating(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Create Project
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setCreating(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Project
+                </Button>
+                <Button variant="outline" onClick={() => void handleImport()} className="gap-2">
+                  <Upload className="h-4 w-4" />
+                  Import JSON
+                </Button>
+              </div>
             </div>
           )}
 
@@ -200,55 +262,109 @@ export function Dashboard() {
                 <Card
                   key={project.id}
                   className="group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
-                  onClick={() => navigate(`/editor/${project.id}`)}
+                  onClick={() => {
+                    if (renamingId === project.id) return;
+                    navigate(`/editor/${project.id}`);
+                  }}
                 >
                   <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                           <FileCode className="h-4 w-4 text-primary" />
                         </div>
-                        <div>
-                          <CardTitle className="text-base font-semibold">
-                            {project.name}
-                          </CardTitle>
-                          <CardDescription className="text-xs">
-                            {project.slideCount} slide
-                            {project.slideCount !== 1 ? "s" : ""}
-                          </CardDescription>
+                        <div className="min-w-0 flex-1">
+                          {renamingId === project.id ? (
+                            <div
+                              className="flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Input
+                                autoFocus
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") void commitRename();
+                                  if (e.key === "Escape") setRenamingId(null);
+                                }}
+                                className="h-8 text-sm"
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => void commitRename()}
+                                disabled={renameMutation.isPending}
+                              >
+                                <Check className="h-4 w-4 text-emerald-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => setRenamingId(null)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <CardTitle className="truncate text-base font-semibold">
+                                {project.name}
+                              </CardTitle>
+                              <CardDescription className="text-xs">
+                                {project.slideCount} slide
+                                {project.slideCount !== 1 ? "s" : ""}
+                              </CardDescription>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="Export JSON"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            exportMutation.mutate(project.id);
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (
-                              confirm(
-                                `Delete “${project.name}”? This cannot be undone.`,
-                              )
-                            ) {
-                              deleteMutation.mutate(project.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {renamingId !== project.id && (
+                        <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Rename"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startRename(project.id, project.name);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Export JSON"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              exportMutation.mutate(project.id);
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (
+                                confirm(
+                                  `Delete “${project.name}”? This cannot be undone.`,
+                                )
+                              ) {
+                                deleteMutation.mutate(project.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="pb-3">

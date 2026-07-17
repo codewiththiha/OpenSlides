@@ -51,13 +51,15 @@ export function useDeleteProject() {
   });
 }
 
-export function useRenameProject(projectId: string) {
+export function useRenameProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => api.renameProject(projectId, name),
+    mutationFn: ({ projectId, name }: { projectId: string; name: string }) =>
+      api.renameProject(projectId, name),
     onSuccess: (project) => {
-      qc.setQueryData(projectKeys.detail(projectId), project);
+      qc.setQueryData(projectKeys.detail(project.id), project);
       qc.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success("Project renamed");
     },
     onError: (err: Error) => toast.error(`Rename failed: ${err.message}`),
   });
@@ -105,21 +107,9 @@ export function useUpdateSlideSettings(projectId: string) {
       slideId: string;
       payload: SlideSettingsPatch;
     }) => api.updateSlideSettings(slideId, payload),
-    onSuccess: (slide: Slide, vars) => {
+    onSuccess: (slide: Slide) => {
       qc.setQueryData<Project>(projectKeys.detail(projectId), (old) => {
         if (!old) return old;
-        // Language is project-wide — mirror onto every slide in the cache
-        if (vars.payload.language) {
-          const lang = vars.payload.language;
-          return {
-            ...old,
-            slides: old.slides.map((s) =>
-              s.id === slide.id
-                ? { ...s, ...slide, language: lang }
-                : { ...s, language: lang },
-            ),
-          };
-        }
         return {
           ...old,
           slides: old.slides.map((s) => (s.id === slide.id ? { ...s, ...slide } : s)),
@@ -133,8 +123,7 @@ export function useUpdateSlideSettings(projectId: string) {
 export function useCreateSlide(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (opts?: { code?: string; language?: string }) =>
-      api.createSlide(projectId, opts),
+    mutationFn: (opts?: { code?: string }) => api.createSlide(projectId, opts),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
       toast.success("Slide added");
@@ -149,9 +138,21 @@ export function useDeleteSlide(projectId: string) {
     mutationFn: (slideId: string) => api.deleteSlide(projectId, slideId),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
-      toast.success("Slide deleted");
     },
     onError: (err: Error) => toast.error(`Could not delete slide: ${err.message}`),
+  });
+}
+
+export function useRestoreSlide(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slide, insertAt }: { slide: Slide; insertAt?: number }) =>
+      api.restoreSlide(projectId, slide, insertAt),
+    onSuccess: (project) => {
+      qc.setQueryData(projectKeys.detail(projectId), project);
+      toast.success("Slide restored");
+    },
+    onError: (err: Error) => toast.error(`Restore failed: ${err.message}`),
   });
 }
 
@@ -173,6 +174,22 @@ export function useExportProject() {
     onError: (err: Error) => {
       if (err.message !== "Export cancelled") {
         toast.error(`Export failed: ${err.message}`);
+      }
+    },
+  });
+}
+
+export function useImportProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.importProjectFromJson(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectKeys.all });
+      toast.success("Project imported");
+    },
+    onError: (err: Error) => {
+      if (err.message !== "Import cancelled") {
+        toast.error(`Import failed: ${err.message}`);
       }
     },
   });

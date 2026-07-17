@@ -16,8 +16,20 @@ const queryClient = new QueryClient({
   },
 });
 
-// Default to dark UI chrome
+// Default to dark UI chrome (Zustand persist may override on hydrate)
 document.documentElement.classList.add("dark");
+try {
+  const raw = localStorage.getItem("openslides-ui");
+  if (raw) {
+    const parsed = JSON.parse(raw) as { state?: { isDarkUi?: boolean } };
+    if (parsed.state?.isDarkUi === false) {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+    }
+  }
+} catch {
+  /* ignore */
+}
 
 // Native macOS menu bar / Windows-Linux window menu
 void installAppMenu();

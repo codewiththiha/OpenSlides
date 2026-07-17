@@ -20,9 +20,13 @@ interface SlidePreviewProps {
   isPresenting?: boolean;
 }
 
-function resolveLanguage(project: Project, slide: Slide): string {
-  // Project language is always taken from the first slide
-  return project.slides[0]?.language || slide.language || "typescript";
+function resolveLanguage(project: Project, _slide: Slide): string {
+  return (
+    project.settings.language ||
+    project.slides[0]?.language ||
+    _slide.language ||
+    "typescript"
+  );
 }
 
 export function SlidePreview({ project, isPresenting = false }: SlidePreviewProps) {

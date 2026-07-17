@@ -66,6 +66,7 @@ export const THEME_OPTIONS: { value: ThemeName; label: string }[] = [
 export interface Slide {
   id: string;
   code: string;
+  /** Mirrored from project settings for UI convenience / export. */
   language: string;
   duration: number;
   transitionDuration: number;
@@ -83,6 +84,8 @@ export interface ProjectSettings {
   useGlobalStagger: boolean;
   globalStagger: number;
   currentSlideId: string | null;
+  /** Project-wide language (source of truth). */
+  language: string;
 }
 
 export interface Project {

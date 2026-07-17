@@ -31,11 +31,13 @@ pub fn run() {
             update_project_theme,
             create_slide,
             delete_slide,
+            restore_slide,
             update_slide_code,
             update_slide_settings,
             reorder_slides,
             set_current_slide,
             export_project_to_json,
+            import_project_from_json,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

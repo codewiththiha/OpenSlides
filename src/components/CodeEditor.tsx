@@ -1,9 +1,10 @@
 /**
  * Syntax-highlighted code editor with:
- * - debounced auto-save
- * - editor line numbers (settings only — not on toolbar)
+ * - debounced auto-save (flushed on slide change / unmount)
+ * - Tab inserts spaces (no focus steal)
+ * - project-wide language in settings
+ * - editor line numbers (settings only)
  * - per-slide animation knobs disabled when global overrides are on
- * - ellipsis labels when the panel is narrow
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Highlighter } from "shiki";
@@ -21,10 +22,10 @@ import {
   LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
   type Project,
-  type Slide,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
 import {
+  useUpdateSettings,
   useUpdateSlideCode,
   useUpdateSlideSettings,
 } from "@/hooks/useProjectQueries";
@@ -40,10 +41,7 @@ interface CodeEditorProps {
   onCollapse?: () => void;
 }
 
-function resolveLanguage(project: Project, slide: Slide | undefined): string {
-  if (!slide) return "typescript";
-  return project.slides[0]?.language || slide.language || "typescript";
-}
+const TAB_SPACES = "  ";
 
 export function CodeEditor({
   project,
@@ -72,9 +70,14 @@ export function CodeEditor({
 
   const codeMutation = useUpdateSlideCode();
   const settingsMutation = useUpdateSlideSettings(project.id);
+  const projectSettingsMutation = useUpdateSettings(project.id);
 
   const useGlobalTransition = project.settings.useGlobalTransition;
   const useGlobalStagger = project.settings.useGlobalStagger;
+  const language =
+    project.settings.language ||
+    project.slides[0]?.language ||
+    "typescript";
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +103,19 @@ export function CodeEditor({
     500,
   );
 
+  // Flush pending auto-save when leaving a slide or unmounting the editor
+  useEffect(() => {
+    return () => {
+      debouncedSave.flush();
+    };
+  }, [slideId, debouncedSave]);
+
+  useEffect(() => {
+    return () => {
+      debouncedSave.flush();
+    };
+  }, [debouncedSave]);
+
   const handleChange = useCallback(
     (value: string) => {
       if (!slideId) return;
@@ -109,8 +125,48 @@ export function CodeEditor({
     [slideId, setLocalCode, debouncedSave],
   );
 
-  const language = resolveLanguage(project, slide);
-  const isFirst = project.slides[0]?.id === slideId;
+  /** Insert spaces on Tab; unindent on Shift+Tab. */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key !== "Tab" || !slideId) return;
+      e.preventDefault();
+      const el = e.currentTarget;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const value = el.value;
+
+      if (e.shiftKey) {
+        // Unindent current line(s)
+        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+        const before = value.slice(0, lineStart);
+        let line = value.slice(lineStart);
+        let removed = 0;
+        if (line.startsWith(TAB_SPACES)) {
+          line = line.slice(TAB_SPACES.length);
+          removed = TAB_SPACES.length;
+        } else if (line.startsWith("\t")) {
+          line = line.slice(1);
+          removed = 1;
+        }
+        const next = before + line;
+        handleChange(next);
+        requestAnimationFrame(() => {
+          const pos = Math.max(lineStart, start - removed);
+          el.selectionStart = el.selectionEnd = pos;
+        });
+        return;
+      }
+
+      const next = value.slice(0, start) + TAB_SPACES + value.slice(end);
+      handleChange(next);
+      requestAnimationFrame(() => {
+        const pos = start + TAB_SPACES.length;
+        el.selectionStart = el.selectionEnd = pos;
+      });
+    },
+    [slideId, handleChange],
+  );
+
   const theme = project.theme;
   const isDarkBg = !LIGHT_THEMES.has(theme);
   const editorFontSize = project.settings.editorFontSize || 14;
@@ -157,6 +213,8 @@ export function CodeEditor({
   const currentIndex = project.slides.findIndex((s) => s.id === slideId);
 
   const goSlide = (dir: -1 | 1) => {
+    // Flush pending save before switching
+    debouncedSave.flush();
     const next = project.slides[currentIndex + dir];
     if (next) setCurrentSlideId(next.id);
   };
@@ -181,7 +239,6 @@ export function CodeEditor({
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-card">
-      {/* Toolbar */}
       <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-2">
         <div className="flex min-w-0 items-center gap-0.5">
           <Button
@@ -210,20 +267,11 @@ export function CodeEditor({
         <div className="flex min-w-0 items-center gap-1">
           <select
             className="h-7 max-w-[9rem] truncate rounded-md border border-input bg-background px-2 text-xs"
-            value={isFirst ? slide.language : project.slides[0].language}
+            value={language}
             onChange={(e) => {
-              // Language is project-wide — always write to first slide
-              const targetId = project.slides[0]?.id ?? slide.id;
-              settingsMutation.mutate({
-                slideId: targetId,
-                payload: { language: e.target.value },
-              });
+              projectSettingsMutation.mutate({ language: e.target.value });
             }}
-            title={
-              isFirst
-                ? "Project language"
-                : "Language is controlled by the first slide"
-            }
+            title="Project language"
           >
             {SUPPORTED_LANGUAGES.map((l) => (
               <option key={l.value} value={l.value}>
@@ -261,7 +309,6 @@ export function CodeEditor({
         </div>
       </div>
 
-      {/* Editor surface with optional gutter */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {editorShowLineNumbers && (
           <div
@@ -294,6 +341,7 @@ export function CodeEditor({
             ref={textareaRef}
             value={code}
             onChange={(e) => handleChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             onScroll={syncScroll}
             spellCheck={false}
             className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-white outline-none"
@@ -303,7 +351,6 @@ export function CodeEditor({
         </div>
       </div>
 
-      {/* Per-slide animation knobs — labels ellipsize when narrow */}
       <div className="grid shrink-0 grid-cols-3 gap-2 border-t px-2 py-2">
         <div className={cn("min-w-0 space-y-1", useGlobalTransition && "opacity-45")}>
           <Label

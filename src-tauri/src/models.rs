@@ -8,6 +8,8 @@ use serde_json::Value as JsonValue;
 pub struct Slide {
     pub id: String,
     pub code: String,
+    /// Mirrored from project settings for export / API compatibility.
+    #[serde(default = "default_language")]
     pub language: String,
     pub duration: i64,
     pub transition_duration: i64,
@@ -37,6 +39,9 @@ pub struct ProjectSettings {
     pub global_stagger: i64,
     #[serde(default)]
     pub current_slide_id: Option<String>,
+    /// Project-wide language (source of truth; no longer per-slide).
+    #[serde(default = "default_language")]
+    pub language: String,
 }
 
 fn default_show_line_numbers() -> bool {
@@ -57,6 +62,9 @@ fn default_transition() -> i64 {
 fn default_stagger() -> i64 {
     5
 }
+fn default_language() -> String {
+    "typescript".into()
+}
 
 impl Default for ProjectSettings {
     fn default() -> Self {
@@ -70,6 +78,7 @@ impl Default for ProjectSettings {
             use_global_stagger: false,
             global_stagger: 5,
             current_slide_id: None,
+            language: default_language(),
         }
     }
 }
@@ -101,7 +110,6 @@ pub struct ProjectSummary {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateSlideSettingsPayload {
-    pub language: Option<String>,
     pub duration: Option<i64>,
     pub transition_duration: Option<i64>,
     pub stagger: Option<i64>,
@@ -112,7 +120,6 @@ pub struct UpdateSlideSettingsPayload {
 pub struct CreateSlidePayload {
     pub project_id: String,
     pub code: Option<String>,
-    pub language: Option<String>,
 }
 
 /// Parse settings JSON blob from DB into typed struct.
@@ -125,12 +132,22 @@ pub fn settings_to_json(settings: &ProjectSettings) -> Result<String, String> {
 }
 
 /// Merge a partial JSON object into existing settings.
-pub fn merge_settings(existing: &ProjectSettings, patch: &JsonValue) -> ProjectSettings {
-    let mut value = serde_json::to_value(existing).unwrap_or(JsonValue::Object(Default::default()));
+/// Returns Err on malformed patches so the frontend can toast an error
+/// instead of silently no-op'ing.
+pub fn merge_settings(
+    existing: &ProjectSettings,
+    patch: &JsonValue,
+) -> Result<ProjectSettings, String> {
+    let mut value =
+        serde_json::to_value(existing).map_err(|e| format!("Failed to serialize settings: {e}"))?;
     if let (Some(obj), Some(patch_obj)) = (value.as_object_mut(), patch.as_object()) {
         for (k, v) in patch_obj {
+            // theme is a project column, not a settings field — skip here
+            if k == "theme" {
+                continue;
+            }
             obj.insert(k.clone(), v.clone());
         }
     }
-    serde_json::from_value(value).unwrap_or_else(|_| existing.clone())
+    serde_json::from_value(value).map_err(|e| format!("Invalid settings payload: {e}"))
 }

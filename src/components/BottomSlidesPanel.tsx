@@ -34,10 +34,12 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import type { Project, Slide } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
+import { toast } from "sonner";
 import {
   useCreateSlide,
   useDeleteSlide,
   useReorderSlides,
+  useRestoreSlide,
 } from "@/hooks/useProjectQueries";
 
 const ITEM_WIDTH = 152;
@@ -196,6 +198,7 @@ export function BottomSlidesPanel({
 
   const createSlide = useCreateSlide(project.id);
   const deleteSlide = useDeleteSlide(project.id);
+  const restoreSlide = useRestoreSlide(project.id);
   const reorder = useReorderSlides(project.id);
 
   const [ordered, setOrdered] = useState<Slide[]>(project.slides);
@@ -250,6 +253,10 @@ export function BottomSlidesPanel({
   const handleRemove = useCallback(
     (id: string) => {
       if (ordered.length <= 1) return;
+      const index = ordered.findIndex((s) => s.id === id);
+      const snapshot = ordered[index];
+      if (!snapshot) return;
+
       deleteSlide.mutate(id, {
         onSuccess: (proj) => {
           if (currentSlideId === id) {
@@ -257,16 +264,33 @@ export function BottomSlidesPanel({
               proj.settings.currentSlideId ?? proj.slides[0]?.id ?? null;
             setCurrentSlideId(fallback);
           }
+          toast.message("Slide deleted", {
+            description: `Slide ${index + 1} removed`,
+            action: {
+              label: "Undo",
+              onClick: () => {
+                restoreSlide.mutate({
+                  slide: snapshot,
+                  insertAt: index,
+                });
+              },
+            },
+          });
         },
       });
     },
-    [ordered.length, deleteSlide, currentSlideId, setCurrentSlideId],
+    [
+      ordered,
+      deleteSlide,
+      restoreSlide,
+      currentSlideId,
+      setCurrentSlideId,
+    ],
   );
 
   const handleAdd = () => {
-    const language = project.slides[0]?.language || "typescript";
     createSlide.mutate(
-      { language },
+      {},
       {
         onSuccess: (slide) => setCurrentSlideId(slide.id),
       },
