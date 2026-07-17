@@ -2,7 +2,8 @@
  * Main editor workspace —
  * single toolbar, resizable preview/editor + slides strip,
  * auto-collapse when panels are dragged too narrow,
- * zen mode, presentation overlay, native menu integration.
+ * collapsed panels show an edge chip (like slides),
+ * expand restores last persisted size from Zustand.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -24,7 +25,7 @@ import {
   Moon,
   Sun,
   Command as CommandIcon,
-  PanelRightOpen,
+  ChevronLeft,
   Code2,
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -53,6 +54,10 @@ const CODE_COLLAPSE_THRESHOLD = 14;
 /** Below this % of the vertical group, slides panel auto-collapses. */
 const SLIDES_COLLAPSE_THRESHOLD = 10;
 
+/** Collapsed rail size (%) — thin strip for the expand chip. */
+const CODE_COLLAPSED_SIZE = 3.5;
+const SLIDES_COLLAPSED_SIZE = 4;
+
 export function Editor() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -76,6 +81,10 @@ export function Editor() {
     setIsBottomPanelCollapsed,
     isCodePanelCollapsed,
     setIsCodePanelCollapsed,
+    codePanelSize,
+    setCodePanelSize,
+    slidesPanelSize,
+    setSlidesPanelSize,
   } = useUiStore();
 
   const exportMutation = useExportProject();
@@ -86,7 +95,6 @@ export function Editor() {
 
   const codePanelRef = useRef<ImperativePanelHandle>(null);
   const slidesPanelRef = useRef<ImperativePanelHandle>(null);
-  // Avoid thrashing collapse while the user is mid-drag near the threshold
   const codeCollapseLock = useRef(false);
   const slidesCollapseLock = useRef(false);
 
@@ -118,42 +126,34 @@ export function Editor() {
     return () => resetEditorUi();
   }, [resetEditorUi]);
 
-  // Keep imperative panel sizes in sync when collapsed via button
+  // Keep imperative panel collapse state in sync with store
   useEffect(() => {
     const panel = codePanelRef.current;
     if (!panel) return;
-    if (isCodePanelCollapsed) {
-      try {
-        panel.collapse();
-      } catch {
-        /* ignore */
+    try {
+      if (isCodePanelCollapsed) {
+        if (!panel.isCollapsed()) panel.collapse();
+      } else if (panel.isCollapsed()) {
+        panel.expand(codePanelSize);
       }
-    } else {
-      try {
-        if (panel.isCollapsed()) panel.expand();
-      } catch {
-        /* ignore */
-      }
+    } catch {
+      /* ignore */
     }
-  }, [isCodePanelCollapsed]);
+  }, [isCodePanelCollapsed, codePanelSize]);
 
   useEffect(() => {
     const panel = slidesPanelRef.current;
     if (!panel) return;
-    if (isBottomPanelCollapsed) {
-      try {
-        panel.collapse();
-      } catch {
-        /* ignore */
+    try {
+      if (isBottomPanelCollapsed) {
+        if (!panel.isCollapsed()) panel.collapse();
+      } else if (panel.isCollapsed()) {
+        panel.expand(slidesPanelSize);
       }
-    } else {
-      try {
-        if (panel.isCollapsed()) panel.expand();
-      } catch {
-        /* ignore */
-      }
+    } catch {
+      /* ignore */
     }
-  }, [isBottomPanelCollapsed]);
+  }, [isBottomPanelCollapsed, slidesPanelSize]);
 
   const slides = project?.slides ?? [];
   const currentIndex = slides.findIndex((s) => s.id === currentSlideId);
@@ -246,47 +246,67 @@ export function Editor() {
   );
   useAppMenu(menuHandlers);
 
-  const expandCodePanel = () => {
+  const expandCodePanel = useCallback(() => {
     setIsCodePanelCollapsed(false);
     requestAnimationFrame(() => {
       try {
-        codePanelRef.current?.expand();
-        codePanelRef.current?.resize(40);
+        const panel = codePanelRef.current;
+        if (!panel) return;
+        panel.expand(codePanelSize);
+        panel.resize(codePanelSize);
       } catch {
         /* ignore */
       }
     });
-  };
+  }, [codePanelSize, setIsCodePanelCollapsed]);
 
-  const collapseCodePanel = () => {
+  const collapseCodePanel = useCallback(() => {
+    try {
+      const size = codePanelRef.current?.getSize();
+      if (typeof size === "number" && size > CODE_COLLAPSE_THRESHOLD) {
+        setCodePanelSize(size);
+      }
+    } catch {
+      /* ignore */
+    }
     setIsCodePanelCollapsed(true);
     try {
       codePanelRef.current?.collapse();
     } catch {
       /* ignore */
     }
-  };
+  }, [setCodePanelSize, setIsCodePanelCollapsed]);
 
-  const expandSlidesPanel = () => {
+  const expandSlidesPanel = useCallback(() => {
     setIsBottomPanelCollapsed(false);
     requestAnimationFrame(() => {
       try {
-        slidesPanelRef.current?.expand();
-        slidesPanelRef.current?.resize(20);
+        const panel = slidesPanelRef.current;
+        if (!panel) return;
+        panel.expand(slidesPanelSize);
+        panel.resize(slidesPanelSize);
       } catch {
         /* ignore */
       }
     });
-  };
+  }, [slidesPanelSize, setIsBottomPanelCollapsed]);
 
-  const collapseSlidesPanel = () => {
+  const collapseSlidesPanel = useCallback(() => {
+    try {
+      const size = slidesPanelRef.current?.getSize();
+      if (typeof size === "number" && size > SLIDES_COLLAPSE_THRESHOLD) {
+        setSlidesPanelSize(size);
+      }
+    } catch {
+      /* ignore */
+    }
     setIsBottomPanelCollapsed(true);
     try {
       slidesPanelRef.current?.collapse();
     } catch {
       /* ignore */
     }
-  };
+  }, [setSlidesPanelSize, setIsBottomPanelCollapsed]);
 
   if (isLoading) {
     return (
@@ -364,19 +384,6 @@ export function Editor() {
           trailing={
             <>
               {saveBadge}
-              {isCodePanelCollapsed && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs"
-                  title="Show code editor"
-                  onClick={expandCodePanel}
-                >
-                  <PanelRightOpen className="h-3.5 w-3.5" />
-                  <Code2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Code</span>
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -485,7 +492,15 @@ export function Editor() {
                 className="h-full min-h-0"
                 autoSaveId="openslides-h"
               >
-                <Panel defaultSize={isCodePanelCollapsed ? 100 : 58} minSize={30} className="min-w-0">
+                <Panel
+                  defaultSize={
+                    isCodePanelCollapsed
+                      ? 100 - CODE_COLLAPSED_SIZE
+                      : 100 - codePanelSize
+                  }
+                  minSize={30}
+                  className="min-w-0"
+                >
                   <div className="flex h-full items-center justify-center bg-muted/20 p-4 pb-5">
                     <div className="aspect-video h-full max-h-full w-full max-w-full">
                       <SlidePreview project={project} />
@@ -498,20 +513,30 @@ export function Editor() {
                     <PanelResizeHandle
                       className={cn(
                         "w-1 bg-border/60 transition-colors hover:bg-primary/50 data-[resize-handle-active]:bg-primary/60",
-                        isCodePanelCollapsed && "pointer-events-none opacity-0 w-0",
+                        isCodePanelCollapsed && "pointer-events-none opacity-40",
                       )}
                       disabled={isCodePanelCollapsed}
                     />
 
                     <Panel
                       ref={codePanelRef}
-                      defaultSize={isCodePanelCollapsed ? 0 : 42}
-                      minSize={isCodePanelCollapsed ? 0 : 18}
+                      defaultSize={
+                        isCodePanelCollapsed ? CODE_COLLAPSED_SIZE : codePanelSize
+                      }
+                      minSize={isCodePanelCollapsed ? CODE_COLLAPSED_SIZE : 18}
+                      maxSize={
+                        isCodePanelCollapsed ? CODE_COLLAPSED_SIZE + 1 : 70
+                      }
                       collapsible
-                      collapsedSize={0}
+                      collapsedSize={CODE_COLLAPSED_SIZE}
                       className="min-w-0"
                       onResize={(size) => {
                         if (codeCollapseLock.current) return;
+
+                        if (!isCodePanelCollapsed && size >= CODE_COLLAPSE_THRESHOLD) {
+                          setCodePanelSize(size);
+                        }
+
                         if (!isCodePanelCollapsed && size < CODE_COLLAPSE_THRESHOLD) {
                           codeCollapseLock.current = true;
                           setIsCodePanelCollapsed(true);
@@ -528,7 +553,29 @@ export function Editor() {
                       onCollapse={() => setIsCodePanelCollapsed(true)}
                       onExpand={() => setIsCodePanelCollapsed(false)}
                     >
-                      {!isCodePanelCollapsed && (
+                      {isCodePanelCollapsed ? (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-l border-border/50 bg-card/60">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto max-h-full flex-col gap-1.5 px-1 py-2 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={expandCodePanel}
+                            title="Expand code editor"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                            <Code2 className="h-3.5 w-3.5" />
+                            <span
+                              className="select-none tracking-wide"
+                              style={{
+                                writingMode: "vertical-rl",
+                                textOrientation: "mixed",
+                              }}
+                            >
+                              Code
+                            </span>
+                          </Button>
+                        </div>
+                      ) : (
                         <CodeEditor
                           project={project}
                           onToggleExpand={() => setEditorExpanded(true)}
@@ -551,15 +598,34 @@ export function Editor() {
                 />
                 <Panel
                   ref={slidesPanelRef}
-                  defaultSize={isBottomPanelCollapsed ? 4 : 22}
-                  minSize={isBottomPanelCollapsed ? 4 : 12}
-                  maxSize={isBottomPanelCollapsed ? 6 : 40}
+                  defaultSize={
+                    isBottomPanelCollapsed
+                      ? SLIDES_COLLAPSED_SIZE
+                      : slidesPanelSize
+                  }
+                  minSize={
+                    isBottomPanelCollapsed ? SLIDES_COLLAPSED_SIZE : 12
+                  }
+                  maxSize={
+                    isBottomPanelCollapsed ? SLIDES_COLLAPSED_SIZE + 2 : 40
+                  }
                   collapsible
-                  collapsedSize={4}
+                  collapsedSize={SLIDES_COLLAPSED_SIZE}
                   className="min-h-0"
                   onResize={(size) => {
                     if (slidesCollapseLock.current) return;
-                    if (!isBottomPanelCollapsed && size < SLIDES_COLLAPSE_THRESHOLD) {
+
+                    if (
+                      !isBottomPanelCollapsed &&
+                      size >= SLIDES_COLLAPSE_THRESHOLD
+                    ) {
+                      setSlidesPanelSize(size);
+                    }
+
+                    if (
+                      !isBottomPanelCollapsed &&
+                      size < SLIDES_COLLAPSE_THRESHOLD
+                    ) {
                       slidesCollapseLock.current = true;
                       setIsBottomPanelCollapsed(true);
                       try {

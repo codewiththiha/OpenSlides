@@ -11,6 +11,10 @@ interface UiState {
   isZenMode: boolean;
   isBottomPanelCollapsed: boolean;
   isCodePanelCollapsed: boolean;
+  /** Last expanded size (%) of the code panel before collapse. */
+  codePanelSize: number;
+  /** Last expanded size (%) of the slides panel before collapse. */
+  slidesPanelSize: number;
   isSettingsOpen: boolean;
   isCommandOpen: boolean;
   isDarkUi: boolean;
@@ -24,6 +28,8 @@ interface UiState {
   toggleZenMode: () => void;
   setIsBottomPanelCollapsed: (v: boolean) => void;
   setIsCodePanelCollapsed: (v: boolean) => void;
+  setCodePanelSize: (v: number) => void;
+  setSlidesPanelSize: (v: number) => void;
   setIsSettingsOpen: (v: boolean) => void;
   setIsCommandOpen: (v: boolean) => void;
   setIsDarkUi: (v: boolean) => void;
@@ -34,6 +40,9 @@ interface UiState {
   resetEditorUi: () => void;
 }
 
+const DEFAULT_CODE_SIZE = 42;
+const DEFAULT_SLIDES_SIZE = 22;
+
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
@@ -42,6 +51,8 @@ export const useUiStore = create<UiState>()(
       isZenMode: false,
       isBottomPanelCollapsed: false,
       isCodePanelCollapsed: false,
+      codePanelSize: DEFAULT_CODE_SIZE,
+      slidesPanelSize: DEFAULT_SLIDES_SIZE,
       isSettingsOpen: false,
       isCommandOpen: false,
       isDarkUi: true,
@@ -55,6 +66,14 @@ export const useUiStore = create<UiState>()(
       toggleZenMode: () => set((s) => ({ isZenMode: !s.isZenMode })),
       setIsBottomPanelCollapsed: (v) => set({ isBottomPanelCollapsed: v }),
       setIsCodePanelCollapsed: (v) => set({ isCodePanelCollapsed: v }),
+      setCodePanelSize: (v) =>
+        set({
+          codePanelSize: Math.min(70, Math.max(18, Math.round(v))),
+        }),
+      setSlidesPanelSize: (v) =>
+        set({
+          slidesPanelSize: Math.min(40, Math.max(12, Math.round(v))),
+        }),
       setIsSettingsOpen: (v) => set({ isSettingsOpen: v }),
       setIsCommandOpen: (v) => set({ isCommandOpen: v }),
       setIsDarkUi: (v) => set({ isDarkUi: v }),
@@ -76,16 +95,17 @@ export const useUiStore = create<UiState>()(
           isSettingsOpen: false,
           localCode: {},
           saveStatus: "idle",
-          // keep panel collapse prefs / theme across navigations
+          // keep panel collapse prefs / sizes / theme across navigations
         }),
     }),
     {
       name: "openslides-ui",
       storage: createJSONStorage(() => localStorage),
-      // Only persist layout / chrome prefs — never ephemeral buffers
       partialize: (s) => ({
         isBottomPanelCollapsed: s.isBottomPanelCollapsed,
         isCodePanelCollapsed: s.isCodePanelCollapsed,
+        codePanelSize: s.codePanelSize,
+        slidesPanelSize: s.slidesPanelSize,
         isDarkUi: s.isDarkUi,
         editorShowLineNumbers: s.editorShowLineNumbers,
       }),
