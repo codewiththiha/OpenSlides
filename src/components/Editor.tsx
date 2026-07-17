@@ -76,6 +76,7 @@ export function Editor() {
     toggleZenMode,
     isSettingsOpen,
     setIsSettingsOpen,
+    isCommandOpen,
     setIsCommandOpen,
     isDarkUi,
     setIsDarkUi,
@@ -169,22 +170,95 @@ export function Editor() {
     document.documentElement.classList.toggle("light", !next);
   }, [isDarkUi, setIsDarkUi]);
 
+  const goNextSlide = useCallback(() => {
+    if (currentIndex < slides.length - 1) {
+      setCurrentSlideId(slides[currentIndex + 1].id);
+    }
+  }, [currentIndex, slides, setCurrentSlideId]);
+
+  const goPrevSlide = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentSlideId(slides[currentIndex - 1].id);
+    }
+  }, [currentIndex, slides, setCurrentSlideId]);
+
+  /** True when focus is in a text field where arrows should move the caret, not slides. */
+  const isTypingTarget = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    if (target.isContentEditable) return true;
+    return Boolean(target.closest("[contenteditable='true'], [role='textbox'], .cm-editor, .cm-content"));
+  };
+
+  const exitPresent = useCallback(async () => {
+    setIsPresenting(false);
+    // Exit browser fullscreen if we entered it
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      /* ignore */
+    }
+    // Exit native window fullscreen if we set it
+    try {
+      const win = getCurrentWindow();
+      if (await win.isFullscreen()) {
+        await win.setFullscreen(false);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [setIsPresenting]);
+
+  const tryEnterFullscreen = useCallback(async () => {
+    // Prefer video-style element fullscreen, then native window fullscreen.
+    const el = document.getElementById("openslides-present-root");
+    try {
+      if (el && el.requestFullscreen && !document.fullscreenElement) {
+        await el.requestFullscreen();
+        return;
+      }
+    } catch {
+      /* fall through to Tauri */
+    }
+    try {
+      const win = getCurrentWindow();
+      if (!(await win.isFullscreen())) {
+        await win.setFullscreen(true);
+      }
+    } catch {
+      /* overlay still works windowed */
+    }
+  }, []);
+
+  const enterPresent = useCallback(() => {
+    setIsPresenting(true);
+  }, [setIsPresenting]);
+
+  // When present overlay mounts, request true fullscreen (browser or Tauri).
+  useEffect(() => {
+    if (!isPresenting) return;
+    const t = window.setTimeout(() => {
+      void tryEnterFullscreen();
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [isPresenting, tryEnterFullscreen]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // Present mode: arrows / space / esc
       if (isPresenting) {
         if (e.key === "Escape") {
           e.preventDefault();
-          setIsPresenting(false);
+          void exitPresent();
         } else if (e.key === "ArrowRight" || e.key === " ") {
           e.preventDefault();
-          if (currentIndex < slides.length - 1) {
-            setCurrentSlideId(slides[currentIndex + 1].id);
-          }
+          goNextSlide();
         } else if (e.key === "ArrowLeft") {
           e.preventDefault();
-          if (currentIndex > 0) {
-            setCurrentSlideId(slides[currentIndex - 1].id);
-          }
+          goPrevSlide();
         }
         return;
       }
@@ -198,14 +272,30 @@ export function Editor() {
         e.preventDefault();
         toggleZenMode();
       }
+
+      // Normal / zen: arrow keys navigate slides when not typing in an input
+      if (
+        (e.key === "ArrowRight" || e.key === "ArrowLeft") &&
+        !isTypingTarget(e.target) &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !isSettingsOpen &&
+        !isCommandOpen
+      ) {
+        e.preventDefault();
+        if (e.key === "ArrowRight") goNextSlide();
+        else goPrevSlide();
+      }
     },
     [
       isPresenting,
       isZenMode,
-      currentIndex,
-      slides,
-      setIsPresenting,
-      setCurrentSlideId,
+      isSettingsOpen,
+      isCommandOpen,
+      exitPresent,
+      goNextSlide,
+      goPrevSlide,
       toggleZenMode,
     ],
   );
@@ -214,6 +304,36 @@ export function Editor() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  // If user exits OS fullscreen via Esc / system UI while presenting, leave present mode
+  useEffect(() => {
+    if (!isPresenting) return;
+    const onFsChange = () => {
+      // Only react when browser fullscreen was used and then left
+      if (!document.fullscreenElement) {
+        // Don't force-exit if we only used Tauri fullscreen (no document.fullscreenElement ever)
+        // Heuristic: if present root existed and lost fullscreen, exit.
+        const el = document.getElementById("openslides-present-root");
+        if (el && !document.fullscreenElement) {
+          // Check if we were the fullscreen element
+          // If fullscreen just ended, sync present state off unless Tauri is still fullscreen
+          void (async () => {
+            try {
+              const win = getCurrentWindow();
+              const nativeFs = await win.isFullscreen().catch(() => false);
+              if (!nativeFs) {
+                setIsPresenting(false);
+              }
+            } catch {
+              setIsPresenting(false);
+            }
+          })();
+        }
+      }
+    };
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, [isPresenting, setIsPresenting]);
 
   const menuHandlers = useMemo(
     () => ({
@@ -226,7 +346,7 @@ export function Editor() {
       "menu://export": () => {
         if (projectId) exportMutation.mutate(projectId);
       },
-      "menu://present": () => setIsPresenting(true),
+      "menu://present": () => void enterPresent(),
       "menu://zen": () => toggleZenMode(),
       "menu://settings": () => setIsSettingsOpen(true),
       "menu://command-palette": () => setIsCommandOpen(true),
@@ -240,7 +360,7 @@ export function Editor() {
       navigate,
       projectId,
       exportMutation,
-      setIsPresenting,
+      enterPresent,
       toggleZenMode,
       setIsSettingsOpen,
       setIsCommandOpen,
@@ -436,7 +556,7 @@ export function Editor() {
               <Button
                 size="sm"
                 className="ml-1 gap-1.5"
-                onClick={() => setIsPresenting(true)}
+                onClick={() => void enterPresent()}
               >
                 <MonitorPlay className="h-3.5 w-3.5" />
                 Present
@@ -447,18 +567,24 @@ export function Editor() {
       )}
 
       {isPresenting && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black">
+        <div
+          id="openslides-present-root"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+        >
           <button
             type="button"
             className="absolute right-4 top-4 z-[110] flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
-            onClick={() => setIsPresenting(false)}
+            onClick={() => void exitPresent()}
           >
             Press{" "}
             <kbd className="rounded bg-white/20 px-2 py-0.5 font-mono text-xs">ESC</kbd>{" "}
             to exit
           </button>
-          <div className="aspect-video h-full max-h-[90vh] w-full max-w-[90vw]">
-            <SlidePreview project={project} isPresenting />
+          {/* Full-bleed stage (true fullscreen when API available) */}
+          <div className="flex h-full w-full items-center justify-center p-0 sm:p-4">
+            <div className="aspect-video h-full max-h-full w-full max-w-full">
+              <SlidePreview project={project} isPresenting />
+            </div>
           </div>
         </div>
       )}
