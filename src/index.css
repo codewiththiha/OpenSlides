@@ -132,79 +132,110 @@
   opacity: 0.5;
 }
 
-/* ─── Toast system (used by AppToaster + notify()) ─────────────────────── */
-.toast-openslides {
+
+/* ─── Toast system (AppToaster + notify()) — FIXED SIZE for every toast ─── */
+.toast-openslides.toast-fixed,
+.toast-fixed {
+  width: min(400px, calc(100vw - 2rem)) !important;
+  min-width: min(400px, calc(100vw - 2rem)) !important;
+  max-width: min(400px, calc(100vw - 2rem)) !important;
+  height: 4.5rem !important;
+  min-height: 4.5rem !important;
+  max-height: 4.5rem !important;
+  box-sizing: border-box !important;
+  padding: 0.85rem 2.75rem 0.85rem 1rem !important;
   background: hsl(var(--card)) !important;
   color: hsl(var(--card-foreground)) !important;
   border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.75rem !important;
   display: flex !important;
+  flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 0.875rem !important;
-  box-sizing: border-box !important;
-  min-height: 3.25rem;
+  gap: 0.75rem !important;
+  overflow: hidden !important;
 }
 
-/* Slightly larger, consistent footprint for all toasts */
-.toast-size-md {
-  min-width: min(400px, calc(100vw - 2rem)) !important;
-  padding-top: 0.9rem !important;
-  padding-bottom: 0.9rem !important;
-  padding-left: 1rem !important;
-  padding-right: 2.75rem !important;
-}
-
-.toast-openslides [data-icon] {
-  flex-shrink: 0;
+.toast-openslides [data-icon],
+.toast-fixed [data-icon] {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
   margin: 0 !important;
-  align-self: center !important;
-  width: 1.125rem !important;
-  height: 1.125rem !important;
+  padding: 0 !important;
 }
 
-.toast-openslides [data-content] {
+.toast-openslides [data-content],
+.toast-fixed [data-content],
+.toast-content {
   flex: 1 1 auto !important;
   min-width: 0 !important;
+  max-width: 100% !important;
   margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  gap: 0.2rem !important;
+  gap: 0.15rem !important;
+  height: 100% !important;
 }
 
-.toast-openslides [data-title] {
+.toast-openslides [data-title],
+.toast-fixed [data-title] {
   font-size: 0.8125rem !important;
   font-weight: 500 !important;
-  line-height: 1.35 !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-.toast-openslides [data-description] {
+.toast-openslides [data-description],
+.toast-fixed [data-description],
+.toast-desc-slot {
   font-size: 0.75rem !important;
-  line-height: 1.35 !important;
+  line-height: 1.3 !important;
+  min-height: 1rem !important;
+  height: 1rem !important;
   opacity: 0.85;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
-/* Action (Undo) at the trailing edge */
 .toast-openslides [data-button],
 .toast-openslides button[data-button],
-.toast-openslides .toast-action {
-  flex-shrink: 0 !important;
+.toast-openslides .toast-action,
+.toast-fixed [data-button] {
+  flex: 0 0 auto !important;
   margin-left: auto !important;
   margin-right: 0 !important;
   align-self: center !important;
+  min-width: 4.75rem !important;
   height: 1.875rem !important;
   padding-inline: 0.9rem !important;
   font-size: 0.75rem !important;
   font-weight: 500 !important;
   border-radius: 9999px !important;
+  white-space: nowrap !important;
 }
 
-/* Close (X) absolutely centered on the right */
+.toast-no-action [data-button],
+.toast-no-action button[data-button],
+.toast-no-action .toast-action {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  background: transparent !important;
+  color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
 .toast-openslides [data-close-button],
 .toast-openslides button[data-close-button],
-.toast-openslides .toast-close {
+.toast-openslides .toast-close,
+.toast-fixed [data-close-button] {
   position: absolute !important;
-  right: 0.55rem !important;
+  right: 0.5rem !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   margin: 0 !important;
@@ -231,77 +262,64 @@
   color: hsl(var(--foreground)) !important;
 }
 
-/* Neutral (message / undo) — same size, no glow */
-.toast-tone-default {
-  border-color: hsl(var(--border)) !important;
+.toast-tone-default,
+.toast-tone-success,
+.toast-tone-error,
+.toast-tone-warning,
+.toast-tone-info {
   box-shadow: 0 8px 24px hsl(0 0% 0% / 0.18) !important;
 }
 
-.toast-tone-success {
-  border-color: hsl(142 70% 45% / 0.85) !important;
-}
-.toast-tone-error {
-  border-color: hsl(0 72% 55% / 0.9) !important;
-}
-.toast-tone-warning {
-  border-color: hsl(38 92% 50% / 0.9) !important;
-}
-.toast-tone-info {
-  border-color: hsl(217 91% 60% / 0.9) !important;
-}
+.toast-tone-default { border-color: hsl(var(--border)) !important; }
+.toast-tone-success { border-color: hsl(142 70% 45% / 0.9) !important; }
+.toast-tone-error { border-color: hsl(0 72% 55% / 0.9) !important; }
+.toast-tone-warning { border-color: hsl(38 92% 50% / 0.9) !important; }
+.toast-tone-info { border-color: hsl(217 91% 60% / 0.9) !important; }
 
-/* Glow opt-in (via notify glow:true / success/error defaults) */
 .toast-glow.toast-tone-success {
   box-shadow:
     0 0 0 1px hsl(142 70% 45% / 0.28),
     0 0 18px hsl(142 70% 45% / 0.28),
-    0 10px 28px hsl(0 0% 0% / 0.22) !important;
+    0 8px 24px hsl(0 0% 0% / 0.18) !important;
 }
 .toast-glow.toast-tone-error {
   box-shadow:
     0 0 0 1px hsl(0 72% 55% / 0.28),
     0 0 18px hsl(0 72% 55% / 0.28),
-    0 10px 28px hsl(0 0% 0% / 0.22) !important;
+    0 8px 24px hsl(0 0% 0% / 0.18) !important;
 }
 .toast-glow.toast-tone-warning {
   box-shadow:
     0 0 0 1px hsl(38 92% 50% / 0.28),
     0 0 18px hsl(38 92% 50% / 0.24),
-    0 10px 28px hsl(0 0% 0% / 0.22) !important;
+    0 8px 24px hsl(0 0% 0% / 0.18) !important;
 }
 .toast-glow.toast-tone-info {
   box-shadow:
     0 0 0 1px hsl(217 91% 60% / 0.28),
     0 0 18px hsl(217 91% 60% / 0.24),
-    0 10px 28px hsl(0 0% 0% / 0.22) !important;
+    0 8px 24px hsl(0 0% 0% / 0.18) !important;
 }
 
-.light .toast-tone-default {
+.light .toast-tone-default,
+.light .toast-tone-success,
+.light .toast-tone-error,
+.light .toast-tone-warning,
+.light .toast-tone-info {
   box-shadow: 0 8px 22px hsl(0 0% 0% / 0.08) !important;
 }
 .light .toast-glow.toast-tone-success {
   box-shadow:
     0 0 0 1px hsl(142 70% 40% / 0.32),
     0 0 14px hsl(142 70% 40% / 0.18),
-    0 8px 18px hsl(0 0% 0% / 0.06) !important;
+    0 8px 22px hsl(0 0% 0% / 0.08) !important;
 }
 .light .toast-glow.toast-tone-error {
   box-shadow:
     0 0 0 1px hsl(0 72% 50% / 0.32),
     0 0 14px hsl(0 72% 50% / 0.16),
-    0 8px 18px hsl(0 0% 0% / 0.06) !important;
+    0 8px 22px hsl(0 0% 0% / 0.08) !important;
 }
-
-/* Legacy class names (kept so any residual sonner defaults still look ok) */
-.toast-success-glow {
-}
-.toast-success-glow,
-.toast-error-glow,
-.toast-warning-glow,
-.toast-info-glow {
-  /* no-op aliases — prefer toast-tone-* + toast-glow */
-}
-
 
 /* Shiki overrides inside editor overlay */
 .editor-highlight pre,
