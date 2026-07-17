@@ -142,12 +142,12 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
           }
         >
           {/*
-            key includes slide.id so switching slides remounts (clean transition)
-            instead of morphing unrelated codebases character-by-character.
-            Magic-move only runs when `code` changes on the *same* slide (typing).
+            Keep a stable key across slide switches so ShikiMagicMove can morph
+            from previous code → next code (the product’s main animation).
+            Only remount when theme / line-numbers / font / language change.
           */}
           <ShikiMagicMove
-            key={`${slide.id}-${theme}-${settings.showLineNumbers}-${settings.fontSize}-${language}`}
+            key={`${theme}-${settings.showLineNumbers}-${settings.fontSize}-${language}`}
             lang={language}
             theme={theme}
             highlighter={highlighter}
