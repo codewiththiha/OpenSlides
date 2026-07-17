@@ -128,12 +128,14 @@ pub async fn delete_slide(
             .map_err(|e| e.to_string())?;
     }
 
-    let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_one(pool.inner())
-        .await
-        .map_err(|e| e.to_string())?;
-    let raw: String = row.get("settings");
+    let raw: String = {
+        let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
+            .bind(&project_id)
+            .fetch_one(pool.inner())
+            .await
+            .map_err(|e| e.to_string())?;
+        row.get("settings")
+    };
     let mut settings = parse_settings(&raw);
     if settings.current_slide_id.as_deref() == Some(slide_id.as_str()) {
         settings.current_slide_id = remaining.first().map(|s| s.id.clone());

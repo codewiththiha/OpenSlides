@@ -142,14 +142,15 @@ pub async fn update_project_settings(
     project_id: String,
     settings: JsonValue,
 ) -> Result<Project, String> {
-    let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_optional(pool.inner())
-        .await
-        .map_err(|e| format!("Failed to load project: {e}"))?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
-
-    let existing_raw: String = row.get("settings");
+    let existing_raw: String = {
+        let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
+            .bind(&project_id)
+            .fetch_optional(pool.inner())
+            .await
+            .map_err(|e| format!("Failed to load project: {e}"))?
+            .ok_or_else(|| format!("Project not found: {project_id}"))?;
+        row.get("settings")
+    };
     let existing = parse_settings(&existing_raw);
     let merged = merge_settings(&existing, &settings)?;
 

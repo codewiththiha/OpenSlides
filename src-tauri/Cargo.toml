@@ -3,7 +3,7 @@ name = "open-slides"
 version = "0.1.0"
 description = "OpenSlides — offline-first code presentation desktop app"
 authors = ["codewiththiha"]
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "open_slides_lib"
