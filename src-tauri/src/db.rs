@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS slides (
     transition_duration INTEGER NOT NULL DEFAULT 750,
     stagger INTEGER NOT NULL DEFAULT 5,
     duration INTEGER NOT NULL DEFAULT 3000,
+    name TEXT NOT NULL DEFAULT '',
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
@@ -102,13 +103,23 @@ async fn set_version(pool: &SqlitePool, v: i64) -> Result<(), String> {
 }
 
 /// Incremental, additive migrations. Bump TARGET when adding a step.
-const TARGET_VERSION: i64 = 1;
+const TARGET_VERSION: i64 = 2;
+
+async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
+    let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(rows.iter().any(|r| {
+        let name: String = r.get("name");
+        name == column
+    }))
+}
 
 async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
     let mut version = current_version(pool).await?;
 
     // v1: hoist language into projects.settings JSON (project-wide source of truth).
-    // Keeps slides.language column for backward compat / export stamping.
     if version < 1 {
         let projects = sqlx::query("SELECT id, settings FROM projects")
             .fetch_all(pool)
@@ -153,7 +164,6 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                // Normalize any leftover "dynamic" markers
                 sqlx::query(
                     "UPDATE slides SET language = ? WHERE project_id = ? AND (language = 'dynamic' OR language = '')",
                 )
@@ -166,6 +176,66 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
         }
 
         version = 1;
+        set_version(pool, version).await?;
+    }
+
+    // v2: slide.name + default codeAlign in settings
+    if version < 2 {
+        if !column_exists(pool, "slides", "name").await? {
+            sqlx::query("ALTER TABLE slides ADD COLUMN name TEXT NOT NULL DEFAULT ''")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to add slides.name: {e}"))?;
+        }
+
+        // Seed default names "Slide 1", "Slide 2", … where empty
+        let slides = sqlx::query(
+            "SELECT id, project_id, order_index, name FROM slides ORDER BY project_id, order_index",
+        )
+        .fetch_all(pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        for row in slides {
+            let name: String = row.get("name");
+            if name.trim().is_empty() {
+                let order: i64 = row.get("order_index");
+                let id: String = row.get("id");
+                let label = format!("Slide {}", order + 1);
+                sqlx::query("UPDATE slides SET name = ? WHERE id = ?")
+                    .bind(&label)
+                    .bind(&id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
+        // Ensure codeAlign exists in project settings JSON
+        let projects = sqlx::query("SELECT id, settings FROM projects")
+            .fetch_all(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        for row in projects {
+            let id: String = row.get("id");
+            let raw: String = row.get("settings");
+            let mut settings: serde_json::Value =
+                serde_json::from_str(&raw).unwrap_or_else(|_| serde_json::json!({}));
+            if settings.get("codeAlign").is_none() {
+                if let Some(obj) = settings.as_object_mut() {
+                    obj.insert("codeAlign".into(), serde_json::Value::String("left".into()));
+                }
+                let new_raw = serde_json::to_string(&settings).map_err(|e| e.to_string())?;
+                sqlx::query("UPDATE projects SET settings = ? WHERE id = ?")
+                    .bind(&new_raw)
+                    .bind(&id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
+        version = 2;
         set_version(pool, version).await?;
     }
 

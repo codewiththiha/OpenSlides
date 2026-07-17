@@ -16,6 +16,9 @@ pub struct Slide {
     pub stagger: i64,
     #[serde(default)]
     pub order_index: i64,
+    /// User-facing slide title (defaults to "Slide N" on the frontend if empty).
+    #[serde(default)]
+    pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +45,10 @@ pub struct ProjectSettings {
     /// Project-wide language (source of truth; no longer per-slide).
     #[serde(default = "default_language")]
     pub language: String,
+    /// How the code block is positioned on the slide stage.
+    /// "left" | "center" — centers the *block*, not text-align of lines.
+    #[serde(default = "default_code_align")]
+    pub code_align: String,
 }
 
 fn default_show_line_numbers() -> bool {
@@ -65,6 +72,9 @@ fn default_stagger() -> i64 {
 fn default_language() -> String {
     "typescript".into()
 }
+fn default_code_align() -> String {
+    "left".into()
+}
 
 impl Default for ProjectSettings {
     fn default() -> Self {
@@ -79,6 +89,7 @@ impl Default for ProjectSettings {
             global_stagger: 5,
             current_slide_id: None,
             language: default_language(),
+            code_align: default_code_align(),
         }
     }
 }
@@ -113,6 +124,7 @@ pub struct UpdateSlideSettingsPayload {
     pub duration: Option<i64>,
     pub transition_duration: Option<i64>,
     pub stagger: Option<i64>,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -120,6 +132,7 @@ pub struct UpdateSlideSettingsPayload {
 pub struct CreateSlidePayload {
     pub project_id: String,
     pub code: Option<String>,
+    pub name: Option<String>,
 }
 
 /// Parse settings JSON blob from DB into typed struct.

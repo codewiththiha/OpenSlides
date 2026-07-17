@@ -21,6 +21,7 @@ import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
 import {
   LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
+  slideDisplayName,
   type Project,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
@@ -254,12 +255,27 @@ export function CodeEditor({
   };
 
   const currentIndex = project.slides.findIndex((s) => s.id === slideId);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
 
   const goSlide = (dir: -1 | 1) => {
     // Flush pending save before switching
     debouncedSave.flush();
     const next = project.slides[currentIndex + dir];
     if (next) setCurrentSlideId(next.id);
+  };
+
+  const displayName = slide
+    ? slideDisplayName(slide, Math.max(0, currentIndex))
+    : "";
+
+  const commitName = () => {
+    if (!slide) return;
+    const name = nameDraft.trim() || `Slide ${currentIndex + 1}`;
+    settingsMutation.mutate(
+      { slideId: slide.id, payload: { name } },
+      { onSettled: () => setEditingName(false) },
+    );
   };
 
   if (!slide) {
@@ -282,7 +298,7 @@ export function CodeEditor({
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-card">
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-2">
+      <div className="relative flex h-10 shrink-0 items-center justify-between gap-2 border-b px-2">
         <div className="flex min-w-0 items-center gap-0.5">
           <Button
             variant="ghost"
@@ -293,8 +309,8 @@ export function CodeEditor({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="min-w-0 truncate text-center text-xs text-muted-foreground">
-            {currentIndex + 1} / {project.slides.length}
+          <span className="shrink-0 text-center text-[10px] text-muted-foreground/80">
+            {currentIndex + 1}/{project.slides.length}
           </span>
           <Button
             variant="ghost"
@@ -305,6 +321,39 @@ export function CodeEditor({
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+        </div>
+
+        {/* Centered slide name on the editor header bar */}
+        <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center px-24">
+          {editingName ? (
+            <input
+              className="pointer-events-auto h-7 max-w-[14rem] truncate rounded-md border border-input bg-background px-2 text-center text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
+              value={nameDraft}
+              autoFocus
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={commitName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitName();
+                if (e.key === "Escape") setEditingName(false);
+              }}
+            />
+          ) : (
+            <button
+              type="button"
+              className="pointer-events-auto max-w-[14rem] truncate rounded px-2 py-0.5 text-center text-xs font-medium text-foreground/90 hover:bg-muted/60"
+              title="Click to rename slide"
+              onClick={() => {
+                setNameDraft(displayName);
+                setEditingName(true);
+              }}
+              onDoubleClick={() => {
+                setNameDraft(displayName);
+                setEditingName(true);
+              }}
+            >
+              {displayName}
+            </button>
+          )}
         </div>
 
         <div className="flex min-w-0 items-center gap-1">

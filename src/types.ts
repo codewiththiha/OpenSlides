@@ -6,6 +6,8 @@
 
 export type FontSize = 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
 
+export type CodeAlign = "left" | "center";
+
 export const SUPPORTED_LANGUAGES = [
   { value: "typescript", label: "TypeScript" },
   { value: "javascript", label: "JavaScript" },
@@ -72,6 +74,8 @@ export interface Slide {
   transitionDuration: number;
   stagger: number;
   orderIndex?: number;
+  /** User-facing title; empty falls back to "Slide N" in UI. */
+  name?: string;
 }
 
 export interface ProjectSettings {
@@ -86,6 +90,12 @@ export interface ProjectSettings {
   currentSlideId: string | null;
   /** Project-wide language (source of truth). */
   language: string;
+  /**
+   * Position of the code *block* on the stage.
+   * - left: block grows from the left (default)
+   * - center: whole block is centered like CodeSlides (not text-align)
+   */
+  codeAlign: CodeAlign;
 }
 
 export interface Project {
@@ -105,6 +115,11 @@ export interface ProjectSummary {
   slideCount: number;
   createdAt: number;
   updatedAt: number;
+}
+
+export function slideDisplayName(slide: Slide, index: number): string {
+  const n = slide.name?.trim();
+  return n || `Slide ${index + 1}`;
 }
 
 export function themeBackground(theme: string): string {

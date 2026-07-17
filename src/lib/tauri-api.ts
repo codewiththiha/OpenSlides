@@ -9,6 +9,7 @@ export type SlideSettingsPatch = Partial<{
   duration: number;
   transitionDuration: number;
   stagger: number;
+  name: string;
 }>;
 
 export type SettingsPatch = Partial<ProjectSettings>;
@@ -41,11 +42,12 @@ export const api = {
   updateProjectTheme: (projectId: string, theme: string) =>
     call<Project>("update_project_theme", { projectId, theme }),
 
-  createSlide: (projectId: string, opts?: { code?: string }) =>
+  createSlide: (projectId: string, opts?: { code?: string; name?: string }) =>
     call<Slide>("create_slide", {
       payload: {
         projectId,
         code: opts?.code,
+        name: opts?.name,
       },
     }),
 

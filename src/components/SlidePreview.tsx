@@ -1,5 +1,6 @@
 /**
  * Live slide preview using shared Shiki singleton + magic-move.
+ * codeAlign (project-wide): left | center — centers the code *block*, not text-align.
  */
 import { useEffect, useState } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
@@ -62,6 +63,10 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
   const isDarkBg = !LIGHT_THEMES.has(theme);
   const canUseShiki =
     highlighter && highlighter.getLoadedLanguages().includes(language);
+  const codeAlign = settings.codeAlign === "center" ? "center" : "left";
+  const centerBlock = codeAlign === "center";
+
+  const stagePad = isPresenting ? "p-16 md:p-24" : "p-8 md:p-12";
 
   if (language === "merustmar" && !canUseShiki) {
     const html = highlightMerustmarCode(code, isDarkBg);
@@ -72,13 +77,14 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
       >
         <div
           className={cn(
-            "relative z-10 flex w-full items-center justify-center",
-            isPresenting ? "p-24" : "p-10",
+            "relative z-10 flex h-full w-full",
+            stagePad,
+            centerBlock ? "items-center justify-center" : "items-center justify-start",
           )}
         >
           <div
+            className={cn(centerBlock ? "w-max max-w-full" : "w-full")}
             style={{
-              width: "100%",
               lineHeight: settings.lineHeight.toString(),
               fontSize: isPresenting
                 ? `${(settings.fontSize * 1.15).toFixed(1)}px`
@@ -86,7 +92,7 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
             }}
           >
             <pre
-              className="font-mono font-medium tracking-wide"
+              className="font-mono font-medium tracking-wide text-left"
               style={{ backgroundColor: "transparent", margin: 0, whiteSpace: "pre" }}
               dangerouslySetInnerHTML={{ __html: html || "&nbsp;" }}
             />
@@ -111,8 +117,9 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
     >
       <div
         className={cn(
-          "relative z-10 flex w-full items-center justify-center",
-          isPresenting ? "p-24" : "p-10",
+          "relative z-10 flex h-full w-full",
+          stagePad,
+          centerBlock ? "items-center justify-center" : "items-center justify-start",
         )}
       >
         <style
@@ -126,14 +133,15 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
             display: block !important;
             line-height: var(--line-height) !important;
             font-size: var(--font-size) !important;
+            text-align: left !important;
           }
         `,
           }}
         />
         <div
+          className={cn(centerBlock ? "w-max max-w-full" : "w-full")}
           style={
             {
-              width: "100%",
               "--line-height": settings.lineHeight.toString(),
               "--font-size": isPresenting
                 ? `${(settings.fontSize * 1.15).toFixed(1)}px`
@@ -142,9 +150,8 @@ export function SlidePreview({ project, isPresenting = false }: SlidePreviewProp
           }
         >
           {/*
-            Keep a stable key across slide switches so ShikiMagicMove can morph
-            from previous code → next code (the product’s main animation).
-            Only remount when theme / line-numbers / font / language change.
+            Stable key across slide switches so ShikiMagicMove morphs code.
+            Remount only when theme / line-numbers / font / language change.
           */}
           <ShikiMagicMove
             key={`${theme}-${settings.showLineNumbers}-${settings.fontSize}-${language}`}

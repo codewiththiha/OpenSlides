@@ -1,13 +1,8 @@
 /**
  * Horizontal slide strip with smooth drag-and-drop reorder.
- *
- * Performance notes:
- * - DragOverlay (portal) so the list itself only dims the source item
- * - CSS.Translate instead of full Transform matrix for cheaper compositing
- * - Optimistic local order so UI snaps instantly; SQLite reorder is async
- * - Labels truncate with ellipsis when the strip is short
+ * Slide titles: double-click label or right-click → Rename.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -29,10 +24,17 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import type { Project, Slide } from "@/types";
+import { slideDisplayName, type Project, type Slide } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
 import { toast } from "sonner";
 import {
@@ -40,6 +42,7 @@ import {
   useDeleteSlide,
   useReorderSlides,
   useRestoreSlide,
+  useUpdateSlideSettings,
 } from "@/hooks/useProjectQueries";
 
 const ITEM_WIDTH = 152;
@@ -64,6 +67,7 @@ function SlideCard({
   isOverlay = false,
   isActive = false,
   onRemove,
+  onRename,
   dragHandleProps,
   setNodeRef,
   style,
@@ -73,6 +77,7 @@ function SlideCard({
   isOverlay?: boolean;
   isActive?: boolean;
   onRemove?: (id: string) => void;
+  onRename?: (id: string, current: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   setNodeRef?: (node: HTMLElement | null) => void;
   style?: React.CSSProperties;
@@ -81,12 +86,19 @@ function SlideCard({
   const preview =
     (localCode[slide.id] ?? slide.code).split("\n")[0]?.slice(0, 28) || "Empty";
   const selected = currentSlideId === slide.id;
+  const title = slideDisplayName(slide, index);
 
   return (
     <div
       ref={setNodeRef}
       style={{ width: ITEM_WIDTH, ...style }}
       onClick={() => !isOverlay && setCurrentSlideId(slide.id)}
+      onContextMenu={(e) => {
+        if (isOverlay || !onRename) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onRename(slide.id, title);
+      }}
       className={cn(
         "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
         "will-change-transform min-w-0",
@@ -108,21 +120,46 @@ function SlideCard({
           >
             <GripVertical className="h-3.5 w-3.5" />
           </button>
-          <span className="truncate text-xs font-medium" title={`Slide ${index + 1}`}>
-            Slide {index + 1}
-          </span>
-        </div>
-        {!isOverlay && onRemove && (
-          <button
-            type="button"
-            className="shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-            onClick={(e) => {
+          <span
+            className="truncate text-xs font-medium"
+            title={`${title} — double-click or right-click to rename`}
+            onDoubleClick={(e) => {
+              if (!onRename) return;
               e.stopPropagation();
-              onRemove(slide.id);
+              onRename(slide.id, title);
             }}
           >
-            <Trash2 className="h-3 w-3" />
-          </button>
+            {title}
+          </span>
+        </div>
+        {!isOverlay && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            {onRename && (
+              <button
+                type="button"
+                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+                title="Rename slide"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRename(slide.id, title);
+                }}
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            )}
+            {onRemove && (
+              <button
+                type="button"
+                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(slide.id);
+                }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div
@@ -131,7 +168,10 @@ function SlideCard({
       >
         {preview}
       </div>
-      <div className="mt-auto truncate text-[10px] text-muted-foreground/70" title={slide.language}>
+      <div
+        className="mt-auto truncate text-[10px] text-muted-foreground/70"
+        title={slide.language}
+      >
         {slide.language}
       </div>
     </div>
@@ -142,11 +182,13 @@ function SortableSlideItem({
   slide,
   index,
   onRemove,
+  onRename,
   isDraggingId,
 }: {
   slide: Slide;
   index: number;
   onRemove: (id: string) => void;
+  onRename: (id: string, current: string) => void;
   isDraggingId: string | null;
 }) {
   const {
@@ -173,6 +215,7 @@ function SortableSlideItem({
       index={index}
       isActive={isDraggingId === slide.id}
       onRemove={onRemove}
+      onRename={onRename}
       setNodeRef={setNodeRef}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
@@ -200,6 +243,7 @@ export function BottomSlidesPanel({
   const deleteSlide = useDeleteSlide(project.id);
   const restoreSlide = useRestoreSlide(project.id);
   const reorder = useReorderSlides(project.id);
+  const updateSettings = useUpdateSlideSettings(project.id);
 
   const [ordered, setOrdered] = useState<Slide[]>(project.slides);
   useEffect(() => {
@@ -207,6 +251,10 @@ export function BottomSlidesPanel({
   }, [project.slides]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
   const activeSlide = useMemo(
     () => ordered.find((s) => s.id === activeId) ?? null,
     [ordered, activeId],
@@ -242,12 +290,10 @@ export function BottomSlidesPanel({
 
       const previous = ordered;
       const next = arrayMove(ordered, oldIndex, newIndex);
-      // Optimistic UI
       setOrdered(next);
       reorder.mutate(
         next.map((s) => s.id),
         {
-          // Roll back strip order if SQLite / IPC rejects the reorder
           onError: () => setOrdered(previous),
         },
       );
@@ -256,6 +302,28 @@ export function BottomSlidesPanel({
   );
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
+
+  const startRename = useCallback((id: string, current: string) => {
+    setRenamingId(id);
+    setRenameValue(current);
+    requestAnimationFrame(() => renameInputRef.current?.select());
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (!renamingId) return;
+    const name = renameValue.trim() || "Untitled slide";
+    updateSettings.mutate(
+      { slideId: renamingId, payload: { name } },
+      {
+        onSuccess: () => {
+          setOrdered((items) =>
+            items.map((s) => (s.id === renamingId ? { ...s, name } : s)),
+          );
+          setRenamingId(null);
+        },
+      },
+    );
+  }, [renamingId, renameValue, updateSettings]);
 
   const handleRemove = useCallback(
     (id: string) => {
@@ -272,7 +340,7 @@ export function BottomSlidesPanel({
             setCurrentSlideId(fallback);
           }
           toast.message("Slide deleted", {
-            description: `Slide ${index + 1} removed`,
+            description: slideDisplayName(snapshot, index),
             action: {
               label: "Undo",
               onClick: () => {
@@ -286,18 +354,13 @@ export function BottomSlidesPanel({
         },
       });
     },
-    [
-      ordered,
-      deleteSlide,
-      restoreSlide,
-      currentSlideId,
-      setCurrentSlideId,
-    ],
+    [ordered, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
   );
 
   const handleAdd = () => {
+    const nextNum = ordered.length + 1;
     createSlide.mutate(
-      {},
+      { name: `Slide ${nextNum}` },
       {
         onSuccess: (slide) => setCurrentSlideId(slide.id),
       },
@@ -353,6 +416,27 @@ export function BottomSlidesPanel({
         </div>
       </div>
 
+      {renamingId && (
+        <div
+          className="flex items-center gap-2 border-b px-3 py-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="shrink-0 text-[11px] text-muted-foreground">Rename</span>
+          <input
+            ref={renameInputRef}
+            className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitRename();
+              if (e.key === "Escape") setRenamingId(null);
+            }}
+            onBlur={() => commitRename()}
+            autoFocus
+          />
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -371,6 +455,7 @@ export function BottomSlidesPanel({
                 slide={slide}
                 index={index}
                 onRemove={handleRemove}
+                onRename={startRename}
                 isDraggingId={activeId}
               />
             ))}

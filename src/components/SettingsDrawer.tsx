@@ -69,6 +69,41 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             </select>
           </section>
 
+          <section className="space-y-2">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              Code layout
+            </Label>
+            <p className="text-[11px] text-muted-foreground">
+              Positions the whole code block on the stage (not per-line text
+              alignment). Applies to every slide.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["left", "center"] as const).map((align) => {
+                const active = (s.codeAlign ?? "left") === align;
+                return (
+                  <button
+                    key={align}
+                    type="button"
+                    onClick={() => patch({ codeAlign: align })}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                      active
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border bg-background hover:bg-muted/50",
+                    )}
+                  >
+                    <div className="font-medium capitalize">{align}</div>
+                    <div className="mt-0.5 text-[10px] text-muted-foreground">
+                      {align === "left"
+                        ? "Block starts at the left edge"
+                        : "Block centered like CodeSlides"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Line numbers

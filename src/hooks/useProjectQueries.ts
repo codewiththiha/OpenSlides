@@ -143,7 +143,8 @@ export function useUpdateSlideSettings(projectId: string) {
 export function useCreateSlide(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (opts?: { code?: string }) => api.createSlide(projectId, opts),
+    mutationFn: (opts?: { code?: string; name?: string }) =>
+      api.createSlide(projectId, opts),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
       toast.success("Slide added");

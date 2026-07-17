@@ -63,7 +63,7 @@ async fn fetch_slides(
 ) -> Result<Vec<Slide>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, code, duration, transition_duration, stagger, order_index
+        SELECT id, code, duration, transition_duration, stagger, order_index, name
         FROM slides
         WHERE project_id = ?
         ORDER BY order_index ASC
@@ -84,6 +84,7 @@ async fn fetch_slides(
             transition_duration: r.get("transition_duration"),
             stagger: r.get("stagger"),
             order_index: r.get("order_index"),
+            name: r.try_get("name").unwrap_or_default(),
         })
         .collect())
 }
@@ -203,8 +204,8 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> Result<Pro
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration)
-        VALUES (?, ?, 0, ?, 'typescript', 750, 5, 3000)
+          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
+        VALUES (?, ?, 0, ?, 'typescript', 750, 5, 3000, 'Slide 1')
         "#,
     )
     .bind(&slide_id)
@@ -343,12 +344,16 @@ pub async fn create_slide(
             .map_err(|e| format!("Failed to get max order: {e}"))?;
 
     let order_index = max_order.0.map(|m| m + 1).unwrap_or(0);
+    let slide_name = payload
+        .name
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| format!("Slide {}", order_index + 1));
 
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration)
-        VALUES (?, ?, ?, ?, ?, 750, 5, 3000)
+          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
+        VALUES (?, ?, ?, ?, ?, 750, 5, 3000, ?)
         "#,
     )
     .bind(&slide_id)
@@ -356,6 +361,7 @@ pub async fn create_slide(
     .bind(order_index)
     .bind(&code)
     .bind(&language)
+    .bind(&slide_name)
     .execute(pool.inner())
     .await
     .map_err(|e| format!("Failed to create slide: {e}"))?;
@@ -378,6 +384,7 @@ pub async fn create_slide(
         transition_duration: 750,
         stagger: 5,
         order_index,
+        name: slide_name,
     })
 }
 
@@ -482,11 +489,17 @@ pub async fn restore_slide(
             .get::<String, _>("settings"),
     );
 
+    let restore_name = if slide.name.trim().is_empty() {
+        format!("Slide {}", order_index + 1)
+    } else {
+        slide.name.clone()
+    };
+
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
     )
     .bind(&slide.id)
@@ -497,6 +510,7 @@ pub async fn restore_slide(
     .bind(slide.transition_duration)
     .bind(slide.stagger)
     .bind(slide.duration)
+    .bind(&restore_name)
     .execute(pool.inner())
     .await
     .map_err(|e| format!("Failed to restore slide: {e}"))?;
@@ -542,7 +556,7 @@ pub async fn update_slide_settings(
 ) -> Result<Slide, String> {
     let row = sqlx::query(
         r#"
-        SELECT id, project_id, code, language, duration, transition_duration, stagger, order_index
+        SELECT id, project_id, code, language, duration, transition_duration, stagger, order_index, name
         FROM slides WHERE id = ?
         "#,
     )
@@ -557,6 +571,10 @@ pub async fn update_slide_settings(
         .transition_duration
         .unwrap_or_else(|| row.get("transition_duration"));
     let stagger = payload.stagger.unwrap_or_else(|| row.get("stagger"));
+    let name = payload
+        .name
+        .clone()
+        .unwrap_or_else(|| row.try_get("name").unwrap_or_default());
     let project_id: String = row.get("project_id");
     let code: String = row.get("code");
     let order_index: i64 = row.get("order_index");
@@ -564,13 +582,14 @@ pub async fn update_slide_settings(
     sqlx::query(
         r#"
         UPDATE slides
-        SET duration = ?, transition_duration = ?, stagger = ?
+        SET duration = ?, transition_duration = ?, stagger = ?, name = ?
         WHERE id = ?
         "#,
     )
     .bind(duration)
     .bind(transition_duration)
     .bind(stagger)
+    .bind(&name)
     .bind(&slide_id)
     .execute(pool.inner())
     .await
@@ -596,6 +615,7 @@ pub async fn update_slide_settings(
         transition_duration,
         stagger,
         order_index,
+        name,
     })
 }
 
@@ -688,6 +708,7 @@ pub async fn export_project_to_json(
         "globalStagger": project.settings.global_stagger,
         "currentSlideId": project.settings.current_slide_id,
         "language": project.settings.language,
+        "codeAlign": project.settings.code_align,
         "slides": project.slides.iter().map(|s| serde_json::json!({
             "id": s.id,
             "code": s.code,
@@ -695,6 +716,7 @@ pub async fn export_project_to_json(
             "duration": s.duration,
             "transitionDuration": s.transition_duration,
             "stagger": s.stagger,
+            "name": s.name,
         })).collect::<Vec<_>>(),
     });
 
@@ -767,6 +789,17 @@ pub async fn import_project_from_json(
         .unwrap_or("typescript")
         .to_string();
 
+    let code_align = value
+        .get("codeAlign")
+        .and_then(|v| v.as_str())
+        .unwrap_or("left")
+        .to_string();
+    let code_align = if code_align == "center" {
+        "center".to_string()
+    } else {
+        "left".to_string()
+    };
+
     let mut settings = ProjectSettings {
         show_line_numbers: value
             .get("showLineNumbers")
@@ -799,12 +832,13 @@ pub async fn import_project_from_json(
             .unwrap_or(5),
         current_slide_id: None,
         language: language.clone(),
+        code_align,
     };
 
     let project_id = Uuid::new_v4().to_string();
     let ts = now_ms();
 
-    let mut parsed_slides: Vec<(String, String, i64, i64, i64)> = Vec::new();
+    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String)> = Vec::new();
     for (i, s) in slides_val.iter().enumerate() {
         let id = s
             .get("id")
@@ -822,10 +856,16 @@ pub async fn import_project_from_json(
             .and_then(|v| v.as_i64())
             .unwrap_or(750);
         let stagger = s.get("stagger").and_then(|v| v.as_i64()).unwrap_or(5);
+        let sname = s
+            .get("name")
+            .and_then(|v| v.as_str())
+            .filter(|n| !n.trim().is_empty())
+            .map(|n| n.to_string())
+            .unwrap_or_else(|| format!("Slide {}", i + 1));
         if i == 0 {
             settings.current_slide_id = Some(id.clone());
         }
-        parsed_slides.push((id, code, duration, transition, stagger));
+        parsed_slides.push((id, code, duration, transition, stagger, sname));
     }
 
     // Prefer imported currentSlideId if it matches a slide we keep
@@ -859,12 +899,12 @@ pub async fn import_project_from_json(
     .await
     .map_err(|e| format!("Failed to insert project: {e}"))?;
 
-    for (i, (id, code, duration, transition, stagger)) in parsed_slides.iter().enumerate() {
+    for (i, (id, code, duration, transition, stagger, sname)) in parsed_slides.iter().enumerate() {
         sqlx::query(
             r#"
             INSERT INTO slides
-              (id, project_id, order_index, code, language, transition_duration, stagger, duration)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(id)
@@ -875,6 +915,7 @@ pub async fn import_project_from_json(
         .bind(transition)
         .bind(stagger)
         .bind(duration)
+        .bind(sname)
         .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to insert slide: {e}"))?;
