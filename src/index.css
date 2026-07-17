@@ -1,0 +1,200 @@
+@import "tailwindcss";
+@import "shiki-magic-move/dist/style.css";
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  :root {
+    --background: 222 20% 6%;
+    --foreground: 210 20% 96%;
+    --card: 222 18% 9%;
+    --card-foreground: 210 20% 96%;
+    --popover: 222 18% 10%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 14% 16%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 222 12% 14%;
+    --muted-foreground: 215 12% 58%;
+    --accent: 222 14% 18%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 12% 18%;
+    --input: 222 12% 18%;
+    --ring: 217 91% 60%;
+    --radius: 0.625rem;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 222 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 20% 10%;
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 20% 10%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 10% 42%;
+    --accent: 220 14% 94%;
+    --accent-foreground: 222 20% 10%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 217 91% 50%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}
+
+/* Resize handles */
+[data-panel-resize-handle-id] {
+  transition: background 0.15s ease;
+  position: relative;
+}
+[data-panel-group-direction="horizontal"] > [data-panel-resize-handle-id]::after {
+  content: "";
+  position: absolute;
+  inset: 0 -3px;
+}
+[data-panel-group-direction="vertical"] > [data-panel-resize-handle-id]::after {
+  content: "";
+  position: absolute;
+  inset: -3px 0;
+}
+
+/* Disabled slider affordance */
+[data-disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Sonner toasts — body uses theme card color; accent only on border + glow */
+.toast-openslides {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.toast-success-glow {
+  border-color: hsl(142 70% 45%) !important;
+  box-shadow:
+    0 0 0 1px hsl(142 70% 45% / 0.35),
+    0 0 18px hsl(142 70% 45% / 0.35),
+    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+}
+
+.toast-error-glow {
+  border-color: hsl(0 72% 55%) !important;
+  box-shadow:
+    0 0 0 1px hsl(0 72% 55% / 0.35),
+    0 0 18px hsl(0 72% 55% / 0.35),
+    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+}
+
+.toast-warning-glow {
+  border-color: hsl(38 92% 50%) !important;
+  box-shadow:
+    0 0 0 1px hsl(38 92% 50% / 0.35),
+    0 0 18px hsl(38 92% 50% / 0.3),
+    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+}
+
+.toast-info-glow {
+  border-color: hsl(217 91% 60%) !important;
+  box-shadow:
+    0 0 0 1px hsl(217 91% 60% / 0.35),
+    0 0 18px hsl(217 91% 60% / 0.3),
+    0 8px 24px hsl(0 0% 0% / 0.25) !important;
+}
+
+.light .toast-success-glow {
+  box-shadow:
+    0 0 0 1px hsl(142 70% 40% / 0.4),
+    0 0 16px hsl(142 70% 40% / 0.25),
+    0 8px 20px hsl(0 0% 0% / 0.08) !important;
+}
+.light .toast-error-glow {
+  box-shadow:
+    0 0 0 1px hsl(0 72% 50% / 0.4),
+    0 0 16px hsl(0 72% 50% / 0.22),
+    0 8px 20px hsl(0 0% 0% / 0.08) !important;
+}
+
+
+/* Shiki overrides inside editor overlay */
+.editor-highlight pre,
+.editor-highlight code {
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  white-space: pre !important;
+  word-wrap: normal !important;
+  overflow: visible !important;
+}
