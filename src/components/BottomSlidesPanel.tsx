@@ -299,16 +299,23 @@ export function BottomSlidesPanel({
 
   if (isCollapsed) {
     return (
-      <div className="flex h-full min-h-[32px] items-center justify-center bg-card/60">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 max-w-full gap-1 truncate text-xs text-muted-foreground"
-          onClick={toggleCollapse}
-        >
+      <div
+        className="flex h-full min-h-[36px] w-full cursor-pointer items-center justify-center bg-card/60 px-2 hover:bg-muted/30"
+        onClick={toggleCollapse}
+        title="Expand slides (or drag the handle above)"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggleCollapse();
+          }
+        }}
+      >
+        <span className="inline-flex max-w-full items-center gap-1.5 truncate text-xs text-muted-foreground">
           <ChevronUp className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">Slides ({ordered.length})</span>
-        </Button>
+        </span>
       </div>
     );
   }

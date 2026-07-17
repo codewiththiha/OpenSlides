@@ -54,9 +54,13 @@ const CODE_COLLAPSE_THRESHOLD = 14;
 /** Below this % of the vertical group, slides panel auto-collapses. */
 const SLIDES_COLLAPSE_THRESHOLD = 10;
 
-/** Collapsed rail size (%) — thin strip for the expand chip. */
+/**
+ * Collapsed rail size (% of group).
+ * Slides needs a larger % so the chip stays readable on short windows;
+ * content also uses min-height as a floor.
+ */
 const CODE_COLLAPSED_SIZE = 3.5;
-const SLIDES_COLLAPSED_SIZE = 4;
+const SLIDES_COLLAPSED_SIZE = 6;
 
 export function Editor() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -510,12 +514,12 @@ export function Editor() {
 
                 {!isZenMode && (
                   <>
+                    {/* Keep handle interactive when collapsed so user can drag to expand (same as slides). */}
                     <PanelResizeHandle
                       className={cn(
-                        "w-1 bg-border/60 transition-colors hover:bg-primary/50 data-[resize-handle-active]:bg-primary/60",
-                        isCodePanelCollapsed && "pointer-events-none opacity-40",
+                        "w-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-[resize-handle-active]:bg-primary/60",
+                        isCodePanelCollapsed && "w-1.5 hover:bg-primary/60",
                       )}
-                      disabled={isCodePanelCollapsed}
                     />
 
                     <Panel
@@ -523,15 +527,24 @@ export function Editor() {
                       defaultSize={
                         isCodePanelCollapsed ? CODE_COLLAPSED_SIZE : codePanelSize
                       }
-                      minSize={isCodePanelCollapsed ? CODE_COLLAPSED_SIZE : 18}
-                      maxSize={
-                        isCodePanelCollapsed ? CODE_COLLAPSED_SIZE + 1 : 70
-                      }
+                      minSize={CODE_COLLAPSED_SIZE}
+                      maxSize={70}
                       collapsible
                       collapsedSize={CODE_COLLAPSED_SIZE}
                       className="min-w-0"
                       onResize={(size) => {
                         if (codeCollapseLock.current) return;
+
+                        // Drag-open from collapsed rail
+                        if (isCodePanelCollapsed && size > CODE_COLLAPSE_THRESHOLD) {
+                          codeCollapseLock.current = true;
+                          setIsCodePanelCollapsed(false);
+                          setCodePanelSize(size);
+                          window.setTimeout(() => {
+                            codeCollapseLock.current = false;
+                          }, 150);
+                          return;
+                        }
 
                         if (!isCodePanelCollapsed && size >= CODE_COLLAPSE_THRESHOLD) {
                           setCodePanelSize(size);
@@ -554,26 +567,30 @@ export function Editor() {
                       onExpand={() => setIsCodePanelCollapsed(false)}
                     >
                       {isCodePanelCollapsed ? (
-                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-l border-border/50 bg-card/60">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-auto max-h-full flex-col gap-1.5 px-1 py-2 text-xs text-muted-foreground hover:text-foreground"
-                            onClick={expandCodePanel}
-                            title="Expand code editor"
+                        <div
+                          className="flex h-full w-full min-w-[28px] cursor-pointer flex-col items-center justify-center gap-2 border-l border-border/50 bg-card/60 hover:bg-muted/40"
+                          onClick={expandCodePanel}
+                          title="Expand code editor (or drag the handle)"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              expandCodePanel();
+                            }
+                          }}
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span
+                            className="select-none text-[11px] tracking-wide text-muted-foreground"
+                            style={{
+                              writingMode: "vertical-rl",
+                              textOrientation: "mixed",
+                            }}
                           >
-                            <ChevronLeft className="h-3.5 w-3.5" />
-                            <Code2 className="h-3.5 w-3.5" />
-                            <span
-                              className="select-none tracking-wide"
-                              style={{
-                                writingMode: "vertical-rl",
-                                textOrientation: "mixed",
-                              }}
-                            >
-                              Code
-                            </span>
-                          </Button>
+                            Code
+                          </span>
                         </div>
                       ) : (
                         <CodeEditor
@@ -590,10 +607,11 @@ export function Editor() {
 
             {!isZenMode && (
               <>
+                {/* Always interactive — drag up from collapsed to expand (same idea as code rail). */}
                 <PanelResizeHandle
                   className={cn(
                     "h-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-[resize-handle-active]:bg-primary/60",
-                    isBottomPanelCollapsed && "h-1",
+                    isBottomPanelCollapsed && "h-1.5",
                   )}
                 />
                 <Panel
@@ -603,17 +621,27 @@ export function Editor() {
                       ? SLIDES_COLLAPSED_SIZE
                       : slidesPanelSize
                   }
-                  minSize={
-                    isBottomPanelCollapsed ? SLIDES_COLLAPSED_SIZE : 12
-                  }
-                  maxSize={
-                    isBottomPanelCollapsed ? SLIDES_COLLAPSED_SIZE + 2 : 40
-                  }
+                  minSize={SLIDES_COLLAPSED_SIZE}
+                  maxSize={40}
                   collapsible
                   collapsedSize={SLIDES_COLLAPSED_SIZE}
                   className="min-h-0"
                   onResize={(size) => {
                     if (slidesCollapseLock.current) return;
+
+                    // Drag-open from collapsed strip
+                    if (
+                      isBottomPanelCollapsed &&
+                      size > SLIDES_COLLAPSE_THRESHOLD
+                    ) {
+                      slidesCollapseLock.current = true;
+                      setIsBottomPanelCollapsed(false);
+                      setSlidesPanelSize(size);
+                      window.setTimeout(() => {
+                        slidesCollapseLock.current = false;
+                      }, 150);
+                      return;
+                    }
 
                     if (
                       !isBottomPanelCollapsed &&
