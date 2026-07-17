@@ -33,6 +33,12 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { cn } from "@/lib/utils";
+import {
+  seedHistory,
+  pushHistory,
+  undoHistory,
+  redoHistory,
+} from "@/lib/code-history";
 
 interface CodeEditorProps {
   project: Project;
@@ -67,6 +73,8 @@ export function CodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
+  /** Skip history push when applying undo/redo */
+  const applyingHistory = useRef(false);
 
   const codeMutation = useUpdateSlideCode();
   const settingsMutation = useUpdateSlideSettings(project.id);
@@ -103,6 +111,12 @@ export function CodeEditor({
     500,
   );
 
+  // Seed undo stack when slide opens / code loads
+  useEffect(() => {
+    if (!slideId) return;
+    seedHistory(slideId, code);
+  }, [slideId]); // eslint-disable-line react-hooks/exhaustive-deps -- seed once per slide
+
   // Flush pending auto-save when leaving a slide or unmounting the editor
   useEffect(() => {
     return () => {
@@ -116,18 +130,112 @@ export function CodeEditor({
     };
   }, [debouncedSave]);
 
-  const handleChange = useCallback(
-    (value: string) => {
+  const applyCode = useCallback(
+    (value: string, opts?: { recordHistory?: boolean }) => {
       if (!slideId) return;
+      if (opts?.recordHistory !== false && !applyingHistory.current) {
+        pushHistory(slideId, value);
+      }
       setLocalCode(slideId, value);
       debouncedSave(slideId, value);
     },
     [slideId, setLocalCode, debouncedSave],
   );
 
+  const handleChange = useCallback(
+    (value: string) => {
+      applyCode(value, { recordHistory: true });
+    },
+    [applyCode],
+  );
+
+  const undo = useCallback(() => {
+    if (!slideId) return;
+    const prev = undoHistory(slideId);
+    if (prev === null) return;
+    applyingHistory.current = true;
+    setLocalCode(slideId, prev);
+    debouncedSave(slideId, prev);
+    applyingHistory.current = false;
+    // Restore caret near end of change is hard; keep current selection best-effort
+  }, [slideId, setLocalCode, debouncedSave]);
+
+  const redo = useCallback(() => {
+    if (!slideId) return;
+    const next = redoHistory(slideId);
+    if (next === null) return;
+    applyingHistory.current = true;
+    setLocalCode(slideId, next);
+    debouncedSave(slideId, next);
+    applyingHistory.current = false;
+  }, [slideId, setLocalCode, debouncedSave]);
+
+  // Expose undo/redo for menu events + capture-phase so we beat native handlers
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !slideId) return;
+      // Only when focus is in our editor (or nothing focused in expanded mode)
+      const t = e.target as HTMLElement | null;
+      const inEditor =
+        t === textareaRef.current ||
+        t?.closest?.("[data-openslides-editor]") != null;
+      if (!inEditor && document.activeElement !== textareaRef.current) {
+        // Still allow menu-driven undo when editor is visible & was last used
+        // Keyboard: require focus in textarea
+        if (t?.tagName === "INPUT" || t?.tagName === "TEXTAREA") {
+          if (t !== textareaRef.current) return;
+        } else if (t?.isContentEditable) {
+          return;
+        } else {
+          // Global Cmd+Z while editor mounted — apply to current slide
+        }
+      }
+
+      const key = e.key.toLowerCase();
+      // Undo: Cmd/Ctrl+Z (without Shift)
+      if (key === "z" && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        undo();
+        return;
+      }
+      // Redo: Cmd/Ctrl+Shift+Z (Mac/Win standard) or Ctrl+Y (Windows)
+      if ((key === "z" && e.shiftKey) || (key === "y" && !e.shiftKey && e.ctrlKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", onKey, true);
+    // Menu events
+    const onUndo = () => undo();
+    const onRedo = () => redo();
+    window.addEventListener("openslides:undo", onUndo);
+    window.addEventListener("openslides:redo", onRedo);
+
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("openslides:undo", onUndo);
+      window.removeEventListener("openslides:redo", onRedo);
+    };
+  }, [slideId, undo, redo]);
+
   /** Insert spaces on Tab; unindent on Shift+Tab. */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Let capture-phase window handler own undo/redo; still block native
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        return;
+      }
+
       if (e.key !== "Tab" || !slideId) return;
       e.preventDefault();
       const el = e.currentTarget;
@@ -136,7 +244,6 @@ export function CodeEditor({
       const value = el.value;
 
       if (e.shiftKey) {
-        // Unindent current line(s)
         const lineStart = value.lastIndexOf("\n", start - 1) + 1;
         const before = value.slice(0, lineStart);
         let line = value.slice(lineStart);
@@ -383,6 +490,7 @@ export function CodeEditor({
           </pre>
           <textarea
             ref={textareaRef}
+            data-openslides-editor
             value={code}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}

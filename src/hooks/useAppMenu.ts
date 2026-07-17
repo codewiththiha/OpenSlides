@@ -20,8 +20,9 @@ export function useAppMenu(handlers: Handlers) {
       "menu://command-palette",
       "menu://add-slide",
       "menu://toggle-theme",
-      "menu://about",
       "menu://shortcuts",
+      "menu://undo",
+      "menu://redo",
     ];
 
     let cancelled = false;

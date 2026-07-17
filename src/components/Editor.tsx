@@ -441,8 +441,13 @@ export function Editor() {
         if (projectId) createSlide.mutate({});
       },
       "menu://toggle-theme": () => toggleTheme(),
-      "menu://about": () => setIsShortcutsOpen(true),
       "menu://shortcuts": () => setIsShortcutsOpen(true),
+      "menu://undo": () => {
+        window.dispatchEvent(new Event("openslides:undo"));
+      },
+      "menu://redo": () => {
+        window.dispatchEvent(new Event("openslides:redo"));
+      },
     }),
     [
       createProject,

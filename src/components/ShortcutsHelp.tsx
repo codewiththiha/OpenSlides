@@ -19,6 +19,9 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
   {
     title: "Editor",
     items: [
+      { keys: ["mod", "Z"], desc: "Undo code edit" },
+      { keys: ["mod", "Shift", "Z"], desc: "Redo code edit" },
+      { keys: ["mod", "Y"], desc: "Redo (Windows / Linux)" },
       { keys: ["mod", "B"], desc: "Toggle zen mode" },
       { keys: ["←", "→"], desc: "Previous / next slide (when not typing)" },
       { keys: ["Tab"], desc: "Indent (insert 2 spaces)" },

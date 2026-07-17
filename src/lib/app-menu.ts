@@ -16,8 +16,9 @@ export type AppMenuEvent =
   | "menu://command-palette"
   | "menu://add-slide"
   | "menu://toggle-theme"
-  | "menu://about"
-  | "menu://shortcuts";
+  | "menu://shortcuts"
+  | "menu://undo"
+  | "menu://redo";
 
 async function item(
   id: AppMenuEvent,
@@ -47,12 +48,16 @@ export async function installAppMenu(): Promise<void> {
 
     if (!isMacOS()) {
       fileItems.push(await PredefinedMenuItem.new({ item: "Separator" }));
-      fileItems.push(await PredefinedMenuItem.new({ item: "Quit", text: "Quit OpenSlides" }));
+      fileItems.push(
+        await PredefinedMenuItem.new({ item: "Quit", text: "Quit OpenSlides" }),
+      );
     }
 
+    // Custom Undo/Redo so our controlled code editor history works
+    // (native Predefined Undo/Redo only affect OS text fields).
     const editItems = [
-      await PredefinedMenuItem.new({ item: "Undo" }),
-      await PredefinedMenuItem.new({ item: "Redo" }),
+      await item("menu://undo", "Undo", "CmdOrCtrl+Z"),
+      await item("menu://redo", "Redo", "CmdOrCtrl+Shift+Z"),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Cut" }),
       await PredefinedMenuItem.new({ item: "Copy" }),
@@ -75,9 +80,9 @@ export async function installAppMenu(): Promise<void> {
       await item("menu://settings", "Project Settings…", "CmdOrCtrl+,"),
     ];
 
+    // Help: only Keyboard Shortcuts (no About — same modal was confusing)
     const helpItems = [
       await item("menu://shortcuts", "Keyboard Shortcuts"),
-      await item("menu://about", "About OpenSlides"),
     ];
 
     const submenus = [
@@ -92,7 +97,7 @@ export async function installAppMenu(): Promise<void> {
       const appMenu = await Submenu.new({
         text: "OpenSlides",
         items: [
-          await item("menu://about", "About OpenSlides"),
+          await item("menu://shortcuts", "Keyboard Shortcuts"),
           await PredefinedMenuItem.new({ item: "Separator" }),
           await PredefinedMenuItem.new({ item: "Services" }),
           await PredefinedMenuItem.new({ item: "Separator" }),
