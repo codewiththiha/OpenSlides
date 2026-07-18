@@ -113,6 +113,10 @@ export function Editor() {
   const [editingSlideName, setEditingSlideName] = useState(false);
   const [slideNameDraft, setSlideNameDraft] = useState("");
 
+  // Highlight navigation state during presentation
+  const [activeHighlightIndex, setActiveHighlightIndex] = useState(-1);
+  const [isHighlightOutro, setIsHighlightOutro] = useState(false);
+
   const codePanelRef = useRef<ImperativePanelHandle>(null);
   const slidesPanelRef = useRef<ImperativePanelHandle>(null);
   const codeCollapseLock = useRef(false);
@@ -185,36 +189,104 @@ export function Editor() {
     document.documentElement.classList.toggle("light", !next);
   }, [isDarkUi, setIsDarkUi]);
 
-  const goNextSlide = useCallback(() => {
+  // Navigate forward: through highlights first, then to next slide
+  const goNext = useCallback(() => {
+    const currentSlide = slides[currentIndex];
+    const highlights = currentSlide?.highlights ?? [];
+
+    // If there are more highlights to show
+    if (activeHighlightIndex < highlights.length - 1) {
+      // If currently in outro, complete it first
+      if (isHighlightOutro) {
+        setIsHighlightOutro(false);
+      }
+      setActiveHighlightIndex((prev) => prev + 1);
+      return true;
+    }
+
+    // Otherwise go to next slide
     if (currentIndex < slides.length - 1) {
+      // Trigger outro if we have an active highlight
+      if (activeHighlightIndex >= 0) {
+        setIsHighlightOutro(true);
+        setTimeout(() => {
+          setIsHighlightOutro(false);
+          setActiveHighlightIndex(-1);
+          setCurrentSlideId(slides[currentIndex + 1].id);
+        }, 600); // Wait for outro animation
+        return true;
+      }
       setCurrentSlideId(slides[currentIndex + 1].id);
       return true;
     }
     return false;
-  }, [currentIndex, slides, setCurrentSlideId]);
+  }, [currentIndex, slides, activeHighlightIndex, isHighlightOutro, setCurrentSlideId]);
 
-  const goPrevSlide = useCallback(() => {
+  // Navigate backward: through highlights first, then to previous slide
+  const goPrev = useCallback(() => {
+    // If we have an active highlight, go back through highlights
+    if (activeHighlightIndex > 0) {
+      setActiveHighlightIndex((prev) => prev - 1);
+      return true;
+    }
+
+    // If we're on the first highlight, go back to no highlight
+    if (activeHighlightIndex === 0) {
+      setIsHighlightOutro(true);
+      setTimeout(() => {
+        setIsHighlightOutro(false);
+        setActiveHighlightIndex(-1);
+      }, 600);
+      return true;
+    }
+
+    // Otherwise go to previous slide and show its last highlight if any
     if (currentIndex > 0) {
-      setCurrentSlideId(slides[currentIndex - 1].id);
+      const prevSlide = slides[currentIndex - 1];
+      const prevHighlights = prevSlide?.highlights ?? [];
+      setCurrentSlideId(prevSlide.id);
+      if (prevHighlights.length > 0) {
+        setActiveHighlightIndex(prevHighlights.length - 1);
+      }
       return true;
     }
     return false;
-  }, [currentIndex, slides, setCurrentSlideId]);
+  }, [currentIndex, slides, activeHighlightIndex, setCurrentSlideId]);
+
+  const goNextSlide = goNext;
+  const goPrevSlide = goPrev;
+
+  // Reset highlight state when switching slides externally (not via highlight nav)
+  useEffect(() => {
+    setActiveHighlightIndex(-1);
+    setIsHighlightOutro(false);
+  }, [currentSlideId]);
 
   // Auto-play: advance after each slide's duration (ms)
   useEffect(() => {
     if (!isAutoPlaying || !project) return;
     if (slides.length === 0 || currentIndex < 0) return;
 
-    // Last slide: stop autoplay when its duration elapses
     const current = slides[currentIndex];
-    const ms = Math.max(500, current?.duration ?? 3000);
+    const highlights = current?.highlights ?? [];
 
+    // If there are highlights to cycle through
+    if (activeHighlightIndex < highlights.length - 1) {
+      const ms = Math.max(500, current?.duration ?? 3000);
+      const timer = window.setTimeout(() => {
+        setActiveHighlightIndex((prev) => prev + 1);
+      }, ms);
+      return () => window.clearTimeout(timer);
+    }
+
+    // Otherwise advance to next slide
+    const ms = Math.max(500, current?.duration ?? 3000);
     const timer = window.setTimeout(() => {
       if (currentIndex >= slides.length - 1) {
         setIsAutoPlaying(false);
         return;
       }
+      setActiveHighlightIndex(-1);
       setCurrentSlideId(slides[currentIndex + 1].id);
     }, ms);
 
@@ -224,6 +296,7 @@ export function Editor() {
     project,
     slides,
     currentIndex,
+    activeHighlightIndex,
     setCurrentSlideId,
     setIsAutoPlaying,
   ]);
@@ -384,6 +457,8 @@ export function Editor() {
       toggleShortcutsOpen,
       setIsAutoPlaying,
       toggleAutoPlaying,
+      activeHighlightIndex,
+      isHighlightOutro,
     ],
   );
 
@@ -765,7 +840,16 @@ export function Editor() {
           {/* Full-bleed stage (true fullscreen when API available) */}
           <div className="flex h-full w-full items-center justify-center p-0 sm:p-4">
             <div className="aspect-video h-full max-h-full w-full max-w-full">
-              <SlidePreview project={project} isPresenting />
+              <SlidePreview
+                project={project}
+                isPresenting
+                activeHighlightIndex={activeHighlightIndex}
+                isHighlightOutro={isHighlightOutro}
+                onHighlightOutroComplete={() => {
+                  setIsHighlightOutro(false);
+                  setActiveHighlightIndex(-1);
+                }}
+              />
             </div>
           </div>
         </div>
@@ -815,7 +899,15 @@ export function Editor() {
                 >
                   <div className="flex h-full items-center justify-center bg-muted/20 p-4 pb-5">
                     <div className="aspect-video h-full max-h-full w-full max-w-full">
-                      <SlidePreview project={project} />
+                      <SlidePreview
+                        project={project}
+                        activeHighlightIndex={activeHighlightIndex}
+                        isHighlightOutro={isHighlightOutro}
+                        onHighlightOutroComplete={() => {
+                          setIsHighlightOutro(false);
+                          setActiveHighlightIndex(-1);
+                        }}
+                      />
                     </div>
                   </div>
                 </Panel>

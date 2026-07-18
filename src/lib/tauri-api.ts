@@ -10,6 +10,7 @@ export type SlideSettingsPatch = Partial<{
   transitionDuration: number;
   stagger: number;
   name: string;
+  highlights: import("../types").Highlight[];
 }>;
 
 export type SettingsPatch = Partial<ProjectSettings>;

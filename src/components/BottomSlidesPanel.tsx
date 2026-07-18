@@ -31,6 +31,7 @@ import {
   ChevronDown,
   ChevronUp,
   Pencil,
+  Highlighter as HighlighterIcon,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -198,10 +199,23 @@ function SlideCard({
         {preview}
       </div>
       <div
-        className="mt-auto truncate text-[10px] text-muted-foreground/70"
-        title={slide.language}
+        className="mt-auto flex items-center justify-between gap-1"
       >
-        {slide.language}
+        <span
+          className="truncate text-[10px] text-muted-foreground/70"
+          title={slide.language}
+        >
+          {slide.language}
+        </span>
+        {slide.highlights && slide.highlights.length > 0 && (
+          <span
+            className="shrink-0 inline-flex items-center gap-0.5 rounded bg-primary/15 px-1 py-0.5 text-[9px] font-medium text-primary"
+            title={`${slide.highlights.length} highlight${slide.highlights.length > 1 ? "s" : ""}`}
+          >
+            <HighlighterIcon className="h-2.5 w-2.5" />
+            {slide.highlights.length}
+          </span>
+        )}
       </div>
     </div>
   );

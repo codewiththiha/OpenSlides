@@ -103,7 +103,7 @@ async fn set_version(pool: &SqlitePool, v: i64) -> Result<(), String> {
 }
 
 /// Incremental, additive migrations. Bump TARGET when adding a step.
-const TARGET_VERSION: i64 = 2;
+const TARGET_VERSION: i64 = 3;
 
 async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
     let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
@@ -236,6 +236,18 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
         }
 
         version = 2;
+        set_version(pool, version).await?;
+    }
+
+    // v3: add highlights JSON column to slides
+    if version < 3 {
+        if !column_exists(pool, "slides", "highlights").await? {
+            sqlx::query("ALTER TABLE slides ADD COLUMN highlights TEXT NOT NULL DEFAULT '[]'")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to add slides.highlights: {e}"))?;
+        }
+        version = 3;
         set_version(pool, version).await?;
     }
 

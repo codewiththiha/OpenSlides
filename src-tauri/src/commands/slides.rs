@@ -47,8 +47,8 @@ pub async fn create_slide(
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
-        VALUES (?, ?, ?, ?, ?, 750, 5, 3000, ?)
+          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
+        VALUES (?, ?, ?, ?, ?, 750, 5, 3000, ?, '[]')
         "#,
     )
     .bind(&slide_id)
@@ -80,6 +80,7 @@ pub async fn create_slide(
         stagger: 5,
         order_index,
         name: slide_name,
+        highlights: vec![],
     })
 }
 
@@ -192,11 +193,13 @@ pub async fn restore_slide(
         slide.name.clone()
     };
 
+    let highlights_json = serde_json::to_string(&slide.highlights).map_err(|e| e.to_string())?;
+
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
     )
     .bind(&slide.id)
@@ -208,6 +211,7 @@ pub async fn restore_slide(
     .bind(slide.stagger)
     .bind(slide.duration)
     .bind(&restore_name)
+    .bind(&highlights_json)
     .execute(pool.inner())
     .await
     .map_err(|e| format!("Failed to restore slide: {e}"))?;
@@ -253,7 +257,7 @@ pub async fn update_slide_settings(
 ) -> Result<Slide, String> {
     let row = sqlx::query(
         r#"
-        SELECT id, project_id, code, language, duration, transition_duration, stagger, order_index, name
+        SELECT id, project_id, code, language, duration, transition_duration, stagger, order_index, name, highlights
         FROM slides WHERE id = ?
         "#,
     )
@@ -276,10 +280,17 @@ pub async fn update_slide_settings(
     let code: String = row.get("code");
     let order_index: i64 = row.get("order_index");
 
+    // Parse existing highlights or use payload
+    let highlights_raw: String = row.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
+    let existing_highlights: Vec<crate::models::Highlight> =
+        serde_json::from_str(&highlights_raw).unwrap_or_default();
+    let highlights = payload.highlights.unwrap_or(existing_highlights);
+    let highlights_json = serde_json::to_string(&highlights).map_err(|e| e.to_string())?;
+
     sqlx::query(
         r#"
         UPDATE slides
-        SET duration = ?, transition_duration = ?, stagger = ?, name = ?
+        SET duration = ?, transition_duration = ?, stagger = ?, name = ?, highlights = ?
         WHERE id = ?
         "#,
     )
@@ -287,6 +298,7 @@ pub async fn update_slide_settings(
     .bind(transition_duration)
     .bind(stagger)
     .bind(&name)
+    .bind(&highlights_json)
     .bind(&slide_id)
     .execute(pool.inner())
     .await
@@ -313,6 +325,7 @@ pub async fn update_slide_settings(
         stagger,
         order_index,
         name,
+        highlights,
     })
 }
 

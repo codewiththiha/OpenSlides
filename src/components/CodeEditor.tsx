@@ -5,6 +5,7 @@
  * - project-wide language in settings
  * - editor line numbers (settings only)
  * - per-slide animation knobs disabled when global overrides are on
+ * - highlight mode toggle and management
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Highlighter } from "shiki";
@@ -15,6 +16,7 @@ import {
   Maximize2,
   Minimize2,
   PanelRightClose,
+  Highlighter as HighlighterIcon,
 } from "lucide-react";
 import { getHighlighter } from "@/lib/shiki-instance";
 import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
@@ -22,6 +24,7 @@ import {
   LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
   type Project,
+  type Highlight,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
 import {
@@ -39,6 +42,9 @@ import {
   undoHistory,
   redoHistory,
 } from "@/lib/code-history";
+import { HighlightContextMenu } from "./HighlightContextMenu";
+import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
+import { createDefaultHighlight } from "@/lib/highlight-utils";
 
 interface CodeEditorProps {
   project: Project;
@@ -62,6 +68,7 @@ export function CodeEditor({
     setLocalCode,
     setSaveStatus,
     editorShowLineNumbers,
+    setPreviewHighlightIndex,
   } = useUiStore();
 
   const slide =
@@ -75,6 +82,18 @@ export function CodeEditor({
   const gutterRef = useRef<HTMLDivElement>(null);
   /** Skip history push when applying undo/redo */
   const applyingHistory = useRef(false);
+
+  // Highlight mode state
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [contextMenuVisible, setContextMenuVisible] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [pendingSelection, setPendingSelection] = useState<{
+    startLine: number;
+    startChar: number;
+    endLine: number;
+    endChar: number;
+  } | null>(null);
+  const [expandedHighlightId, setExpandedHighlightId] = useState<string | null>(null);
 
   const codeMutation = useUpdateSlideCode();
   const settingsMutation = useUpdateSlideSettings(project.id);
@@ -369,6 +388,96 @@ export function CodeEditor({
     if (next) setCurrentSlideId(next.id);
   };
 
+  // Highlight CRUD operations
+  const currentHighlights = slide?.highlights ?? [];
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!highlightMode) return; // Let default context menu appear
+      e.preventDefault();
+
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start === end) return; // No selection
+
+      // Convert flat offset to line/char
+      const textBefore = code.slice(0, start);
+      const textBeforeEnd = code.slice(0, end);
+      const startLine = (textBefore.match(/\n/g) || []).length;
+      const startChar = start - (textBefore.lastIndexOf("\n") + 1);
+      const endLine = (textBeforeEnd.match(/\n/g) || []).length;
+      const endChar = end - (textBeforeEnd.lastIndexOf("\n") + 1);
+
+      setPendingSelection({ startLine, startChar, endLine, endChar });
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      setContextMenuVisible(true);
+    },
+    [highlightMode, code],
+  );
+
+  const handleAddHighlight = useCallback(() => {
+    if (!pendingSelection || !slideId) return;
+    const newHl = createDefaultHighlight(
+      pendingSelection.startLine,
+      pendingSelection.startChar,
+      pendingSelection.endLine,
+      pendingSelection.endChar,
+    );
+    const updated = [...currentHighlights, newHl];
+    settingsMutation.mutate({
+      slideId,
+      payload: { highlights: updated },
+    });
+    setPendingSelection(null);
+    setExpandedHighlightId(newHl.id);
+  }, [pendingSelection, slideId, currentHighlights, settingsMutation]);
+
+  const handleUpdateHighlight = useCallback(
+    (id: string, patch: Partial<Highlight>) => {
+      if (!slideId) return;
+      const updated = currentHighlights.map((hl) =>
+        hl.id === id ? { ...hl, ...patch } : hl,
+      );
+      settingsMutation.mutate({
+        slideId,
+        payload: { highlights: updated },
+      });
+    },
+    [slideId, currentHighlights, settingsMutation],
+  );
+
+  const handleDeleteHighlight = useCallback(
+    (id: string) => {
+      if (!slideId) return;
+      const updated = currentHighlights.filter((hl) => hl.id !== id);
+      settingsMutation.mutate({
+        slideId,
+        payload: { highlights: updated },
+      });
+      if (expandedHighlightId === id) {
+        setExpandedHighlightId(null);
+      }
+    },
+    [slideId, currentHighlights, settingsMutation, expandedHighlightId],
+  );
+
+  const handlePreviewHighlight = useCallback((index: number) => {
+    const current = useUiStore.getState().previewHighlightIndex;
+    setPreviewHighlightIndex(current === index ? -1 : index);
+  }, [setPreviewHighlightIndex]);
+
+  // Clear preview when leaving highlight mode or switching slides
+  useEffect(() => {
+    if (!highlightMode) setPreviewHighlightIndex(-1);
+  }, [highlightMode, setPreviewHighlightIndex]);
+
+  useEffect(() => {
+    setPreviewHighlightIndex(-1);
+    setExpandedHighlightId(null);
+  }, [slideId, setPreviewHighlightIndex]);
 
   if (!slide) {
     return (
@@ -430,6 +539,23 @@ export function CodeEditor({
               </option>
             ))}
           </select>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-7 w-7 shrink-0",
+              highlightMode && "bg-primary/15 text-primary",
+            )}
+            onClick={() => setHighlightMode((v) => !v)}
+            title={
+              highlightMode
+                ? "Highlight mode ON — select text and right-click to add highlights"
+                : "Toggle highlight mode"
+            }
+          >
+            <HighlighterIcon className="h-3.5 w-3.5" />
+          </Button>
 
           {onToggleExpand && (
             <Button
@@ -495,6 +621,7 @@ export function CodeEditor({
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onScroll={syncScroll}
+            onContextMenu={handleContextMenu}
             spellCheck={false}
             className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-white outline-none"
             style={{ fontSize: editorFontSize, lineHeight, tabSize: 2 }}
@@ -502,6 +629,13 @@ export function CodeEditor({
           />
         </div>
       </div>
+
+      <HighlightContextMenu
+        visible={contextMenuVisible}
+        position={contextMenuPosition}
+        onAddHighlight={handleAddHighlight}
+        onClose={() => setContextMenuVisible(false)}
+      />
 
       <div className="grid shrink-0 grid-cols-3 gap-2 border-t px-2 py-2">
         <div className={cn("min-w-0 space-y-1", useGlobalTransition && "opacity-45")}>
@@ -573,6 +707,19 @@ export function CodeEditor({
           />
         </div>
       </div>
+
+      {highlightMode && (
+        <HighlightSettingsPanel
+          highlights={currentHighlights}
+          expandedId={expandedHighlightId}
+          onToggleExpand={(id) =>
+            setExpandedHighlightId((prev) => (prev === id ? null : id))
+          }
+          onUpdate={handleUpdateHighlight}
+          onDelete={handleDeleteHighlight}
+          onPreview={handlePreviewHighlight}
+        />
+      )}
     </div>
   );
 }

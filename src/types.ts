@@ -65,6 +65,28 @@ export const THEME_OPTIONS: { value: ThemeName; label: string }[] = [
   { value: "night-owl", label: "Night Owl" },
 ];
 
+export interface Highlight {
+  id: string;
+  /** 0-based start line */
+  startLine: number;
+  /** 0-based start character within startLine */
+  startChar: number;
+  /** 0-based end line */
+  endLine: number;
+  /** 0-based end character within endLine */
+  endChar: number;
+  /** Dim amount for non-selected text (0-100). */
+  dimAmount: number;
+  /** Whether to scale up the selected text. */
+  sizeUpEnabled: boolean;
+  /** Use custom transition durations (otherwise uses defaults). */
+  useCustomTransition: boolean;
+  /** Dim animation duration in ms. */
+  dimTransition: number;
+  /** Scale-up animation duration in ms. */
+  sizeUpTransition: number;
+}
+
 export interface Slide {
   id: string;
   code: string;
@@ -76,6 +98,8 @@ export interface Slide {
   orderIndex?: number;
   /** User-facing title; empty falls back to "Slide N" in UI. */
   name?: string;
+  /** Highlight effects (sub-slide focus indicators). */
+  highlights: Highlight[];
 }
 
 export interface ProjectSettings {

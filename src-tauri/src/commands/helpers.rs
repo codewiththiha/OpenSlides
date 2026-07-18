@@ -58,7 +58,7 @@ pub async fn fetch_slides(
 ) -> Result<Vec<Slide>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, code, duration, transition_duration, stagger, order_index, name
+        SELECT id, code, duration, transition_duration, stagger, order_index, name, highlights
         FROM slides
         WHERE project_id = ?
         ORDER BY order_index ASC
@@ -71,15 +71,21 @@ pub async fn fetch_slides(
 
     Ok(rows
         .into_iter()
-        .map(|r| Slide {
-            id: r.get("id"),
-            code: r.get("code"),
-            language: language.to_string(),
-            duration: r.get("duration"),
-            transition_duration: r.get("transition_duration"),
-            stagger: r.get("stagger"),
-            order_index: r.get("order_index"),
-            name: r.try_get("name").unwrap_or_default(),
+        .map(|r| {
+            let highlights_raw: String = r.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
+            let highlights: Vec<crate::models::Highlight> =
+                serde_json::from_str(&highlights_raw).unwrap_or_default();
+            Slide {
+                id: r.get("id"),
+                code: r.get("code"),
+                language: language.to_string(),
+                duration: r.get("duration"),
+                transition_duration: r.get("transition_duration"),
+                stagger: r.get("stagger"),
+                order_index: r.get("order_index"),
+                name: r.try_get("name").unwrap_or_default(),
+                highlights,
+            }
         })
         .collect())
 }

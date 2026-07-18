@@ -3,6 +3,43 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+/// A highlight is a "sub-slide" effect that focuses on a specific text range
+/// within the slide's code, dimming everything else and optionally scaling up
+/// the selected text.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Highlight {
+    pub id: String,
+    /// 0-based start line
+    pub start_line: i64,
+    /// 0-based start character within start_line
+    pub start_char: i64,
+    /// 0-based end line
+    pub end_line: i64,
+    /// 0-based end character within end_line
+    pub end_char: i64,
+    /// Dim amount for non-selected text (0-100)
+    #[serde(default = "default_dim_amount")]
+    pub dim_amount: i64,
+    /// Whether to scale up the selected text
+    #[serde(default = "default_true")]
+    pub size_up_enabled: bool,
+    /// Whether to use custom transition durations (otherwise defaults)
+    #[serde(default)]
+    pub use_custom_transition: bool,
+    /// Dim animation duration in ms
+    #[serde(default = "default_dim_transition")]
+    pub dim_transition: i64,
+    /// Scale-up animation duration in ms
+    #[serde(default = "default_size_up_transition")]
+    pub size_up_transition: i64,
+}
+
+fn default_dim_amount() -> i64 { 75 }
+fn default_true() -> bool { true }
+fn default_dim_transition() -> i64 { 500 }
+fn default_size_up_transition() -> i64 { 600 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Slide {
@@ -19,6 +56,9 @@ pub struct Slide {
     /// User-facing slide title (defaults to "Slide N" on the frontend if empty).
     #[serde(default)]
     pub name: String,
+    /// Highlight effects attached to this slide (sub-slide focus effects).
+    #[serde(default)]
+    pub highlights: Vec<Highlight>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,6 +165,7 @@ pub struct UpdateSlideSettingsPayload {
     pub transition_duration: Option<i64>,
     pub stagger: Option<i64>,
     pub name: Option<String>,
+    pub highlights: Option<Vec<Highlight>>,
 }
 
 #[derive(Debug, Deserialize)]

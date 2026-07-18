@@ -24,6 +24,8 @@ interface UiState {
   editorShowLineNumbers: boolean;
   localCode: Record<string, string>;
   saveStatus: "idle" | "saving" | "saved" | "error";
+  /** Highlight index being previewed from the editor (-1 = none). */
+  previewHighlightIndex: number;
 
   setCurrentSlideId: (id: string | null) => void;
   setIsPresenting: (v: boolean) => void;
@@ -44,6 +46,7 @@ interface UiState {
   setLocalCode: (slideId: string, code: string) => void;
   clearLocalCode: (slideId: string) => void;
   setSaveStatus: (s: UiState["saveStatus"]) => void;
+  setPreviewHighlightIndex: (v: number) => void;
   resetEditorUi: () => void;
 }
 
@@ -68,6 +71,7 @@ export const useUiStore = create<UiState>()(
       editorShowLineNumbers: true,
       localCode: {},
       saveStatus: "idle",
+      previewHighlightIndex: -1,
 
       setCurrentSlideId: (id) => set({ currentSlideId: id }),
       setIsPresenting: (v) => set({ isPresenting: v }),
@@ -100,6 +104,7 @@ export const useUiStore = create<UiState>()(
           return { localCode: next };
         }),
       setSaveStatus: (saveStatus) => set({ saveStatus }),
+      setPreviewHighlightIndex: (v) => set({ previewHighlightIndex: v }),
       resetEditorUi: () =>
         set({
           currentSlideId: null,
@@ -110,6 +115,7 @@ export const useUiStore = create<UiState>()(
           isShortcutsOpen: false,
           localCode: {},
           saveStatus: "idle",
+          previewHighlightIndex: -1,
           // keep panel collapse prefs / sizes / theme across navigations
         }),
     }),
