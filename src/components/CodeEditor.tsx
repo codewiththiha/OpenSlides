@@ -40,13 +40,6 @@ import { cn, escapeHtml } from "@/lib/utils";
 import { api } from "@/lib/tauri-api";
 import { renderTokenLines, selectionToRange } from "@/lib/highlight-tokens";
 import { markSavePending, clearPendingSave } from "@/lib/save-flush";
-import { isModKey } from "@/lib/keyboard";
-import {
-  seedHistory,
-  pushHistory,
-  undoHistory,
-  redoHistory,
-} from "@/lib/code-history";
 import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
 import { createDefaultHighlight } from "@/lib/highlight-utils";
@@ -88,8 +81,6 @@ export function CodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  /** Skip history push when applying undo/redo */
-  const applyingHistory = useRef(false);
 
   // ── Uncontrolled textarea, by design ────────────────────────────────
   // The textarea is intentionally NOT value-controlled. User report
@@ -172,11 +163,8 @@ export function CodeEditor({
     500,
   );
 
-  // Seed undo stack when slide opens / code loads
-  useEffect(() => {
-    if (!slideId) return;
-    seedHistory(slideId, code);
-  }, [slideId]); // eslint-disable-line react-hooks/exhaustive-deps -- seed once per slide
+  // (No undo-stack seeding: the textarea is uncontrolled, so the browser
+  // owns undo/redo natively — see the menu-delegation effect below.)
 
   // Flush pending auto-save when leaving a slide or unmounting the editor
   useEffect(() => {
@@ -192,11 +180,8 @@ export function CodeEditor({
   }, [debouncedSave]);
 
   const applyCode = useCallback(
-    (value: string, opts?: { recordHistory?: boolean }) => {
+    (value: string) => {
       if (!slideId) return;
-      if (opts?.recordHistory !== false && !applyingHistory.current) {
-        pushHistory(slideId, value);
-      }
       setLocalCode(slideId, value);
       markSavePending(slideId, value);
       debouncedSave(slideId, value);
@@ -204,113 +189,49 @@ export function CodeEditor({
     [slideId, setLocalCode, debouncedSave],
   );
 
-  const handleChange = useCallback(
-    (value: string) => {
-      applyCode(value, { recordHistory: true });
-    },
-    [applyCode],
-  );
+  const handleChange = applyCode;
 
-  const undo = useCallback(() => {
-    if (!slideId) return;
-    const prev = undoHistory(slideId);
-    if (prev === null) return;
-    applyingHistory.current = true;
-    // Write the DOM explicitly (uncontrolled textarea): value + caret.
-    const el = textareaRef.current;
-    if (el) {
-      el.value = prev;
-      el.selectionStart = el.selectionEnd = prev.length;
-    }
-    setLocalCode(slideId, prev);
-    markSavePending(slideId, prev);
-    debouncedSave(slideId, prev);
-    applyingHistory.current = false;
-    // Caret placement: end of restored content (documented best-effort).
-  }, [slideId, setLocalCode, debouncedSave]);
-
-  const redo = useCallback(() => {
-    if (!slideId) return;
-    const next = redoHistory(slideId);
-    if (next === null) return;
-    applyingHistory.current = true;
-    const el = textareaRef.current;
-    if (el) {
-      el.value = next;
-      el.selectionStart = el.selectionEnd = next.length;
-    }
-    setLocalCode(slideId, next);
-    markSavePending(slideId, next);
-    debouncedSave(slideId, next);
-    applyingHistory.current = false;
-  }, [slideId, setLocalCode, debouncedSave]);
-
-  // Expose undo/redo for menu events + capture-phase so we beat native handlers
+  // Undo/redo is OWNED BY THE BROWSER: the textarea is uncontrolled
+  // (defaultValue; see the design comment near the top of this component),
+  // so the native undo stack works — including word-level granularity and
+  // IME composition groups the old custom snapshot stack ("Native textarea
+  // undo breaks under React controlled values" — stale rationale) never
+  // had. Keyboard shortcuts need NO handlers: Cmd+Z / Shift+Cmd+Z (macOS)
+  // and Ctrl+Z / Ctrl+Y (Windows) are native in focused textareas. A slide
+  // switch writes `.value` imperatively, which resets the native undo
+  // history — this is a feature: undo can never bleed across slides.
+  //
+  // The only bridge still required is the native app MENU: it emits custom
+  // "menu://undo" events (Editor.tsx → window "openslides:undo"), not
+  // PredefinedMenuItem, so we delegate to the SAME native machinery via
+  // execCommand. Per platform convention, Undo acts on the focused
+  // (first-responder) editable region — two editors can be mounted
+  // (expanded overlay + rail panel), so we only act when THIS textarea has
+  // focus. execCommand() fires the textarea's `input` event, so onChange →
+  // store → auto-save stay in sync. Guarded for jsdom (no execCommand).
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const mod = isModKey(e);
-      if (!mod || !slideId) return;
-      // Only when focus is in our editor (or nothing focused in expanded mode)
-      const t = e.target as HTMLElement | null;
-      const inEditor =
-        t === textareaRef.current ||
-        t?.closest?.("[data-openslides-editor]") != null;
-      if (!inEditor && document.activeElement !== textareaRef.current) {
-        // Still allow menu-driven undo when editor is visible & was last used
-        // Keyboard: require focus in textarea
-        if (t?.tagName === "INPUT" || t?.tagName === "TEXTAREA") {
-          if (t !== textareaRef.current) return;
-        } else if (t?.isContentEditable) {
-          return;
-        } else {
-          // Global Cmd+Z while editor mounted — apply to current slide
-        }
-      }
-
-      const key = e.key.toLowerCase();
-      // Undo: Cmd/Ctrl+Z (without Shift)
-      if (key === "z" && !e.shiftKey && !e.altKey) {
-        e.preventDefault();
-        e.stopPropagation();
-        undo();
-        return;
-      }
-      // Redo: Cmd/Ctrl+Shift+Z (Mac/Win standard) or Ctrl+Y (Windows)
-      if ((key === "z" && e.shiftKey) || (key === "y" && !e.shiftKey && e.ctrlKey)) {
-        e.preventDefault();
-        e.stopPropagation();
-        redo();
+    const exec = (cmd: "undo" | "redo") => {
+      const el = textareaRef.current;
+      if (!el || document.activeElement !== el) return;
+      if (typeof document.execCommand === "function") {
+        document.execCommand(cmd);
       }
     };
-
-    window.addEventListener("keydown", onKey, true);
-    // Menu events
-    const onUndo = () => undo();
-    const onRedo = () => redo();
+    const onUndo = () => exec("undo");
+    const onRedo = () => exec("redo");
     window.addEventListener("openslides:undo", onUndo);
     window.addEventListener("openslides:redo", onRedo);
-
     return () => {
-      window.removeEventListener("keydown", onKey, true);
       window.removeEventListener("openslides:undo", onUndo);
       window.removeEventListener("openslides:redo", onRedo);
     };
-  }, [slideId, undo, redo]);
+  }, []);
 
   /** Insert spaces on Tab; unindent on Shift+Tab. */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Let capture-phase window handler own undo/redo; still block native
-      const mod = isModKey(e);
-      if (mod && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        return;
-      }
-      if (mod && e.key.toLowerCase() === "y") {
-        e.preventDefault();
-        return;
-      }
-
+      // Undo/redo (Cmd/Ctrl+Z etc.) must NOT be intercepted here — native
+      // textarea undo owns those keys (see the menu-delegation comment).
       if (e.key !== "Tab" || !slideId) return;
       e.preventDefault();
       const el = e.currentTarget;

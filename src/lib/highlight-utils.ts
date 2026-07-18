@@ -173,11 +173,25 @@ function rectForCharRange(
 /**
  * Measure character width in a given container by creating a test element.
  */
-function measureCharWidth(
+/**
+ * Horizontal probe for the monospace character width. Font metrics are
+ * stable per (fontFamily, fontSize) for the whole app session — theme or
+ * font-size changes naturally produce a different cache key — so the DOM
+ * probe runs once per metric instead of once per measure call (previously
+ * a node was created, laid out and removed on EVERY highlight measure).
+ */
+const charWidthCache = new Map<string, number>();
+
+/** Exported for the cache regression test (tests/highlight-utils-cache). */
+export function measureCharWidth(
   container: HTMLElement,
   fontSize: number,
   fontFamily: string,
 ): number {
+  const key = `${fontSize}|${fontFamily}`;
+  const cached = charWidthCache.get(key);
+  if (cached !== undefined) return cached;
+
   const test = document.createElement("span");
   test.style.position = "absolute";
   test.style.visibility = "hidden";
@@ -189,6 +203,7 @@ function measureCharWidth(
   container.appendChild(test);
   const width = test.getBoundingClientRect().width / 10;
   container.removeChild(test);
+  charWidthCache.set(key, width);
   return width;
 }
 

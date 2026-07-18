@@ -37,7 +37,6 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { slideDisplayName, type Project, type Slide } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
-import { clearHistory } from "@/lib/code-history";
 import { notify } from "@/lib/toast";
 import {
   useCreateSlide,
@@ -429,9 +428,8 @@ export function BottomSlidesPanel({
 
       deleteSlide.mutate(id, {
         onSuccess: (proj) => {
-          // Free the per-slide undo stack — restore (Undo) intentionally
-          // starts a fresh history for the revived slide id.
-          clearHistory(id);
+          // (Native textarea undo needs no cleanup here: the undo history
+          // lives on the DOM node, and a remounted slide gets a fresh node.)
           if (currentSlideId === id) {
             const fallback =
               proj.settings.currentSlideId ?? proj.slides[0]?.id ?? null;

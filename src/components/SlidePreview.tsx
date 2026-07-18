@@ -8,7 +8,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
-import { useShallow } from "zustand/react/shallow";
 import { getHighlighter } from "@/lib/shiki-instance";
 import { api } from "@/lib/tauri-api";
 import {
@@ -42,11 +41,14 @@ export function SlidePreview({
   activeHighlightIndex = -1,
   onHighlightExitComplete,
 }: SlidePreviewProps) {
-  const { currentSlideId, localCode } = useUiStore(
-    useShallow((s) => ({
-      currentSlideId: s.currentSlideId,
-      localCode: s.localCode,
-    })),
+  // Fine-grained selectors: subscribing to the whole `localCode` record
+  // re-rendered the preview on EVERY keystroke — even for edits belonging
+  // to a different slide. Select primitives only.
+  const currentSlideId = useUiStore((s) => s.currentSlideId);
+  const slide =
+    project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
+  const code = useUiStore((s) =>
+    slide ? (s.localCode[slide.id] ?? slide.code) : "",
   );
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,12 +64,8 @@ export function SlidePreview({
     };
   }, []);
 
-  const slide =
-    project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
-
-  /* These feed hooks below, so they must be computed before the early
+  /* `code` feeds hooks below, so it must be selected before the early
      `!slide` return (code is "" then — that branch never renders anyway). */
-  const code = slide ? (localCode[slide.id] ?? slide.code) : "";
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
   const isDarkBg = !LIGHT_THEMES.has(theme);
