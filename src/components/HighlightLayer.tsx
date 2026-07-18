@@ -54,8 +54,8 @@ interface HighlightLayerProps {
   onExitComplete?: () => void;
 }
 
-/** Default scale-up factor for highlighted text */
-const SCALE_FACTOR = 1.25;
+/** Adjust-clamped fallback for the scale-up amount (percent → factor). */
+const DEFAULT_SIZE_UP_AMOUNT = 125;
 /** Default intro/outro durations (match backend defaults) */
 const DEFAULT_DIM_MS = 500;
 const DEFAULT_SIZE_MS = 600;
@@ -169,7 +169,12 @@ export function HighlightLayer({
       ? highlight.sizeUpTransition
       : DEFAULT_SIZE_MS) / 1000;
   const dimAmount = (highlight?.dimAmount ?? 75) / 100;
-  const scaleTarget = highlight?.sizeUpEnabled ? SCALE_FACTOR : 1;
+  const sizeUpAmount = highlight?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT;
+  // 100% = no visual scale (same as size-up off); up to 300% pop.
+  const scaleTarget =
+    highlight?.sizeUpEnabled && sizeUpAmount > 100
+      ? Math.min(Math.max(sizeUpAmount, 100), 300) / 100
+      : 1;
   const bg = themeBackground(theme);
   // The eraser must match the *dimmed* card (bg + black overlay), not the
   // raw slide bg — otherwise it shows as an obvious bright rectangle.

@@ -79,6 +79,8 @@ export interface Highlight {
   dimAmount: number;
   /** Whether to scale up the selected text. */
   sizeUpEnabled: boolean;
+  /** Scale-up amount in percent (100 = unchanged, 125 = default pop). */
+  sizeUpAmount: number;
   /** Use custom transition durations (otherwise uses defaults). */
   useCustomTransition: boolean;
   /** Dim animation duration in ms. */

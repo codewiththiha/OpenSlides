@@ -193,6 +193,24 @@ export function HighlightSettingsPanel({
                       />
                     </div>
 
+                    {/* Size up amount (only when size-up is on) */}
+                    {hl.sizeUpEnabled && (
+                      <div className="space-y-1">
+                        <Label className="text-[9px] text-muted-foreground">
+                          Size Up Amount ({hl.sizeUpAmount ?? 125}%)
+                        </Label>
+                        <Slider
+                          min={105}
+                          max={250}
+                          step={5}
+                          value={[hl.sizeUpAmount ?? 125]}
+                          onValueChange={([v]) =>
+                            onUpdate(hl.id, { sizeUpAmount: v })
+                          }
+                        />
+                      </div>
+                    )}
+
                     {/* Custom transition toggle */}
                     <div className="flex items-center justify-between">
                       <Label className="text-[9px] text-muted-foreground">

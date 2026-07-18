@@ -38,6 +38,7 @@ export function createDefaultHighlight(
     endChar,
     dimAmount: 75,
     sizeUpEnabled: true,
+    sizeUpAmount: 125,
     useCustomTransition: false,
     dimTransition: 500,
     sizeUpTransition: 600,

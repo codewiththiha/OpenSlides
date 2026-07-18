@@ -24,6 +24,9 @@ pub struct Highlight {
     /// Whether to scale up the selected text
     #[serde(default = "default_true")]
     pub size_up_enabled: bool,
+    /// Scale-up amount in percent (100 = unchanged, 125 = default pop)
+    #[serde(default = "default_size_up_amount")]
+    pub size_up_amount: i64,
     /// Whether to use custom transition durations (otherwise defaults)
     #[serde(default)]
     pub use_custom_transition: bool,
@@ -37,6 +40,7 @@ pub struct Highlight {
 
 fn default_dim_amount() -> i64 { 75 }
 fn default_true() -> bool { true }
+fn default_size_up_amount() -> i64 { 125 }
 fn default_dim_transition() -> i64 { 500 }
 fn default_size_up_transition() -> i64 { 600 }
 
