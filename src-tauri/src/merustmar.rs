@@ -205,6 +205,9 @@ fn try_match(
 }
 
 /// JS `esc()`: escapes `&`, `<`, `>`, `"` only.
+/// HTML compose path — retained for the byte-exact parity tests only
+/// (production renders from tokens in the frontend).
+#[cfg(test)]
 fn esc(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -220,6 +223,8 @@ fn decode(units: &[u16]) -> String {
 
 /// Render one line of tokens to `<span style="color:…">…</span>` HTML
 /// (escaping at render time — token content is stored raw).
+/// Parity-test-only: the production IPC payload is the raw token list.
+#[cfg(test)]
 fn render_line_tokens(tokens: &[MerustmarToken]) -> String {
     tokens.iter().fold(String::new(), |mut out, t| {
         out.push_str(&format!(
@@ -459,6 +464,9 @@ pub fn merustmar_tokens(code: &str, is_dark: bool) -> Vec<Vec<MerustmarToken>> {
 
 /// Port of the frozen JS `highlightMerustmarCode`:
 /// `<span class="line">…</span>` per line, joined by `\n`.
+/// Parity-test-only anchor against the frozen JS fixtures; production
+/// consumes `merustmar_tokens` and renders client-side.
+#[cfg(test)]
 pub fn highlight_merustmar_code(code: &str, is_dark: bool) -> String {
     merustmar_tokens(code, is_dark)
         .iter()
