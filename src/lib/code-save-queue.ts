@@ -61,3 +61,8 @@ export function enqueueCodeSave(
 export function pendingSaveChains(): number {
   return tails.size;
 }
+
+/** Test introspection only: which slides still have tracked tails. */
+export function pendingSaveChainKeys(): string[] {
+  return [...tails.keys()];
+}

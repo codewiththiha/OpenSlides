@@ -24,8 +24,6 @@ import { build } from "esbuild";
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(repo, ".cache-tests");
 mkdirSync(outDir, { recursive: true });
-const out = join(outDir, "editor-save-race.test.mjs");
-
 const mockPlugin = {
   name: "mock-tauri-ipc",
   setup(b) {
@@ -35,12 +33,19 @@ const mockPlugin = {
     b.onResolve({ filter: /(^|\/)toast$/ }, () => ({
       path: join(repo, "tests", "mocks", "toast.mock.mts"),
     }));
+    b.onResolve({ filter: /(^|\/)shiki-instance$/ }, () => ({
+      path: join(repo, "tests", "mocks", "shiki-instance.mock.mts"),
+    }));
   },
 };
 
 await build({
-  entryPoints: [join(repo, "tests", "editor-save-race.test.mts")],
-  outfile: out,
+  entryPoints: [
+    join(repo, "tests", "editor-save-race.test.mts"),
+    join(repo, "tests", "codeeditor-typing.test.mts"),
+  ],
+  outdir: outDir,
+  outExtension: { ".js": ".mjs" },
   bundle: true,
   format: "esm",
   platform: "node",
@@ -54,6 +59,13 @@ await build({
 
 // --test-force-exit: react-dom's scheduler holds a jsdom MessageChannel
 // whose ports otherwise keep the event loop alive after the last test.
-execFileSync(process.execPath, ["--test", "--test-force-exit", out], {
-  stdio: "inherit",
-});
+execFileSync(
+  process.execPath,
+  [
+    "--test",
+    "--test-force-exit",
+    join(outDir, "editor-save-race.test.mjs"),
+    join(outDir, "codeeditor-typing.test.mjs"),
+  ],
+  { stdio: "inherit" },
+);

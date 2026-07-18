@@ -16,12 +16,32 @@ g.localStorage = dom.window.localStorage;
 g.HTMLElement = dom.window.HTMLElement;
 g.HTMLTextAreaElement = dom.window.HTMLTextAreaElement;
 g.HTMLInputElement = dom.window.HTMLInputElement;
+g.HTMLFormElement = dom.window.HTMLFormElement;
+g.HTMLSelectElement = dom.window.HTMLSelectElement;
+g.HTMLButtonElement = dom.window.HTMLButtonElement;
+g.HTMLDivElement = dom.window.HTMLDivElement;
+g.HTMLSpanElement = dom.window.HTMLSpanElement;
+g.HTMLAnchorElement = dom.window.HTMLAnchorElement;
+g.HTMLLabelElement = dom.window.HTMLLabelElement;
 g.Element = dom.window.Element;
 g.Node = dom.window.Node;
 g.Event = dom.window.Event;
 g.KeyboardEvent = dom.window.KeyboardEvent;
 g.MouseEvent = dom.window.MouseEvent;
 g.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+g.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+g.DOMRect = class DOMRect {
+  constructor(
+    public x = 0,
+    public y = 0,
+    public width = 0,
+    public height = 0,
+  ) {}
+};
 g.requestAnimationFrame = (cb: FrameRequestCallback) =>
   setTimeout(() => cb(Date.now()), 0);
 g.cancelAnimationFrame = clearTimeout;

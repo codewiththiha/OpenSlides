@@ -91,6 +91,40 @@ export function CodeEditor({
   /** Skip history push when applying undo/redo */
   const applyingHistory = useRef(false);
 
+  // ── Uncontrolled textarea, by design ────────────────────────────────
+  // The textarea is intentionally NOT value-controlled. User report
+  // (WKWebView/macOS): mid-line edit → re-render → caret teleports to the
+  // end of the code. Any commit in which React (re)assigns `.value` can
+  // slam the caret per the value-setter spec, and the transparent-textarea-
+  // over-highlight overlay makes every keystroke produce several re-renders
+  // (store echo, overlay re-highlight, save-status chip, cache stamps).
+  // Rather than prove every write benign, we make writes structurally
+  // impossible while typing: the DOM node is the source of truth during
+  // editing, and we only push text INTO it on external transitions —
+  // mount, slide switch, undo/redo. The UI-facing `code` (preview, overlay,
+  // line numbers, highlight slicing) still derives from the store.
+  //
+  // External code writers to an OPEN slide do not exist (settings responses
+  // preserve `code`; imports/restores touch other slides), so no sync-on-
+  // project-change is needed — only slide identity transitions.
+  //
+  // Mount + slide switch are the only legal hard-sync moments during a
+  // session; the dep list is deliberately slideId-ONLY so store echoes from
+  // typing never rewrite the DOM value (and the caret with it).
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el || !slideId) return;
+    const next =
+      useUiStore.getState().localCode[slideId] ?? slide?.code ?? "";
+    if (el.value !== next) {
+      el.value = next;
+      el.selectionStart = el.selectionEnd = next.length;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- slide?.code is
+    // intentionally read from the slideId-change render only; re-running on
+    // every code edit would defeat the whole uncontrolled design above.
+  }, [slideId]);
+
   // Highlight mode state
   const [highlightMode, setHighlightMode] = useState(false);
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
@@ -182,11 +216,17 @@ export function CodeEditor({
     const prev = undoHistory(slideId);
     if (prev === null) return;
     applyingHistory.current = true;
+    // Write the DOM explicitly (uncontrolled textarea): value + caret.
+    const el = textareaRef.current;
+    if (el) {
+      el.value = prev;
+      el.selectionStart = el.selectionEnd = prev.length;
+    }
     setLocalCode(slideId, prev);
     markSavePending(slideId, prev);
     debouncedSave(slideId, prev);
     applyingHistory.current = false;
-    // Restore caret near end of change is hard; keep current selection best-effort
+    // Caret placement: end of restored content (documented best-effort).
   }, [slideId, setLocalCode, debouncedSave]);
 
   const redo = useCallback(() => {
@@ -194,6 +234,11 @@ export function CodeEditor({
     const next = redoHistory(slideId);
     if (next === null) return;
     applyingHistory.current = true;
+    const el = textareaRef.current;
+    if (el) {
+      el.value = next;
+      el.selectionStart = el.selectionEnd = next.length;
+    }
     setLocalCode(slideId, next);
     markSavePending(slideId, next);
     debouncedSave(slideId, next);
@@ -680,7 +725,10 @@ export function CodeEditor({
           <textarea
             ref={textareaRef}
             data-openslides-editor
-            value={code}
+            // Uncontrolled (see the design comment near the top of this
+            // component): NO `value` prop. `defaultValue` seeds first mount;
+            // later writes happen only via the slideId effect / undo / redo.
+            defaultValue={code}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onScroll={syncScroll}

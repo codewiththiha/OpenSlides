@@ -31,7 +31,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "../src/store/useUiStore";
-import { enqueueCodeSave, pendingSaveChains } from "../src/lib/code-save-queue";
+import { enqueueCodeSave, pendingSaveChains, pendingSaveChainKeys } from "../src/lib/code-save-queue";
 import { useUpdateSlideCode, mergeSlidePreservingEditorCode } from "../src/hooks/queries/slides";
 import type { Project, Slide } from "../src/types";
 import {
@@ -283,6 +283,34 @@ test("queued saves: out-of-order resolution is structurally impossible; value an
   await m.unmount();
 });
 
+test("mid-line insertion keeps the caret mid-line (no async involved)", async () => {
+  resetApiMocks();
+  resetStore();
+  const m = await mount(useUpdateSlideCode, makeProject("example", "s3"), "s3");
+  const el = m.el();
+  el.focus();
+  // Caret inside the word: "exa|mple" — type "X".
+  await type(el, "exaXmple", 4);
+  assert.equal(el.value, "exaXmple");
+  assert.equal(el.selectionStart, 4, "caret stayed where the user typed");
+  await type(el, "exaXYmple", 5);
+  assert.equal(el.selectionStart, 5);
+  // Drain the two pending saves so this test's queue tail settles — the
+  // chain-map cleanup assertion in a later test counts all slides. The
+  // queue releases writes one at a time, so the second save only appears
+  // in pendingSaves AFTER the first resolves — keep pumping until both
+  // calls have flowed through and nothing is left.
+  await act(async () => {
+    let guard = 12;
+    while ((pendingSaves.length > 0 || saveCalls.length < 2) && guard-- > 0) {
+      if (pendingSaves.length) resolveSaveAt(0);
+      await Promise.resolve();
+    }
+  });
+  await new Promise((r) => setTimeout(r, 0));
+  await m.unmount();
+});
+
 test("enqueueCodeSave: strictly sequential per slide", async () => {
   const started: string[] = [];
   const gates: Array<() => void> = [];
@@ -335,8 +363,15 @@ test("enqueueCodeSave: chains are independent across slides and the map is clean
   assert.deepEqual(started.sort(), ["slide-A:1", "slide-B:1"], "no cross-slide waiting");
   for (const g of gates) g();
   await Promise.all([a, b]);
-  await new Promise((r) => setTimeout(r, 0));
-  assert.equal(pendingSaveChains(), 0, "tail entries dropped after settling");
+  // The tail entry is dropped in a Promise.finally — poll briefly instead
+  // of racing a fixed number of macrotasks.
+  let dropped = false;
+  for (let i = 0; i < 20 && !dropped; i++) {
+    await new Promise((r) => setTimeout(r, 5));
+    dropped = pendingSaveChains() === 0;
+  }
+  if (!dropped) console.log("LEAKED KEYS:", pendingSaveChainKeys());
+  assert.ok(dropped, "tail entries dropped after settling");
 });
 
 test("mergeSlidePreservingEditorCode: settings responses cannot regress code", () => {
