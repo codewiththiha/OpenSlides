@@ -37,8 +37,7 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { cn, escapeHtml } from "@/lib/utils";
-import { api } from "@/lib/tauri-api";
-import { renderTokenLines, selectionToRange } from "@/lib/highlight-tokens";
+import { selectionToRange } from "@/lib/highlight-tokens";
 import { markSavePending, clearPendingSave } from "@/lib/save-flush";
 import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
@@ -280,49 +279,73 @@ export function CodeEditor({
   // Escape-only fallback (cheap) shown while Shiki runs
   const plainEscaped = useMemo(() => escapeHtml(code), [code]);
 
-  const [highlighted, setHighlighted] = useState(plainEscaped);
-  // Monotonic token so a late async result can never overwrite a newer one.
-  const hlReqRef = useRef(0);
+  // ── Always-colored overlay — NO white flash on keystrokes ─────────
+  // The transparent textarea means the overlay IS the visible text, so on
+  // every keystroke it must be BOTH exact-content (else glyphs/caret
+  // misalign — why "keep stale colored HTML" was wrong) AND colored (else
+  // the user sees the text flash plain — the old exact-plain interim).
+  // Synchronous full-fidelity paths satisfy both:
+  //   1. Shiki: codeToHtml is synchronous once the WASM instance exists —
+  //      covers every registered language incl. merustmar — sized within a
+  //      budget so huge files never block the main thread mid-keystroke.
+  //   2. Merustmar fallback whenever (1) can't run (WASM still loading, or
+  //      an over-budget file): the FROZEN synchronous JS highlighter —
+  //      byte-exact parity with the Rust port (parity fixtures), a cheap
+  //      linear scan, so merustmar decks NEVER flash at any size.
+  // Only when neither applies does the legacy debounced state path render:
+  // non-merustmar Shiki startup (one moment, once) or over-budget
+  // non-merustmar files — exact-content plain keeps correctness there.
+  //
+  // Budget rationale: 20k chars ≈ 400 typical slide lines; Shiki textmate
+  // cost scales with chars and decks are snippets — beyond the budget a
+  // per-keystroke full re-tokenize would risk frame jank, which is worse
+  // than the interim plain text the legacy path shows.
+  const SYNC_HIGHLIGHT_CHAR_BUDGET = 20_000;
 
-  // Debounce highlight so rapid keystrokes don't block the main thread.
-  // Merustmar renders in Rust (off-thread); everything else stays on Shiki.
+  const shikiLoaded =
+    highlighter !== null &&
+    highlighter.getLoadedLanguages().includes(language);
+
+  const shikiSync = useMemo(() => {
+    if (!highlighter || !shikiLoaded) return null;
+    if (code.length > SYNC_HIGHLIGHT_CHAR_BUDGET) return null;
+    try {
+      const html = highlighter.codeToHtml(code, { lang: language, theme });
+      const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
+  }, [code, highlighter, shikiLoaded, language, theme]);
+
+  const merustmarSync = useMemo(
+    () =>
+      language === "merustmar" && shikiSync === null
+        ? highlightMerustmarCode(code, isDarkBg)
+        : null,
+    [code, language, isDarkBg, shikiSync],
+  );
+
+  const syncOverlay = shikiSync ?? merustmarSync;
+
+  // Legacy debounced pipeline — used ONLY while no sync path applies.
+  // (Synchronous body: Shiki codeToHtml or plain escape, so no late-async
+  // overwrite guard is needed here anymore.)
+  const [highlighted, setHighlighted] = useState(plainEscaped);
+
   const runHighlight = useDebouncedCallback(
-    (
-      src: string,
-      lang: string,
-      th: string,
-      dark: boolean,
-      h: Highlighter | null,
-    ) => {
-      const req = ++hlReqRef.current;
-      if (h) {
-        const loaded = h.getLoadedLanguages().includes(lang);
-        if (loaded) {
-          try {
-            const html = h.codeToHtml(src, { lang, theme: th });
-            const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-            if (match) {
-              setHighlighted(match[1]);
-              return;
-            }
-          } catch {
-            /* fall through */
+    (src: string, lang: string, th: string, h: Highlighter | null) => {
+      if (h && h.getLoadedLanguages().includes(lang)) {
+        try {
+          const html = h.codeToHtml(src, { lang, theme: th });
+          const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
+          if (match) {
+            setHighlighted(match[1]);
+            return;
           }
+        } catch {
+          /* fall through */
         }
-      }
-      if (lang === "merustmar") {
-        api
-          .merustmarTokens(src, dark)
-          .then((tokens) => {
-            if (hlReqRef.current === req) setHighlighted(renderTokenLines(tokens));
-          })
-          .catch(() => {
-            // Frozen JS fallback (kept per repo policy) if IPC fails.
-            if (hlReqRef.current === req) {
-              setHighlighted(highlightMerustmarCode(src, dark));
-            }
-          });
-        return;
       }
       setHighlighted(escapeHtml(src));
     },
@@ -330,21 +353,22 @@ export function CodeEditor({
   );
 
   useEffect(() => {
-    // Immediate cheap fallback so caret/overlay stay aligned while waiting;
-    // also invalidates any in-flight async highlight from the older code.
-    hlReqRef.current++;
+    // When the sync overlay applies the legacy state is not read at all.
+    if (syncOverlay !== null) return;
+    // Immediate cheap fallback so caret/overlay stay aligned while waiting
+    // for Shiki WASM (startup) or the budgeted debounce (huge files).
     setHighlighted(plainEscaped);
     if (!slide) return;
-    runHighlight(code, language, theme, isDarkBg, highlighter);
+    runHighlight(code, language, theme, highlighter);
   }, [
     code,
     language,
     theme,
-    isDarkBg,
     highlighter,
     slide,
     plainEscaped,
     runHighlight,
+    syncOverlay,
   ]);
 
   const syncScroll = () => {
@@ -641,7 +665,13 @@ export function CodeEditor({
             className="editor-highlight pointer-events-none absolute inset-0 overflow-auto py-4 pl-3 pr-4 font-mono"
             style={{ fontSize: editorFontSize, lineHeight }}
           >
-            <code dangerouslySetInnerHTML={{ __html: highlighted + "\n" }} />
+            <code
+              // Colored sync path wins; legacy debounced state is the
+              // startup/over-budget fallback only.
+              dangerouslySetInnerHTML={{
+                __html: (syncOverlay ?? highlighted) + "\n",
+              }}
+            />
           </pre>
           <textarea
             ref={textareaRef}

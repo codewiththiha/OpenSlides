@@ -29,11 +29,11 @@ function makeLineCode(lines: number): string {
   return Array.from({ length: lines }, (_, i) => `let v${i + 1} = ${i + 1};`).join("\n");
 }
 
-function makeProject(code: string): Project {
+function makeProject(code: string, language = "rust"): Project {
   const slide: Slide = {
     id: "s1",
     code,
-    language: "rust",
+    language,
     duration: 1000,
     transitionDuration: 300,
     stagger: 0,
@@ -53,7 +53,7 @@ function makeProject(code: string): Project {
       useGlobalStagger: false,
       globalStagger: 0,
       currentSlideId: "s1",
-      language: "rust",
+      language,
       codeBlockPosition: "left",
     } as Project["settings"],
     slides: [slide],
@@ -72,6 +72,8 @@ function EditorFromQuery() {
 interface Mounted {
   root: Root;
   el: HTMLTextAreaElement;
+  /** Highlight-overlay <code> element (the visible text surface). */
+  overlayEl: HTMLElement;
   unmount: () => Promise<void>;
 }
 
@@ -103,9 +105,12 @@ async function mountEditor(project: Project): Promise<Mounted> {
   const el = container.querySelector("textarea");
   assert.ok(el, "CodeEditor rendered its textarea");
   el.focus();
+  const overlayEl = container.querySelector(".editor-highlight code");
+  assert.ok(overlayEl, "CodeEditor rendered its highlight overlay");
   return {
     root,
     el,
+    overlayEl: overlayEl as HTMLElement,
     unmount: async () => {
       await act(async () => root.unmount());
       container.remove();
@@ -198,5 +203,60 @@ test("CodeEditor: append at end also keeps caret at end (control case)", async (
   const end = el.value.length;
   await typeAt(el, end, "\nlet extra = 1;");
   assert.equal(el.selectionStart, end + "\nlet extra = 1;".length);
+  await m.unmount();
+});
+
+test("CodeEditor: shiki path stays COLORED and exact on every keystroke (no white flash)", async () => {
+  resetApiMocks();
+  const m = await mountEditor(makeProject(makeLineCode(100)));
+  const el = m.el;
+  const pre = m.overlayEl;
+
+  // Color must be present once the highlighter has arrived (mount flush).
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "overlay is colored after mount — no plain interim for shiki decks",
+  );
+
+  const off = offsetOfLine(el.value, 3, 5);
+  await typeAt(el, off, "X");
+  assert.match(pre.innerHTML, /style="color:/, "colored immediately after keystroke 1");
+  assert.equal(
+    pre.textContent,
+    el.value + "\n",
+    "overlay content exactly matches the textarea (alignment preserved)",
+  );
+
+  await typeAt(el, off + 1, "Y");
+  assert.match(pre.innerHTML, /style="color:/, "colored immediately after keystroke 2");
+  assert.equal(pre.textContent, el.value + "\n");
+
+  await typeAt(el, off + 2, "Z");
+  assert.match(pre.innerHTML, /style="color:/, "colored immediately after keystroke 3");
+  assert.equal(pre.textContent, el.value + "\n", "still exact after a burst");
+
+  await m.unmount();
+});
+
+test("CodeEditor: merustmar deck stays COLORED via the frozen sync highlighter", async () => {
+  resetApiMocks();
+  const m = await mountEditor(makeProject(makeLineCode(50), "merustmar"));
+  const el = m.el;
+  const pre = m.overlayEl;
+
+  // The frozen JS highlighter runs synchronously in render — colored even
+  // before/without any Shiki WASM, and on every keystroke thereafter.
+  assert.match(pre.innerHTML, /style="color:/, "merustmar overlay colored at mount");
+
+  const off = offsetOfLine(el.value, 1, 3);
+  await typeAt(el, off, "A");
+  assert.match(pre.innerHTML, /style="color:/, "merustmar colored after keystroke 1");
+  assert.equal(pre.textContent, el.value + "\n", "exact content preserved");
+
+  await typeAt(el, off + 1, "B");
+  assert.match(pre.innerHTML, /style="color:/, "merustmar colored after keystroke 2");
+  assert.equal(pre.textContent, el.value + "\n");
+
   await m.unmount();
 });
