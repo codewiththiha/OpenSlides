@@ -21,7 +21,7 @@ import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
-import { extractHighlightText } from "@/lib/highlight-utils";
+import { useHighlightSnippets } from "@/hooks/queries/highlights";
 import type { Highlight } from "@/types";
 
 interface HighlightSettingsPanelProps {
@@ -49,6 +49,9 @@ export function HighlightSettingsPanel({
   onPreview,
   onMove,
 }: HighlightSettingsPanelProps) {
+  // Snippets are sliced in Rust (same parsing the overlay plans use).
+  const { data: snippets } = useHighlightSnippets(code, highlights);
+
   if (highlights.length === 0) return null;
 
   return (
@@ -65,9 +68,11 @@ export function HighlightSettingsPanel({
         {highlights.map((hl, index) => {
           const isExpanded = expandedId === hl.id;
           const isPreviewing = previewIndex === index;
+          const rawSnippet = snippets?.[index];
           const snippet =
-            extractHighlightText(code, hl).replace(/\s+/g, " ").trim() ||
-            "(empty selection)";
+            rawSnippet === undefined
+              ? "…"
+              : rawSnippet.replace(/\s+/g, " ").trim() || "(empty selection)";
           return (
             <div
               key={hl.id}

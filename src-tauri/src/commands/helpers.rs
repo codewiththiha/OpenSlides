@@ -1,7 +1,7 @@
 //! Shared helpers for command modules (DB reads, dialogs, clocks).
 
 use crate::db::DbPool;
-use crate::models::{parse_settings, Project, Slide};
+use crate::models::{parse_settings, settings_to_json, Project, ProjectSettings, Slide};
 use sqlx::Row;
 use std::sync::mpsc;
 use tauri::AppHandle;
@@ -120,6 +120,46 @@ pub async fn fetch_project(pool: &DbPool, project_id: &str) -> Result<Project, S
         created_at: row.get("created_at"),
         updated_at: row.get("updated_at"),
     })
+}
+
+/// Load + parse the settings JSON blob of a project.
+pub async fn load_settings(pool: &DbPool, project_id: &str) -> Result<ProjectSettings, String> {
+    let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
+        .bind(project_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| format!("Failed to load project settings: {e}"))?
+        .ok_or_else(|| format!("Project not found: {project_id}"))?;
+    let raw: String = row.get("settings");
+    Ok(parse_settings(&raw))
+}
+
+/// Persist settings JSON back to the project row.
+/// `touch: true` also refreshes `updated_at` (user-visible edits).
+pub async fn save_settings(
+    pool: &DbPool,
+    project_id: &str,
+    settings: &ProjectSettings,
+    touch: bool,
+) -> Result<(), String> {
+    let json = settings_to_json(settings)?;
+    if touch {
+        sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
+            .bind(json)
+            .bind(now_ms())
+            .bind(project_id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+    } else {
+        sqlx::query("UPDATE projects SET settings = ? WHERE id = ?")
+            .bind(json)
+            .bind(project_id)
+            .execute(pool)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
 
 pub async fn touch_project(pool: &DbPool, project_id: &str) -> Result<(), String> {

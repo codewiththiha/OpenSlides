@@ -74,4 +74,53 @@ export const api = {
     call<string>("export_project_to_json", { projectId }),
 
   importProjectFromJson: () => call<Project>("import_project_from_json"),
+
+  /* ---- Highlight processing (Rust-side parsing) ---- */
+
+  computeHighlightPlan: (req: {
+    code: string;
+    /** Full Shiki/Merustmar highlighted HTML of `code` ("" → plain fallback). */
+    html: string;
+    range: SelectionRange;
+    themeBg: string;
+    dimPercent: number;
+  }) => call<HighlightPlan>("compute_highlight_plan", req),
+
+  highlightSnippets: (code: string, ranges: SelectionRange[]) =>
+    call<string[]>("highlight_snippets", { code, ranges }),
+
+  selectionRange: (code: string, start: number, end: number) =>
+    call<SelectionRange>("selection_range", { code, start, end }),
 };
+
+/* ----------------------------------------------------------------------- *
+ * Highlight-processing DTOs (mirrors src-tauri/src/highlight.rs)
+ * ----------------------------------------------------------------------- */
+
+/** 0-based line/char span over the raw code (chars = JS string indices). */
+export interface SelectionRange {
+  startLine: number;
+  startChar: number;
+  endLine: number;
+  endChar: number;
+}
+
+export interface HighlightPlanLine {
+  /** 0-based index of this line in the source code. */
+  lineIndex: number;
+  /** Clamped selection bounds (UTF-16 units) inside this line. */
+  startChar: number;
+  endChar: number;
+  /** Syntax-colored, tag-balanced HTML for the clone. */
+  html: string;
+  plainText: string;
+  /** Nothing selected on this line — skip erase/clone, keep the entry. */
+  isEmpty: boolean;
+}
+
+export interface HighlightPlan {
+  lines: HighlightPlanLine[];
+  /** Dimmed-card color the eraser boxes must paint (mixed in Rust). */
+  eraserColor: string;
+  selectedText: string;
+}

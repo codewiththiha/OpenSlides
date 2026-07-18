@@ -1,10 +1,11 @@
 //! Slide-level Tauri commands.
 
-use crate::commands::helpers::{fetch_project, fetch_slides, now_ms, touch_project};
+use crate::commands::helpers::{
+    fetch_project, fetch_slides, load_settings, now_ms, save_settings, touch_project,
+};
 use crate::db::DbPool;
 use crate::models::{
-    parse_settings, settings_to_json, CreateSlidePayload, Project, Slide,
-    UpdateSlideSettingsPayload,
+    CreateSlidePayload, Project, Slide, UpdateSlideSettingsPayload,
 };
 use sqlx::Row;
 use tauri::State;
@@ -21,14 +22,7 @@ pub async fn create_slide(
         .unwrap_or_else(|| "// New Slide\n// Edit me!".to_string());
 
     // Language comes from project settings
-    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&payload.project_id)
-        .fetch_optional(pool.inner())
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("Project not found: {}", payload.project_id))?;
-    let raw: String = settings_row.get("settings");
-    let mut settings = parse_settings(&raw);
+    let mut settings = load_settings(pool.inner(), &payload.project_id).await?;
     let language = settings.language.clone();
 
     let max_order: (Option<i64>,) =
@@ -62,14 +56,7 @@ pub async fn create_slide(
     .map_err(|e| format!("Failed to create slide: {e}"))?;
 
     settings.current_slide_id = Some(slide_id.clone());
-    let json = settings_to_json(&settings)?;
-    sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
-        .bind(json)
-        .bind(now_ms())
-        .bind(&payload.project_id)
-        .execute(pool.inner())
-        .await
-        .map_err(|e| e.to_string())?;
+    save_settings(pool.inner(), &payload.project_id, &settings, true).await?;
 
     Ok(Slide {
         id: slide_id,
@@ -109,14 +96,7 @@ pub async fn delete_slide(
         .map_err(|e| format!("Failed to delete slide: {e}"))?;
 
     let remaining = {
-        let settings = parse_settings(
-            &sqlx::query("SELECT settings FROM projects WHERE id = ?")
-                .bind(&project_id)
-                .fetch_one(pool.inner())
-                .await
-                .map_err(|e| e.to_string())?
-                .get::<String, _>("settings"),
-        );
+        let settings = load_settings(pool.inner(), &project_id).await?;
         fetch_slides(pool.inner(), &project_id, &settings.language).await?
     };
 
@@ -129,25 +109,10 @@ pub async fn delete_slide(
             .map_err(|e| e.to_string())?;
     }
 
-    let raw: String = {
-        let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-            .bind(&project_id)
-            .fetch_one(pool.inner())
-            .await
-            .map_err(|e| e.to_string())?;
-        row.get("settings")
-    };
-    let mut settings = parse_settings(&raw);
+    let mut settings = load_settings(pool.inner(), &project_id).await?;
     if settings.current_slide_id.as_deref() == Some(slide_id.as_str()) {
         settings.current_slide_id = remaining.first().map(|s| s.id.clone());
-        let json = settings_to_json(&settings)?;
-        sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
-            .bind(json)
-            .bind(now_ms())
-            .bind(&project_id)
-            .execute(pool.inner())
-            .await
-            .map_err(|e| e.to_string())?;
+        save_settings(pool.inner(), &project_id, &settings, true).await?;
     } else {
         touch_project(pool.inner(), &project_id).await?;
     }
@@ -178,14 +143,7 @@ pub async fn restore_slide(
     .await
     .map_err(|e| e.to_string())?;
 
-    let settings = parse_settings(
-        &sqlx::query("SELECT settings FROM projects WHERE id = ?")
-            .bind(&project_id)
-            .fetch_one(pool.inner())
-            .await
-            .map_err(|e| e.to_string())?
-            .get::<String, _>("settings"),
-    );
+    let settings = load_settings(pool.inner(), &project_id).await?;
 
     let restore_name = if slide.name.trim().is_empty() {
         format!("Slide {}", order_index + 1)
@@ -307,14 +265,7 @@ pub async fn update_slide_settings(
     touch_project(pool.inner(), &project_id).await?;
 
     // Stamp language from project settings
-    let settings = parse_settings(
-        &sqlx::query("SELECT settings FROM projects WHERE id = ?")
-            .bind(&project_id)
-            .fetch_one(pool.inner())
-            .await
-            .map_err(|e| e.to_string())?
-            .get::<String, _>("settings"),
-    );
+    let settings = load_settings(pool.inner(), &project_id).await?;
 
     Ok(Slide {
         id: slide_id,
@@ -371,24 +322,10 @@ pub async fn set_current_slide(
     project_id: String,
     slide_id: String,
 ) -> Result<(), String> {
-    let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_optional(pool.inner())
-        .await
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
-
-    let raw: String = row.get("settings");
-    let mut settings = parse_settings(&raw);
+    let mut settings = load_settings(pool.inner(), &project_id).await?;
     settings.current_slide_id = Some(slide_id);
-    let json = settings_to_json(&settings)?;
-
-    sqlx::query("UPDATE projects SET settings = ? WHERE id = ?")
-        .bind(json)
-        .bind(&project_id)
-        .execute(pool.inner())
-        .await
-        .map_err(|e| e.to_string())?;
+    // No updated_at bump — purely a navigation record.
+    save_settings(pool.inner(), &project_id, &settings, false).await?;
 
     Ok(())
 }

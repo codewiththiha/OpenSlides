@@ -4,8 +4,14 @@
  * Layering (bottom to top):
  *   1. shiki-magic-move code (always rendered underneath, untouched)
  *   2. Dim overlay covering the whole slide card (persists across steps)
- *   3. Per-line "eraser" boxes over the selected text (slide bg color)
+ *   3. Per-line "eraser" boxes over the selected text (dimmed card color)
  *   4. Clone text (syntax-highlighted, pixel-aligned per line, scales up)
+ *
+ * Data flow per step:
+ *   useHighlightPlan (Rust: ranges + per-line clone HTML + eraser color)
+ *     → measureHighlight (JS: plan char ranges → real DOM pixel rects)
+ *     → erasers + clone positioned by rect, 1:1 with the plan lines,
+ *       so multi-line selections erase every covered line exactly.
  *
  * Animation model:
  *   - `highlight === null` → nothing rendered; AnimatePresence stays mounted
@@ -15,22 +21,16 @@
  *     clone exit while B's enter → a smooth crossfade between steps.
  *   - All durations come from the highlight itself (custom transitions or
  *     defaults), for both intro AND outro.
- *
- * Geometry is measured from real DOM ranges (see lib/highlight-utils), so it
- * stays exact with line numbers, block centering and any font metrics.
  */
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Highlighter } from "shiki";
 import type { Highlight } from "@/types";
-import { themeBackground, LIGHT_THEMES } from "@/types";
 import {
-  buildCloneLineHtmls,
   measureHighlight,
-  mixTowardBlack,
   type HighlightMeasurement,
 } from "@/lib/highlight-utils";
-import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
+import { useHighlightPlan } from "@/hooks/useHighlightPlan";
 
 interface HighlightLayerProps {
   /** The slide container element ref (the rounded div with theme bg) */
@@ -80,6 +80,10 @@ export function HighlightLayer({
   const rafRef = useRef(0);
   const settleRef = useRef(0);
 
+  // Rust-side plan: per-line char ranges + clone HTML + eraser color.
+  // Null until the plan for THIS highlight id has arrived.
+  const plan = useHighlightPlan({ highlight, code, highlighter, theme, language });
+
   // Measure against live DOM; re-run on layout-relevant changes + settle once.
   // NOTE: on a fresh mount an ancestor host ref can attach AFTER this layout
   // effect (reused-root commit ordering) — so "refs null" must retry across
@@ -103,19 +107,12 @@ export function HighlightLayer({
         ro.observe(container);
         ro.observe(codeRoot);
       }
-      if (!highlight) {
+      if (!plan) {
         setMeasurement(null);
         return;
       }
       setMeasurement(
-        measureHighlight(
-          container,
-          codeRoot,
-          highlight,
-          code,
-          fontSize,
-          lineHeight,
-        ),
+        measureHighlight(container, codeRoot, plan, fontSize, lineHeight),
       );
     };
 
@@ -128,27 +125,7 @@ export function HighlightLayer({
       window.clearTimeout(settleRef.current);
       ro?.disconnect();
     };
-  }, [containerRef, codeContainerRef, highlight, code, fontSize, lineHeight, theme]);
-
-  // Per-line selected HTML for the clone, sliced (via the shared parser in
-  // highlight-utils) from the same syntax html the slide code uses, so the
-  // clone colors match exactly. Shiki first, merustmar fallback second.
-  const cloneLineHtmls = useMemo(() => {
-    if (!highlight || !code) return [] as string[];
-
-    let html = "";
-    if (highlighter && highlighter.getLoadedLanguages().includes(language)) {
-      try {
-        html = highlighter.codeToHtml(code, { lang: language, theme });
-      } catch {
-        html = "";
-      }
-    }
-    if (!html && language === "merustmar") {
-      html = highlightMerustmarCode(code, !LIGHT_THEMES.has(theme));
-    }
-    return buildCloneLineHtmls(code, highlight, html);
-  }, [highlight, highlighter, code, language, theme]);
+  }, [containerRef, codeContainerRef, plan, fontSize, lineHeight, theme]);
 
   const dimDuration =
     (highlight?.useCustomTransition ? highlight.dimTransition : DEFAULT_DIM_MS) /
@@ -164,13 +141,9 @@ export function HighlightLayer({
     highlight?.sizeUpEnabled && sizeUpAmount > 100
       ? Math.min(Math.max(sizeUpAmount, 100), 300) / 100
       : 1;
-  const bg = themeBackground(theme);
-  // The eraser must match the *dimmed* card (bg + black overlay), not the
-  // raw slide bg — otherwise it shows as an obvious bright rectangle.
-  const eraserBg = mixTowardBlack(bg, dimAmount);
 
-  const active = Boolean(
-    highlight && measurement && measurement.lines.length > 0,
+  const hasSegments = Boolean(
+    plan && measurement && measurement.segments.length > 0,
   );
   const union = measurement?.union;
 
@@ -179,9 +152,11 @@ export function HighlightLayer({
   // AnimatePresence the inner exits never ran on unmount — which killed the
   // outro for single/last highlights before a slide change.
   const pieces: React.ReactNode[] = [];
-  if (highlight && active && union) {
+  if (highlight) {
     pieces.push(
-      /* Dim overlay — persists across highlight steps within this slide */
+      /* Dim overlay — mounted for the whole highlight session (persisting
+         across steps AND across the async plan hand-off between them, so the
+         dim never flickers out when stepping A → B). */
       <motion.div
         key="hl-dim"
         className="pointer-events-none absolute inset-0 z-20"
@@ -192,19 +167,22 @@ export function HighlightLayer({
         transition={{ duration: dimDuration, ease: EASE_DIM }}
       />,
     );
-
-    /* Per-line erasers keyed by step — crossfade between highlights */
-    measurement.lines.forEach((rect, i) => {
+  }
+  if (highlight && hasSegments && plan && union) {
+    /* Per-line erasers keyed by step — crossfade between highlights.
+       The color is the dimmed card itself (mixed in Rust), so the box is
+       invisible; only the original glyphs underneath disappear. */
+    measurement.segments.forEach((seg) => {
       pieces.push(
         <motion.div
-          key={`${highlight.id}-eraser-${i}`}
+          key={`${highlight.id}-eraser-${seg.line.lineIndex}`}
           className="pointer-events-none absolute z-20"
           style={{
-            left: rect.x,
-            top: rect.y,
-            width: rect.width,
-            height: rect.height,
-            backgroundColor: eraserBg,
+            left: seg.rect.x,
+            top: seg.rect.y,
+            width: seg.rect.width,
+            height: seg.rect.height,
+            backgroundColor: plan.eraserColor,
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -237,13 +215,13 @@ export function HighlightLayer({
           opacity: { duration: dimDuration, ease: EASE_DIM },
         }}
       >
-        {measurement.lines.map((rect, i) => (
+        {measurement.segments.map((seg) => (
           <pre
-            key={i}
+            key={seg.line.lineIndex}
             className="absolute whitespace-pre"
             style={{
-              left: rect.x - union.x,
-              top: rect.y - union.y,
+              left: seg.rect.x - union.x,
+              top: seg.rect.y - union.y,
               margin: 0,
               padding: 0,
               background: "transparent",
@@ -253,7 +231,7 @@ export function HighlightLayer({
               letterSpacing: "inherit",
             }}
             dangerouslySetInnerHTML={{
-              __html: cloneLineHtmls[i] ?? "",
+              __html: seg.line.html,
             }}
           />
         ))}

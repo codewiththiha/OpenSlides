@@ -1,5 +1,6 @@
 mod commands;
 mod db;
+mod highlight;
 mod models;
 
 use commands::*;
@@ -38,6 +39,9 @@ pub fn run() {
             set_current_slide,
             export_project_to_json,
             import_project_from_json,
+            compute_highlight_plan,
+            highlight_snippets,
+            selection_range,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

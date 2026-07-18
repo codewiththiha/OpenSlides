@@ -1,9 +1,9 @@
 //! Project-level Tauri commands.
 
-use crate::commands::helpers::{fetch_project, now_ms, DEFAULT_CODE};
+use crate::commands::helpers::{fetch_project, load_settings, now_ms, DEFAULT_CODE};
 use crate::db::DbPool;
 use crate::models::{
-    merge_settings, parse_settings, settings_to_json, Project, ProjectSettings, ProjectSummary,
+    merge_settings, settings_to_json, Project, ProjectSettings, ProjectSummary,
 };
 use serde_json::Value as JsonValue;
 use sqlx::Row;
@@ -142,16 +142,7 @@ pub async fn update_project_settings(
     project_id: String,
     settings: JsonValue,
 ) -> Result<Project, String> {
-    let existing_raw: String = {
-        let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-            .bind(&project_id)
-            .fetch_optional(pool.inner())
-            .await
-            .map_err(|e| format!("Failed to load project: {e}"))?
-            .ok_or_else(|| format!("Project not found: {project_id}"))?;
-        row.get("settings")
-    };
-    let existing = parse_settings(&existing_raw);
+    let existing = load_settings(pool.inner(), &project_id).await?;
     let merged = merge_settings(&existing, &settings)?;
 
     let settings_json = settings_to_json(&merged)?;

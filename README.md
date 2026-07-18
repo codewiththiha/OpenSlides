@@ -13,6 +13,7 @@ Migrated from the web version of [open-slides](https://github.com/codewiththiha/
 | Backend | Tauri 2 commands (Rust) | Business logic, export, dialogs |
 | Persistence | SQLite via `sqlx` | Projects + slides in app data dir |
 | Highlighting | Shiki (singleton WASM) + Magic Move | Syntax + animated transitions |
+| Highlight processing | Rust (`src-tauri/src/highlight.rs`, unit-tested) | Range decomposition, entity-aware HTML slicing, eraser color |
 
 ### Data flow
 
@@ -22,6 +23,21 @@ UI event → optimistic Zustand (localCode / currentSlideId)
         → invoke("update_slide_code", …)
         → Rust sqlx → SQLite
 ```
+
+### Highlight overlay flow
+
+```
+step change → Shiki codeToHtml (JS, singleton)
+            → invoke("compute_highlight_plan", …)  — Rust: per-line char
+              ranges + tag-balanced clone HTML + eraser color
+            → measureHighlight (JS: DOM ranges → pixel rects)
+            → dim + per-line erasers + scaled clone (framer-motion)
+```
+
+Parsing lives in Rust for correctness and speed: the overlay erases "which
+lines, which char from which char" exactly — multi-line selections, empty
+middle lines and entity-escaped code (`<`, `&`) all handled. Only the DOM
+measurement itself stays in JS, because Rust has no webview access.
 
 Persistent state **never** goes through `localStorage`. Zustand holds UI-only state (zen mode, presentation, command palette, optimistic code buffer).
 
@@ -44,6 +60,9 @@ npm run tauri dev
 
 # Production bundle
 npm run tauri build
+
+# Rust unit tests (highlight processing logic)
+cd src-tauri && cargo test
 ```
 
 Requires: Node 20+, Rust stable, platform WebView deps (see [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)).

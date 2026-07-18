@@ -13,8 +13,8 @@ import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
 import {
   LIGHT_THEMES,
   themeBackground,
+  resolveProjectLanguage,
   type Project,
-  type Slide,
 } from "@/types";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
@@ -27,15 +27,6 @@ interface SlidePreviewProps {
   activeHighlightIndex?: number;
   /** Fired when the highlight outro fully completed (safe to change slide). */
   onHighlightExitComplete?: () => void;
-}
-
-function resolveLanguage(project: Project, _slide: Slide): string {
-  return (
-    project.settings.language ||
-    project.slides[0]?.language ||
-    _slide.language ||
-    "typescript"
-  );
 }
 
 export function SlidePreview({
@@ -71,7 +62,7 @@ export function SlidePreview({
   }
 
   const code = localCode[slide.id] ?? slide.code;
-  const language = resolveLanguage(project, slide);
+  const language = resolveProjectLanguage(project);
   const theme = project.theme;
   const settings = project.settings;
   const bg = themeBackground(theme);

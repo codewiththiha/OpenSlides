@@ -148,6 +148,19 @@ export function slideDisplayName(slide: Slide, index: number): string {
   return n || `Slide ${index + 1}`;
 }
 
+/**
+ * The language used to highlight this project's code.
+ * Project settings are the source of truth; the first slide is a legacy
+ * fallback from when language was per-slide.
+ */
+export function resolveProjectLanguage(project: Project): string {
+  return (
+    project.settings.language ||
+    project.slides[0]?.language ||
+    "typescript"
+  );
+}
+
 export function themeBackground(theme: string): string {
   switch (theme) {
     case "github-light":

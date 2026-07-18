@@ -23,6 +23,7 @@ import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
 import {
   LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
+  resolveProjectLanguage,
   type Project,
   type Highlight,
 } from "@/types";
@@ -35,7 +36,8 @@ import {
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
-import { cn } from "@/lib/utils";
+import { cn, escapeHtml } from "@/lib/utils";
+import { api } from "@/lib/tauri-api";
 import {
   seedHistory,
   pushHistory,
@@ -102,10 +104,7 @@ export function CodeEditor({
 
   const useGlobalTransition = project.settings.useGlobalTransition;
   const useGlobalStagger = project.settings.useGlobalStagger;
-  const language =
-    project.settings.language ||
-    project.slides[0]?.language ||
-    "typescript";
+  const language = resolveProjectLanguage(project);
 
   useEffect(() => {
     let cancelled = false;
@@ -302,14 +301,7 @@ export function CodeEditor({
   const lineCount = useMemo(() => Math.max(1, code.split("\n").length), [code]);
 
   // Escape-only fallback (cheap) shown while Shiki runs
-  const plainEscaped = useMemo(
-    () =>
-      code
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;"),
-    [code],
-  );
+  const plainEscaped = useMemo(() => escapeHtml(code), [code]);
 
   const [highlighted, setHighlighted] = useState(plainEscaped);
 
@@ -341,12 +333,7 @@ export function CodeEditor({
         setHighlighted(highlightMerustmarCode(src, dark));
         return;
       }
-      setHighlighted(
-        src
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;"),
-      );
+      setHighlighted(escapeHtml(src));
     },
     120,
   );
@@ -404,17 +391,32 @@ export function CodeEditor({
       const end = textarea.selectionEnd;
       if (start === end) return; // No selection
 
-      // Convert flat offset to line/char
-      const textBefore = code.slice(0, start);
-      const textBeforeEnd = code.slice(0, end);
-      const startLine = (textBefore.match(/\n/g) || []).length;
-      const startChar = start - (textBefore.lastIndexOf("\n") + 1);
-      const endLine = (textBeforeEnd.match(/\n/g) || []).length;
-      const endChar = end - (textBeforeEnd.lastIndexOf("\n") + 1);
-
-      setPendingSelection({ startLine, startChar, endLine, endChar });
-      setContextMenuPosition({ x: e.clientX, y: e.clientY });
-      setContextMenuVisible(true);
+      // Flat offsets → line/char range, computed in Rust (single
+      // implementation of line/char semantics, shared with the overlay).
+      const openMenu = (range: {
+        startLine: number;
+        startChar: number;
+        endLine: number;
+        endChar: number;
+      }) => {
+        setPendingSelection(range);
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+        setContextMenuVisible(true);
+      };
+      api
+        .selectionRange(code, start, end)
+        .then(openMenu)
+        .catch(() => {
+          // Offline fallback (same math) if IPC is unavailable.
+          const beforeStart = code.slice(0, start);
+          const beforeEnd = code.slice(0, end);
+          openMenu({
+            startLine: (beforeStart.match(/\n/g) || []).length,
+            startChar: start - (beforeStart.lastIndexOf("\n") + 1),
+            endLine: (beforeEnd.match(/\n/g) || []).length,
+            endChar: end - (beforeEnd.lastIndexOf("\n") + 1),
+          });
+        });
     },
     [highlightMode, code],
   );
