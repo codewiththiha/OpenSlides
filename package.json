@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test:highlight": "node scripts/run-highlight-tests.mjs"
+    "test:highlight": "node scripts/run-highlight-tests.mjs",
+    "test:save-race": "node scripts/run-save-race-tests.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -51,6 +52,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
     "vite": "^7.0.5"

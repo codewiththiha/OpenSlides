@@ -1,18 +1,34 @@
-import {
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { notify } from "../../lib/toast";
 import { api, type SlideSettingsPatch } from "../../lib/tauri-api";
+import { enqueueCodeSave } from "../../lib/code-save-queue";
 import { useUiStore } from "../../store/useUiStore";
 import type { Project, Slide } from "../../types";
 import { projectKeys } from "./keys";
 
+/**
+ * Merge a slide returned by a settings/command response into the cached one
+ * WITHOUT touching `code`. Code ownership belongs to the code channel
+ * (editor localCode shadow + serialized saves); a settings response may
+ * carry a stale `code` column read before the newest save landed, and
+ * stamping it would briefly regress the editor value (and slam the caret
+ * to the end of the textarea in WKWebView).
+ */
+export function mergeSlidePreservingEditorCode(
+  cached: Slide,
+  incoming: Slide,
+): Slide {
+  return { ...cached, ...incoming, code: cached.code };
+}
+
 export function useUpdateSlideCode() {
   const qc = useQueryClient();
   return useMutation({
+    // Serialized per slide (see lib/code-save-queue.ts): guarantees DB write
+    // order and completion order match schedule order, so the cache stamp in
+    // onSuccess below can never be an older value overwriting a newer one.
     mutationFn: ({ slideId, code }: { slideId: string; code: string }) =>
-      api.updateSlideCode(slideId, code),
+      enqueueCodeSave(slideId, code),
     onSuccess: (_void, { slideId, code }) => {
       qc.setQueriesData<Project>({ queryKey: ["project"] }, (old) => {
         if (!old?.slides?.some((s) => s.id === slideId)) return old;
@@ -49,7 +65,7 @@ export function useUpdateSlideSettings(projectId: string) {
         return {
           ...old,
           slides: old.slides.map((s) =>
-            s.id === slide.id ? { ...s, ...slide } : s,
+            s.id === slide.id ? mergeSlidePreservingEditorCode(s, slide) : s,
           ),
         };
       });

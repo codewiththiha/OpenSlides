@@ -81,7 +81,8 @@ Requires: Node 20+, Rust stable, platform WebView deps (see [Tauri prerequisites
 - Custom frameless titlebar + window controls
 - Resizable preview / editor split (`react-resizable-panels`)
 - Virtualized slide strip (`@tanstack/react-virtual`) + dnd-kit reorder
-- Debounced auto-save (500 ms) to SQLite
+- Debounced auto-save (500 ms) to SQLite, serialized per slide (`src/lib/code-save-queue.ts`) so out-of-order IPC completion can never regress the editor or the DB row
+- Pending saves are flushed on quit via a Rust/JS handshake (CloseRequested/ExitRequested), with settings responses blocked from carrying stale `code` into the cache
 - Command palette (`⌘/Ctrl+K`)
 - Zen mode & fullscreen presentation
 - Native JSON export via `tauri-plugin-dialog`
