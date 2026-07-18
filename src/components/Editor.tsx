@@ -47,7 +47,8 @@ import {
   useUpdateTheme,
   useCreateProject,
   useUpdateSlideSettings,
-} from "@/hooks/useProjectQueries";
+} from "@/hooks/queries";
+import { useCollapsiblePanel } from "@/hooks/useCollapsiblePanel";
 import { api } from "@/lib/tauri-api";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
@@ -149,34 +150,27 @@ export function Editor() {
     return () => resetEditorUi();
   }, [resetEditorUi]);
 
-  // Keep imperative panel collapse state in sync with store
-  useEffect(() => {
-    const panel = codePanelRef.current;
-    if (!panel) return;
-    try {
-      if (isCodePanelCollapsed) {
-        if (!panel.isCollapsed()) panel.collapse();
-      } else if (panel.isCollapsed()) {
-        panel.expand(codePanelSize);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [isCodePanelCollapsed, codePanelSize]);
+  // Panel rails: imperative collapse state ⇆ persisted store, expand
+  // restores last size, collapse snapshots it first (shared logic).
+  const { expand: expandCodePanel, collapse: collapseCodePanel } =
+    useCollapsiblePanel({
+      panelRef: codePanelRef,
+      isCollapsed: isCodePanelCollapsed,
+      setCollapsed: setIsCodePanelCollapsed,
+      size: codePanelSize,
+      setSize: setCodePanelSize,
+      collapseThreshold: CODE_COLLAPSE_THRESHOLD,
+    });
 
-  useEffect(() => {
-    const panel = slidesPanelRef.current;
-    if (!panel) return;
-    try {
-      if (isBottomPanelCollapsed) {
-        if (!panel.isCollapsed()) panel.collapse();
-      } else if (panel.isCollapsed()) {
-        panel.expand(slidesPanelSize);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [isBottomPanelCollapsed, slidesPanelSize]);
+  const { expand: expandSlidesPanel, collapse: collapseSlidesPanel } =
+    useCollapsiblePanel({
+      panelRef: slidesPanelRef,
+      isCollapsed: isBottomPanelCollapsed,
+      setCollapsed: setIsBottomPanelCollapsed,
+      size: slidesPanelSize,
+      setSize: setSlidesPanelSize,
+      collapseThreshold: SLIDES_COLLAPSE_THRESHOLD,
+    });
 
   const slides = project?.slides ?? [];
   const currentIndex = slides.findIndex((s) => s.id === currentSlideId);
@@ -462,68 +456,6 @@ export function Editor() {
     ],
   );
   useAppMenu(menuHandlers);
-
-  const expandCodePanel = useCallback(() => {
-    setIsCodePanelCollapsed(false);
-    requestAnimationFrame(() => {
-      try {
-        const panel = codePanelRef.current;
-        if (!panel) return;
-        panel.expand(codePanelSize);
-        panel.resize(codePanelSize);
-      } catch {
-        /* ignore */
-      }
-    });
-  }, [codePanelSize, setIsCodePanelCollapsed]);
-
-  const collapseCodePanel = useCallback(() => {
-    try {
-      const size = codePanelRef.current?.getSize();
-      if (typeof size === "number" && size > CODE_COLLAPSE_THRESHOLD) {
-        setCodePanelSize(size);
-      }
-    } catch {
-      /* ignore */
-    }
-    setIsCodePanelCollapsed(true);
-    try {
-      codePanelRef.current?.collapse();
-    } catch {
-      /* ignore */
-    }
-  }, [setCodePanelSize, setIsCodePanelCollapsed]);
-
-  const expandSlidesPanel = useCallback(() => {
-    setIsBottomPanelCollapsed(false);
-    requestAnimationFrame(() => {
-      try {
-        const panel = slidesPanelRef.current;
-        if (!panel) return;
-        panel.expand(slidesPanelSize);
-        panel.resize(slidesPanelSize);
-      } catch {
-        /* ignore */
-      }
-    });
-  }, [slidesPanelSize, setIsBottomPanelCollapsed]);
-
-  const collapseSlidesPanel = useCallback(() => {
-    try {
-      const size = slidesPanelRef.current?.getSize();
-      if (typeof size === "number" && size > SLIDES_COLLAPSE_THRESHOLD) {
-        setSlidesPanelSize(size);
-      }
-    } catch {
-      /* ignore */
-    }
-    setIsBottomPanelCollapsed(true);
-    try {
-      slidesPanelRef.current?.collapse();
-    } catch {
-      /* ignore */
-    }
-  }, [setSlidesPanelSize, setIsBottomPanelCollapsed]);
 
   if (isLoading) {
     return (

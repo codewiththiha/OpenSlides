@@ -8,7 +8,7 @@ import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { Slider } from "./ui/slider";
 import { THEME_OPTIONS, type Project } from "@/types";
-import { useUpdateSettings, useUpdateTheme } from "@/hooks/useProjectQueries";
+import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
 

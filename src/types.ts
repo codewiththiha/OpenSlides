@@ -4,8 +4,6 @@
  * these types mirror the IPC JSON contracts.
  */
 
-export type FontSize = 12 | 14 | 16 | 18 | 20 | 24 | 28 | 32;
-
 export type CodeAlign = "left" | "center";
 
 export const SUPPORTED_LANGUAGES = [

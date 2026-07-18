@@ -73,14 +73,6 @@ export function redoHistory(slideId: string): string | null {
   return next;
 }
 
-export function canUndo(slideId: string): boolean {
-  return (buckets.get(slideId)?.past.length ?? 0) > 0;
-}
-
-export function canRedo(slideId: string): boolean {
-  return (buckets.get(slideId)?.future.length ?? 0) > 0;
-}
-
 /** Drop history for a slide (e.g. after delete). */
 export function clearHistory(slideId: string) {
   buckets.delete(slideId);

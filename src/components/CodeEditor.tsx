@@ -32,7 +32,7 @@ import {
   useUpdateSettings,
   useUpdateSlideCode,
   useUpdateSlideSettings,
-} from "@/hooks/useProjectQueries";
+} from "@/hooks/queries";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";

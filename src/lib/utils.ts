@@ -13,7 +13,8 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-export function formatDate(timestamp: number): string {
+/** Absolute fallback for formatRelative (kept private — nothing imports it). */
+function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",

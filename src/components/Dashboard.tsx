@@ -38,7 +38,7 @@ import {
   useExportProject,
   useImportProject,
   useRenameProject,
-} from "@/hooks/useProjectQueries";
+} from "@/hooks/queries";
 import { formatRelative } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
 import { useAppMenu } from "@/hooks/useAppMenu";

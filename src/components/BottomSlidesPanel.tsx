@@ -44,7 +44,7 @@ import {
   useReorderSlides,
   useRestoreSlide,
   useUpdateSlideSettings,
-} from "@/hooks/useProjectQueries";
+} from "@/hooks/queries";
 
 const ITEM_WIDTH = 152;
 
