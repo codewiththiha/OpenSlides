@@ -25,8 +25,9 @@ import type { Highlighter } from "shiki";
 import type { Highlight } from "@/types";
 import { themeBackground, LIGHT_THEMES } from "@/types";
 import {
-  extractVisibleChars,
+  buildCloneLineHtmls,
   measureHighlight,
+  mixTowardBlack,
   type HighlightMeasurement,
 } from "@/lib/highlight-utils";
 import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
@@ -80,15 +81,28 @@ export function HighlightLayer({
   const settleRef = useRef(0);
 
   // Measure against live DOM; re-run on layout-relevant changes + settle once.
+  // NOTE: on a fresh mount an ancestor host ref can attach AFTER this layout
+  // effect (reused-root commit ordering) — so "refs null" must retry across
+  // frames instead of giving up, otherwise a layer mounted with a highlight
+  // already active (e.g. entering Present mid-step) would never appear.
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    const codeRoot = codeContainerRef.current;
-    if (!container || !codeRoot) {
-      setMeasurement(null);
-      return;
-    }
+    let disposed = false;
+    let retries = 0;
+    let ro: ResizeObserver | null = null;
 
     const measure = () => {
+      if (disposed) return;
+      const container = containerRef.current;
+      const codeRoot = codeContainerRef.current;
+      if (!container || !codeRoot) {
+        if (retries++ < 12) rafRef.current = requestAnimationFrame(measure);
+        return;
+      }
+      if (!ro) {
+        ro = new ResizeObserver(measure);
+        ro.observe(container);
+        ro.observe(codeRoot);
+      }
       if (!highlight) {
         setMeasurement(null);
         return;
@@ -106,22 +120,19 @@ export function HighlightLayer({
     };
 
     measure();
-    rafRef.current = requestAnimationFrame(measure);
     settleRef.current = window.setTimeout(measure, 280);
 
-    const ro = new ResizeObserver(measure);
-    ro.observe(container);
-    ro.observe(codeRoot);
-
     return () => {
+      disposed = true;
       cancelAnimationFrame(rafRef.current);
       window.clearTimeout(settleRef.current);
-      ro.disconnect();
+      ro?.disconnect();
     };
   }, [containerRef, codeContainerRef, highlight, code, fontSize, lineHeight, theme]);
 
-  // Per-line selected HTML for the clone, pulled from the rendered syntax
-  // html (shiki, or the merustmar fallback) so colors match the slide code.
+  // Per-line selected HTML for the clone, sliced (via the shared parser in
+  // highlight-utils) from the same syntax html the slide code uses, so the
+  // clone colors match exactly. Shiki first, merustmar fallback second.
   const cloneLineHtmls = useMemo(() => {
     if (!highlight || !code) return [] as string[];
 
@@ -136,29 +147,7 @@ export function HighlightLayer({
     if (!html && language === "merustmar") {
       html = highlightMerustmarCode(code, !LIGHT_THEMES.has(theme));
     }
-    if (!html) return [];
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const lineSpans = doc.querySelectorAll("code .line, pre .line");
-    if (lineSpans.length === 0) return [];
-
-    const plain = code.split("\n");
-    const out: string[] = [];
-    for (let i = highlight.startLine; i <= highlight.endLine; i++) {
-      const el = lineSpans[i];
-      const s = i === highlight.startLine ? highlight.startChar : 0;
-      const e = i === highlight.endLine ? highlight.endChar : -1;
-      let slice = el ? extractVisibleChars(el.innerHTML, s, e) : "";
-      if (!slice.trim() && plain[i] !== undefined) {
-        const raw = e === -1 ? plain[i].slice(s) : plain[i].slice(s, e);
-        slice = raw
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
-      }
-      out.push(slice);
-    }
-    return out;
+    return buildCloneLineHtmls(code, highlight, html);
   }, [highlight, highlighter, code, language, theme]);
 
   const dimDuration =
@@ -275,13 +264,4 @@ export function HighlightLayer({
   return (
     <AnimatePresence onExitComplete={onExitComplete}>{pieces}</AnimatePresence>
   );
-}
-
-/** Mix a #rrggbb color toward black by t (0 = unchanged, 1 = black). */
-function mixTowardBlack(hex: string, t: number): string {
-  const m = hex.replace("#", "");
-  if (m.length !== 6) return hex;
-  const mix = (part: string) =>
-    Math.round(parseInt(part, 16) * (1 - Math.min(Math.max(t, 0), 1)));
-  return `rgb(${mix(m.slice(0, 2))}, ${mix(m.slice(2, 4))}, ${mix(m.slice(4, 6))})`;
 }

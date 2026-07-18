@@ -1,6 +1,16 @@
 /**
- * Utility functions for highlight mode.
- * Handles text position calculation, range extraction, and DOM measurement.
+ * highlight-utils — everything about mapping a Highlight range onto text
+ * and onto the rendered slide DOM.
+ *
+ * Layout:
+ *   1. ID/defaults
+ *   2. Line-range parsing (pure) — highlightLineRanges() is THE single
+ *      source of truth for "which lines, which char→char per line".
+ *      Everything else (text extraction, clone html, DOM measurement)
+ *      is derived from it, so the rules can't drift apart.
+ *   3. Text / html extraction (pure)
+ *   4. DOM geometry — real Range measurement with a monospace fallback
+ *   5. Color helpers
  */
 import type { Highlight } from "@/types";
 
@@ -17,6 +27,20 @@ export interface HighlightMeasurement {
   lines: HighlightLineRect[];
   union: HighlightLineRect;
 }
+
+/** One parsed highlight line: the [start, end) character span to cover. */
+export interface HighlightLineRange {
+  /** Absolute line index in the code. */
+  line: number;
+  /** Inclusive start char. */
+  start: number;
+  /** Exclusive end char. */
+  end: number;
+}
+
+/* ----------------------------------------------------------------------- *
+ * 1. ID / defaults
+ * ----------------------------------------------------------------------- */
 
 /** Generate a simple unique ID for highlights */
 export function generateHighlightId(): string {
@@ -45,102 +69,270 @@ export function createDefaultHighlight(
   };
 }
 
+/* ----------------------------------------------------------------------- *
+ * 2. Line-range parsing
+ * ----------------------------------------------------------------------- */
+
 /**
- * Extract the selected text from code given a highlight range.
- * Works with the raw code string.
+ * Resolve a Highlight into concrete per-line character spans.
+ *
+ * Rules (single definition used by erase rects, clone slices and text
+ * extraction alike):
+ *   - only line  → [startChar, endChar)
+ *   - first line → [startChar, end-of-line)
+ *   - middle     → whole line
+ *   - last line  → [0, endChar)
+ *
+ * Handles reversed selections defensively and clamps to the real code.
  */
+export function highlightLineRanges(
+  highlight: Highlight,
+  code: string,
+): HighlightLineRange[] {
+  const codeLines = code.split("\n");
+
+  let startLine = Math.max(0, highlight.startLine);
+  let startChar = Math.max(0, highlight.startChar);
+  let endLine = Math.max(0, highlight.endLine);
+  let endChar = Math.max(0, highlight.endChar);
+
+  // Reversed selection (bottom-to-top mouse drag) — normalize.
+  if (
+    endLine < startLine ||
+    (endLine === startLine && endChar < startChar)
+  ) {
+    [startLine, endLine] = [endLine, startLine];
+    [startChar, endChar] = [endChar, startChar];
+  }
+
+  const out: HighlightLineRange[] = [];
+  for (let line = startLine; line <= endLine; line++) {
+    if (line >= codeLines.length) break;
+    const len = codeLines[line].length;
+
+    let start = 0;
+    let end = len; // exclusive
+    if (line === startLine && line === endLine) {
+      start = Math.min(startChar, len);
+      end = Math.min(endChar, len);
+    } else if (line === startLine) {
+      start = Math.min(startChar, len);
+    } else if (line === endLine) {
+      end = Math.min(endChar, len);
+    }
+
+    // Empty span on a non-empty line (e.g. caret at EOL) is pointless.
+    if (start === end && len > 0) continue;
+    out.push({ line, start, end });
+  }
+  return out;
+}
+
+/* ----------------------------------------------------------------------- *
+ * 3. Text / html extraction
+ * ----------------------------------------------------------------------- */
+
+/** Extract the selected plain text covered by a highlight range. */
 export function extractHighlightText(
   code: string,
   highlight: Highlight,
 ): string {
-  const lines = code.split("\n");
-  if (highlight.startLine === highlight.endLine) {
-    const line = lines[highlight.startLine] ?? "";
-    return line.slice(highlight.startChar, highlight.endChar);
-  }
-  const result: string[] = [];
-  for (let i = highlight.startLine; i <= highlight.endLine; i++) {
-    const line = lines[i] ?? "";
-    if (i === highlight.startLine) {
-      result.push(line.slice(highlight.startChar));
-    } else if (i === highlight.endLine) {
-      result.push(line.slice(0, highlight.endChar));
-    } else {
-      result.push(line);
-    }
-  }
-  return result.join("\n");
+  const codeLines = code.split("\n");
+  return highlightLineRanges(highlight, code)
+    .map((r) => codeLines[r.line].slice(r.start, r.end))
+    .join("\n");
 }
 
 /**
- * Extract the lines of code that contain the highlight.
- * Returns the full lines (not truncated).
+ * Extract the per-line syntax-highlighted slices for the clone from a
+ * fully rendered html (shiki `codeToHtml` output or the merustmar
+ * fallback — both use `span.line` rows). Falls back to escaped plain
+ * text per line when a slice can't be recovered.
  */
-export function extractHighlightLines(
+export function buildCloneLineHtmls(
   code: string,
   highlight: Highlight,
+  fullHtml: string,
 ): string[] {
-  const lines = code.split("\n");
-  return lines.slice(highlight.startLine, highlight.endLine + 1);
-}
+  const ranges = highlightLineRanges(highlight, code);
+  if (ranges.length === 0) return [];
 
-/**
- * Calculate the pixel position of a highlight range within a monospace code block.
- * Uses character width and line height for precise positioning.
- */
-export function calculateHighlightPosition(
-  container: HTMLElement,
-  highlight: Highlight,
-  charWidth: number,
-  lineHeight: number,
-  paddingTop: number,
-  paddingLeft: number,
-): { x: number; y: number; width: number; height: number } {
-  const numLines = highlight.endLine - highlight.startLine + 1;
-
-  // Calculate width: for single line, it's (endChar - startChar) * charWidth
-  // For multi-line, it's the max width of any line in the range
-  let maxWidth: number;
-  if (numLines === 1) {
-    maxWidth = (highlight.endChar - highlight.startChar) * charWidth;
-  } else {
-    // Multi-line: width is from startChar to end of first line, then full lines, then to endChar
-    // We use the max of the first line's remainder and last line's end
-    const codeLines = container.closest("[data-code-container]")?.getAttribute("data-code")?.split("\n") ?? [];
-    const firstLineWidth = ((codeLines[highlight.startLine]?.length ?? 0) - highlight.startChar) * charWidth;
-    const lastLineWidth = highlight.endChar * charWidth;
-    maxWidth = Math.max(firstLineWidth, lastLineWidth);
-    // Also consider middle lines
-    for (let i = highlight.startLine + 1; i < highlight.endLine; i++) {
-      const w = (codeLines[i]?.length ?? 0) * charWidth;
-      if (w > maxWidth) maxWidth = w;
-    }
+  let lineSpans: NodeListOf<Element> | [] = [] as unknown as NodeListOf<Element>;
+  if (fullHtml) {
+    const doc = new DOMParser().parseFromString(fullHtml, "text/html");
+    lineSpans = doc.querySelectorAll("code .line, pre .line");
   }
 
-  const x = paddingLeft + highlight.startChar * charWidth;
-  const y = paddingTop + highlight.startLine * lineHeight;
-  const height = numLines * lineHeight;
-
-  return { x, y, width: Math.max(maxWidth, charWidth), height };
+  const codeLines = code.split("\n");
+  return ranges.map((r) => {
+    const el = lineSpans[r.line];
+    let slice = el ? extractVisibleChars(el.innerHTML, r.start, r.end) : "";
+    if (!slice.trim()) {
+      slice = escapeHtml(codeLines[r.line].slice(r.start, r.end));
+    }
+    return slice;
+  });
 }
 
 /**
- * Get the center point of a highlight's bounding area.
- * Used as transform-origin for scale-up animation.
+ * Extract visible characters [start, end) from an HTML line while keeping
+ * any intersecting tags balanced. end = -1 takes the rest of the line.
  */
-export function getHighlightCenter(
-  pos: { x: number; y: number; width: number; height: number },
-): { cx: number; cy: number } {
-  return {
-    cx: pos.x + pos.width / 2,
-    cy: pos.y + pos.height / 2,
+export function extractVisibleChars(
+  html: string,
+  start: number,
+  end: number,
+): string {
+  let charIndex = 0;
+  let result = "";
+  const stop = end === -1 ? Number.MAX_SAFE_INTEGER : end;
+  const inRange = () => charIndex >= start && charIndex < stop;
+
+  for (let i = 0; i < html.length; i++) {
+    const ch = html[i];
+    if (ch === "<") {
+      const tagEnd = html.indexOf(">", i);
+      if (tagEnd === -1) break;
+      if (inRange()) result += html.slice(i, tagEnd + 1);
+      i = tagEnd;
+      continue;
+    }
+    if (inRange()) result += ch;
+    charIndex++;
+    if (charIndex >= stop) break;
+  }
+  return result;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/* ----------------------------------------------------------------------- *
+ * 4. DOM geometry
+ *
+ * The slide code is rendered by shiki-magic-move as token <span>s with
+ * <br> line separators (optionally preceded by line-number spans), or by
+ * the merustmar fallback as <span class="line">…</span> rows. char-count ×
+ * char-width math can't account for the line-number gutter or center
+ * alignment, so we measure real DOM ranges and keep a monospace fallback
+ * for unmeasurable states (mid-morph, hidden, …).
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Collect visible text nodes per code line, in document order.
+ * Style/script subtrees are skipped — SlidePreview mounts an inline
+ * <style> inside the code container, whose text must NOT become "line 0".
+ */
+function collectLineTextNodes(root: HTMLElement): Text[][] {
+  // Shape A: explicit line spans (merustmar fallback / plain shiki html).
+  const lineSpans = root.querySelectorAll(
+    ":is(pre, code) span.line, span.line",
+  );
+  if (lineSpans.length > 0) {
+    return Array.from(lineSpans, (span) => {
+      const nodes: Text[] = [];
+      const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
+      let n = walker.nextNode();
+      while (n) {
+        if ((n as Text).data) nodes.push(n as Text);
+        n = walker.nextNode();
+      }
+      return nodes;
+    });
+  }
+
+  // Shape B: token spans separated by <br> (shiki-magic-move renderer).
+  const lines: Text[][] = [[]];
+  const walk = (node: Node) => {
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        const el = child as HTMLElement;
+        if (el.tagName === "BR") {
+          lines.push([]);
+          return;
+        }
+        if (
+          el.tagName === "STYLE" ||
+          el.tagName === "SCRIPT" ||
+          el.classList.contains("shiki-magic-move-line-number")
+        ) {
+          return;
+        }
+        walk(el);
+        return;
+      }
+      if (child.nodeType === Node.TEXT_NODE) {
+        const t = child as Text;
+        if (t.data === "\n") {
+          lines.push([]);
+        } else if (t.data) {
+          lines[lines.length - 1].push(t);
+        }
+      }
+    });
   };
+  walk(root);
+  // Drop trailing empty lines produced by a final <br>.
+  while (lines.length > 1 && lines[lines.length - 1].length === 0) {
+    lines.pop();
+  }
+  return lines;
+}
+
+/**
+ * Bounding rect (viewport coords) of a character span across a line's text
+ * nodes. Both ends are resolved explicitly; spans reaching the end of the
+ * line resolve against the LAST node (a single early return at the first
+ * node was the multi-line erase bug).
+ */
+function rectForCharSpan(
+  nodes: Text[],
+  start: number,
+  end: number,
+): DOMRect | null {
+  if (nodes.length === 0 || start >= end) return null;
+
+  let startNode: Text | null = null;
+  let endNode: Text | null = null;
+  let startOffset = 0;
+  let endOffset = 0;
+  let acc = 0;
+
+  for (const tn of nodes) {
+    const len = tn.data.length;
+    const next = acc + len;
+    if (startNode === null && start <= next) {
+      startNode = tn;
+      startOffset = Math.min(len, Math.max(0, start - acc));
+    }
+    if (endNode === null && end <= next) {
+      endNode = tn;
+      endOffset = Math.min(len, Math.max(0, end - acc));
+    }
+    if (startNode !== null && endNode !== null) break;
+    acc = next;
+  }
+  if (startNode === null) return null;
+  if (endNode === null) {
+    endNode = nodes[nodes.length - 1];
+    endOffset = endNode.data.length;
+  }
+
+  const range = document.createRange();
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset);
+  return range.getBoundingClientRect();
 }
 
 /**
  * Measure character width in a given container by creating a test element.
+ * (Only used by the monospace-fallback path.)
  */
-export function measureCharWidth(
+function measureCharWidth(
   container: HTMLElement,
   fontSize: number,
   fontFamily: string,
@@ -160,202 +352,6 @@ export function measureCharWidth(
 }
 
 /**
- * Build an HTML string for the highlighted text range with proper syntax colors.
- * This takes the full Shiki-rendered HTML and extracts just the highlight range.
- */
-export function extractHighlightedHtml(
-  fullHtml: string,
-  highlight: Highlight,
-): string {
-  // Parse the HTML to find line spans
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(
-    `<div>${fullHtml}</div>`,
-    "text/html",
-  );
-  const root = doc.body.firstElementChild;
-  if (!root) return "";
-
-  // Find all line elements - shiki renders each line as a span
-  // ShikiMagicMove uses individual character spans, but regular Shiki uses line spans
-  const lines = root.querySelectorAll(".line, [data-line]");
-
-  if (lines.length === 0) {
-    // Fallback: treat the entire HTML as a single block
-    // Split by newlines
-    const allLines = fullHtml.split("\n");
-    const selected = allLines.slice(
-      highlight.startLine,
-      highlight.endLine + 1,
-    );
-    return selected.join("\n");
-  }
-
-  const result: string[] = [];
-  for (let i = highlight.startLine; i <= highlight.endLine; i++) {
-    const lineEl = lines[i];
-    if (!lineEl) continue;
-
-    const lineHtml = lineEl.innerHTML;
-    if (i === highlight.startLine && i === highlight.endLine) {
-      // Single line: extract character range
-      result.push(extractCharRange(lineHtml, highlight.startChar, highlight.endChar));
-    } else if (i === highlight.startLine) {
-      result.push(extractCharRange(lineHtml, highlight.startChar, -1));
-    } else if (i === highlight.endLine) {
-      result.push(extractCharRange(lineHtml, 0, highlight.endChar));
-    } else {
-      result.push(lineHtml);
-    }
-  }
-
-  return result.join("\n");
-}
-
-/**
- * Extract a character range from an HTML string while preserving tags.
- * Counts only visible characters (not HTML tags).
- */
-function extractCharRange(html: string, start: number, end: number): string {  let charIndex = 0;
-  let inTag = false;
-  let result = "";
-  let capturing = false;
-
-  for (let i = 0; i < html.length; i++) {
-    const ch = html[i];
-
-    if (ch === "<") {
-      inTag = true;
-      if (capturing) result += ch;
-      continue;
-    }
-    if (ch === ">") {
-      inTag = false;
-      if (capturing) result += ch;
-      continue;
-    }
-    if (inTag) {
-      if (capturing) result += ch;
-      continue;
-    }
-
-    // Visible character
-    if (charIndex >= start && (end === -1 || charIndex < end)) {
-      if (!capturing) {
-        // Start capturing: include any open tags we need
-        capturing = true;
-      }
-      result += ch;
-    }
-
-    charIndex++;
-
-    if (end !== -1 && charIndex >= end && !inTag) {
-      break;
-    }
-  }
-
-  return result;
-}
-
-/* ----------------------------------------------------------------------- *
- * DOM-measured highlight geometry
- *
- * The slide code is rendered by shiki-magic-move as token <span>s with
- * <br> line separators (optionally preceded by .shiki-magic-move-line-number
- * spans), or by the merustmar fallback as <span class="line">…</span> joined
- * by "\n" text nodes. Character-count × char-width math cannot account for
- * the line-number gutter, center alignment or proportional renderer quirks,
- * so we measure real DOM ranges instead. A char-width fallback is kept for
- * unmeasurable edge cases.
- * ----------------------------------------------------------------------- */
-
-/** Collect visible text nodes per code line, in document order. */
-function collectLineTextNodes(root: HTMLElement): Text[][] {
-  const lines: Text[][] = [];
-
-  // Shape A: explicit line spans (merustmar fallback / plain shiki html).
-  const lineSpans = root.querySelectorAll("span.line");
-  if (lineSpans.length > 0) {
-    lineSpans.forEach((span) => {
-      const nodes: Text[] = [];
-      const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
-      let n = walker.nextNode();
-      while (n) {
-        if ((n as Text).data) nodes.push(n as Text);
-        n = walker.nextNode();
-      }
-      lines.push(nodes);
-    });
-    return lines;
-  }
-
-  // Shape B: token spans separated by <br> (shiki-magic-move renderer).
-  const current: Text[][] = [[]];
-  const walk = (node: Node) => {
-    node.childNodes.forEach((child) => {
-      if (child.nodeType === Node.ELEMENT_NODE) {
-        const el = child as HTMLElement;
-        if (el.tagName === "BR") {
-          current.push([]);
-          return;
-        }
-        if (el.classList.contains("shiki-magic-move-line-number")) return;
-        walk(el);
-        return;
-      }
-      if (child.nodeType === Node.TEXT_NODE) {
-        const t = child as Text;
-        if (t.data === "\n") {
-          current.push([]);
-        } else if (t.data) {
-          current[current.length - 1].push(t);
-        }
-      }
-    });
-  };
-  walk(root);
-  // Drop a trailing empty line produced by a final <br>.
-  while (current.length > 1 && current[current.length - 1].length === 0) {
-    current.pop();
-  }
-  return current;
-}
-
-/**
- * Bounding rect (viewport coords) of a character range across a line's text
- * nodes. end = -1 means "to end of line".
- */
-function rectForCharRange(
-  nodes: Text[],
-  start: number,
-  end: number,
-): DOMRect | null {
-  if (nodes.length === 0) return null;
-  const range = document.createRange();
-  let acc = 0;
-  let started = false;
-  for (const tn of nodes) {
-    const len = tn.data.length;
-    const next = acc + len;
-    if (!started && start <= next) {
-      range.setStart(tn, Math.min(len, Math.max(0, start - acc)));
-      started = true;
-    }
-    if (started && (end === -1 || end <= next)) {
-      const stop = end === -1 ? len : Math.min(len, Math.max(0, end - acc));
-      range.setEnd(tn, stop);
-      return range.getBoundingClientRect();
-    }
-    acc = next;
-  }
-  if (!started) return null;
-  const last = nodes[nodes.length - 1];
-  range.setEnd(last, last.data.length);
-  return range.getBoundingClientRect();
-}
-
-/**
  * Measure a highlight against the live DOM.
  * `container` is the slide card the overlay is absolutely positioned in;
  * `codeRoot` wraps the rendered code (magic-move container or merustmar pre).
@@ -369,28 +365,29 @@ export function measureHighlight(
   lineHeight: number,
 ): HighlightMeasurement | null {
   const cRect = container.getBoundingClientRect();
-  const codeLines = code.split("\n");
+  const ranges = highlightLineRanges(highlight, code);
   const lineNodes = collectLineTextNodes(codeRoot);
-
-  const usable =
-    lineNodes.length > highlight.startLine &&
-    (lineNodes[highlight.startLine]?.length ?? 0) > 0;
-
   const lines: HighlightLineRect[] = [];
 
-  if (usable) {
-    for (let i = highlight.startLine; i <= highlight.endLine; i++) {
-      const nodes = lineNodes[i];
-      if (!nodes || nodes.length === 0) continue;
-      const start = i === highlight.startLine ? highlight.startChar : 0;
-      const end = i === highlight.endLine ? highlight.endChar : -1;
-      const r = rectForCharRange(nodes, start, end);
-      if (!r || (r.width === 0 && r.height === 0)) continue;
+  const domUsable =
+    lineNodes.length > highlight.startLine &&
+    ranges.some((r) => (lineNodes[r.line]?.length ?? 0) > 0);
+
+  if (domUsable) {
+    for (const r of ranges) {
+      const nodes = lineNodes[r.line];
+      if (!nodes || nodes.length === 0) continue; // empty code line
+      // At least one node must actually cover part of the requested span,
+      // otherwise a stale/short DOM (mid-morph) would misplace the rect.
+      const totalChars = nodes.reduce((n, t) => n + t.data.length, 0);
+      if (r.start >= totalChars) continue;
+      const rect = rectForCharSpan(nodes, r.start, r.end);
+      if (!rect || rect.width === 0 || rect.height === 0) continue;
       lines.push({
-        x: r.left - cRect.left,
-        y: r.top - cRect.top,
-        width: Math.max(r.width, 1),
-        height: Math.max(r.height, 1),
+        x: rect.left - cRect.left,
+        y: rect.top - cRect.top,
+        width: Math.max(rect.width, 1),
+        height: Math.max(rect.height, 1),
       });
     }
   }
@@ -401,21 +398,18 @@ export function measureHighlight(
       codeRoot,
       fontSize,
       getComputedStyle(codeRoot).fontFamily ||
-        'ui-monospace, SFMono-Regular, Menlo, monospace',
+        "ui-monospace, SFMono-Regular, Menlo, monospace",
     );
     if (!cws || !Number.isFinite(cws)) return null;
     const kRect = codeRoot.getBoundingClientRect();
     const ox = kRect.left - cRect.left;
     const oy = kRect.top - cRect.top;
     const lh = fontSize * lineHeight;
-    for (let i = highlight.startLine; i <= highlight.endLine; i++) {
-      const text = codeLines[i] ?? "";
-      const start = i === highlight.startLine ? highlight.startChar : 0;
-      const end = i === highlight.endLine ? highlight.endChar : text.length;
+    for (const r of ranges) {
       lines.push({
-        x: ox + start * cws,
-        y: oy + i * lh,
-        width: Math.max((end - start) * cws, cws),
+        x: ox + r.start * cws,
+        y: oy + r.line * lh,
+        width: Math.max((r.end - r.start) * cws, cws),
         height: lh,
       });
     }
@@ -449,30 +443,19 @@ export function measureHighlight(
   };
 }
 
-/**
- * Extract visible characters [start, end) from an HTML line while keeping
- * any intersecting tags balanced. end = -1 takes the rest of the line.
- */
-export function extractVisibleChars(
-  html: string,
-  start: number,
-  end: number,
-): string {
-  let charIndex = 0;
-  let result = "";
-  const inRange = () => charIndex >= start && (end === -1 || charIndex < end);
+/* ----------------------------------------------------------------------- *
+ * 5. Color helpers
+ * ----------------------------------------------------------------------- */
 
-  for (let i = 0; i < html.length; i++) {
-    const ch = html[i];
-    if (ch === "<") {
-      const tagEnd = html.indexOf(">", i);
-      if (tagEnd === -1) break;
-      if (inRange()) result += html.slice(i, tagEnd + 1);
-      i = tagEnd;
-      continue;
-    }
-    if (inRange()) result += ch;
-    charIndex++;
-  }
-  return result;
+/**
+ * Mix a #rrggbb color toward black by t (0 = unchanged, 1 = black).
+ * Used for eraser boxes so they match the dimmed card exactly
+ * (bg + the same black overlay), avoiding a visible rectangle.
+ */
+export function mixTowardBlack(hex: string, t: number): string {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return hex;
+  const k = 1 - Math.min(Math.max(t, 0), 1);
+  const mix = (part: string) => Math.round(parseInt(part, 16) * k);
+  return `rgb(${mix(m.slice(0, 2))}, ${mix(m.slice(2, 4))}, ${mix(m.slice(4, 6))})`;
 }
