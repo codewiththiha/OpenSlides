@@ -17,7 +17,8 @@ pub(crate) static QUIT_FLUSHED: AtomicBool = AtomicBool::new(false);
 /// Ask the webview to flush pending saves before terminating, and arm a
 /// hard-exit fallback so a wedged frontend can never trap the OS-level
 /// quit (the app force-exits a few seconds later regardless).
-fn request_flush_before_quit<E: Emitter + ?Sized>(emitter: &E) {
+/// Works for both `Window` (CloseRequested) and `AppHandle` (ExitRequested).
+fn request_flush_before_quit<R: tauri::Runtime, E: Emitter<R> + ?Sized>(emitter: &E) {
     let _ = emitter.emit("app://quit-request", ());
     std::thread::spawn(|| {
         std::thread::sleep(std::time::Duration::from_secs(4));
