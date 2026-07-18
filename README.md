@@ -13,7 +13,7 @@ Migrated from the web version of [open-slides](https://github.com/codewiththiha/
 | Backend | Tauri 2 commands (Rust) | Business logic, export, dialogs |
 | Persistence | SQLite via `sqlx` | Projects + slides in app data dir |
 | Highlighting | Shiki (singleton WASM) + Magic Move | Syntax + animated transitions |
-| Highlight processing | Rust (`src-tauri/src/highlight.rs`, unit-tested) | Range decomposition, entity-aware HTML slicing, eraser color |
+| Highlight processing | Client-side tokens (`src/lib/highlight-tokens.ts`, unit-tested) | Selection slicing over structured tokens, clone rendering, eraser color |
 
 ### Data flow
 
@@ -27,17 +27,19 @@ UI event → optimistic Zustand (localCode / currentSlideId)
 ### Highlight overlay flow
 
 ```
-step change → Shiki codeToHtml (JS, singleton)
-            → invoke("compute_highlight_plan", …)  — Rust: per-line char
-              ranges + tag-balanced clone HTML + eraser color
+step change → Shiki codeToTokensBase (JS, singleton)
+              — or invoke("merustmar_tokens", …) for Merustmar
+            → buildPlan (JS: per-line char ranges + token slicing
+              → escape-and-render clone HTML + eraser color mixing)
             → measureHighlight (JS: DOM ranges → pixel rects)
             → dim + per-line erasers + scaled clone (framer-motion)
 ```
 
-Parsing lives in Rust for correctness and speed: the overlay erases "which
-lines, which char from which char" exactly — multi-line selections, empty
-middle lines and entity-escaped code (`<`, `&`) all handled. Only the DOM
-measurement itself stays in JS, because Rust has no webview access.
+Slicing happens on raw token *strings* and HTML escaping happens at render
+time, so the historical failure modes (mid-entity cuts, tag balancing,
+line-index desync) cannot exist: multi-line selections, empty middle lines
+and entity-heavy code (`<`, `&`, `"`) are handled by construction. Only the
+DOM measurement itself needs the webview; everything up to it is pure math.
 
 Persistent state **never** goes through `localStorage`. Zustand holds UI-only state (zen mode, presentation, command palette, optimistic code buffer).
 
@@ -61,7 +63,10 @@ npm run tauri dev
 # Production bundle
 npm run tauri build
 
-# Rust unit tests (highlight processing logic)
+# Highlight-token regression tests (JS, node:test — no extra deps)
+npm run test:highlight
+
+# Rust unit tests (Merustmar tokenizer parity)
 cd src-tauri && cargo test
 ```
 

@@ -149,6 +149,15 @@ fn boundary_end(slice: &[u16], e: usize) -> bool {
     e == slice.len() || !is_regex_word(slice[e])
 }
 
+/// One styled run of text: raw (unescaped) UTF-8 content + palette color.
+/// The IPC payload — slicing happens on token CONTENT on the frontend and
+/// HTML escaping happens at render time, so entity-cutting is impossible.
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+pub struct MerustmarToken {
+    pub content: String,
+    pub color: String,
+}
+
 /// Emulates UNANCHORED `slice.match(/A|B|C/)` for literal alternations:
 /// leftmost match wins; equal start positions break ties by declaration
 /// order. With `word_boundaries` each candidate occurrence must satisfy the
@@ -196,24 +205,39 @@ fn try_match(
 }
 
 /// JS `esc()`: escapes `&`, `<`, `>`, `"` only.
-fn esc(units: &[u16]) -> String {
-    // Decode first (escapable chars are all ASCII singles; a scalar-level
-    // replace is order-equivalent to the JS per-char replacement).
-    String::from_utf16_lossy(units)
-        .replace('&', "&amp;")
+fn esc(s: &str) -> String {
+    s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
 }
 
-fn span(color: &str, units: &[u16]) -> String {
-    format!("<span style=\"color:{color}\">{}</span>", esc(units))
+/// Decode UTF-16 units to a Rust string (lossy only for the documented
+/// lone-surrogate edge — see module docs).
+fn decode(units: &[u16]) -> String {
+    String::from_utf16_lossy(units)
 }
 
-/// JS `flush()`: close the pending plain-text span, if any.
-fn flush(parts: &mut String, plain: &mut Vec<u16>, color: &'static str) {
+/// Render one line of tokens to `<span style="color:…">…</span>` HTML
+/// (escaping at render time — token content is stored raw).
+fn render_line_tokens(tokens: &[MerustmarToken]) -> String {
+    tokens.iter().fold(String::new(), |mut out, t| {
+        out.push_str(&format!(
+            "<span style=\"color:{}\">{}</span>",
+            t.color,
+            esc(t.content.as_str())
+        ));
+        out
+    })
+}
+
+/// JS `flush()`: close the pending plain-text token, if any.
+fn flush(tokens: &mut Vec<MerustmarToken>, plain: &mut Vec<u16>, color: &'static str) {
     if !plain.is_empty() {
-        parts.push_str(&span(color, plain));
+        tokens.push(MerustmarToken {
+            content: decode(plain),
+            color: color.to_string(),
+        });
         plain.clear();
     }
 }
@@ -263,33 +287,43 @@ fn is_ascii_letter(u: u16) -> bool {
 }
 
 /// Port of the frozen JS `highlightLine` — same branch order, same guards,
-/// same quirks.
-fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
-    let mut parts = String::new();
+/// same quirks. Returns tokens (raw content); rendering is a separate,
+/// trivially-verifiable step.
+fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> Vec<MerustmarToken> {
+    let mut tokens: Vec<MerustmarToken> = Vec::new();
     let mut plain: Vec<u16> = Vec::new();
     let mut i = 0usize;
+
+    macro_rules! tok {
+        ($color:expr, $units:expr) => {
+            tokens.push(MerustmarToken {
+                content: decode($units),
+                color: $color.to_string(),
+            })
+        };
+    }
 
     while i < line.len() {
         // -- comments (all three styles consume the rest of the line) --
         if line[i] == SLASH && i + 1 < line.len() && line[i + 1] == SLASH {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.comment, &line[i..]));
-            return parts;
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.comment, &line[i..]);
+            return tokens;
         }
         if line[i] == HASH {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.comment, &line[i..]));
-            return parts;
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.comment, &line[i..]);
+            return tokens;
         }
         if line[i] == SLASH && i + 1 < line.len() && line[i + 1] == STAR {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.comment, &line[i..]));
-            return parts;
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.comment, &line[i..]);
+            return tokens;
         }
 
         // -- string (unterminated consumes to end of line; `\` escapes) --
         if line[i] == QUOTE {
-            flush(&mut parts, &mut plain, c.default);
+            flush(&mut tokens, &mut plain, c.default);
             let mut j = i + 1;
             while j < line.len() && line[j] != QUOTE {
                 if line[j] == BACKSLASH {
@@ -298,33 +332,33 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
                 j += 1;
             }
             j = (j + 1).min(line.len());
-            parts.push_str(&span(c.string, &line[i..j]));
+            tok!(c.string, &line[i..j]);
             i = j;
             continue;
         }
 
         // -- keywords / booleans / builtins (unanchored tryMatch, see docs) --
         if let Some((len, ai)) = try_match(line, i, &tables.keywords, false) {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.keyword, &tables.keywords[ai]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.keyword, &tables.keywords[ai]);
             i += len;
             continue;
         }
         if let Some((len, ai)) = try_match(line, i, &tables.booleans, false) {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.boolean, &tables.booleans[ai]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.boolean, &tables.booleans[ai]);
             i += len;
             continue;
         }
         if let Some((len, ai)) = try_match(line, i, &tables.ascii_builtins, true) {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.builtin, &tables.ascii_builtins[ai]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.builtin, &tables.ascii_builtins[ai]);
             i += len;
             continue;
         }
         if let Some((len, ai)) = try_match(line, i, &tables.myanmar_builtin, false) {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.builtin, &tables.myanmar_builtin[ai]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.builtin, &tables.myanmar_builtin[ai]);
             i += len;
             continue;
         }
@@ -341,11 +375,11 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
                 _ => None,
             };
             if let Some(op) = two {
-                flush(&mut parts, &mut plain, c.default);
-                // JS pushes `s(c.operator, '==')` — esc() applies, so
-                // <= → &lt;=, && → &amp;&amp; etc.
-                let op_units: Vec<u16> = op.encode_utf16().collect();
-                parts.push_str(&span(c.operator, &op_units));
+                flush(&mut tokens, &mut plain, c.default);
+                tokens.push(MerustmarToken {
+                    content: op.to_string(),
+                    color: c.operator.to_string(),
+                });
                 i += 2;
                 continue;
             }
@@ -353,8 +387,8 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
         // '<>+-*/%=' single-char operators
         if matches!(line[i], u if [b'<' as u16, b'>' as u16, b'+' as u16, b'-' as u16, b'*' as u16, b'/' as u16, b'%' as u16, b'=' as u16].contains(&u))
         {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.operator, &line[i..i + 1]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.operator, &line[i..i + 1]);
             i += 1;
             continue;
         }
@@ -363,8 +397,8 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
         // `^\d+\.\d+` (guard: previous char not a word char)
         if let Some(len) = match_ascii_float(&line[i..]) {
             if i == 0 || !is_word_char(line[i - 1]) {
-                flush(&mut parts, &mut plain, c.default);
-                parts.push_str(&span(c.number, &line[i..i + len]));
+                flush(&mut tokens, &mut plain, c.default);
+                tok!(c.number, &line[i..i + len]);
                 i += len;
                 continue;
             }
@@ -373,31 +407,31 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
         if let Some(len) = match_ascii_int(&line[i..]) {
             let next_ok = i + len >= line.len() || !is_ascii_letter(line[i + len]);
             if (i == 0 || !is_word_char(line[i - 1])) && next_ok {
-                flush(&mut parts, &mut plain, c.default);
-                parts.push_str(&span(c.number, &line[i..i + len]));
+                flush(&mut tokens, &mut plain, c.default);
+                tok!(c.number, &line[i..i + len]);
                 i += len;
                 continue;
             }
         }
         // `^[၀-၉]+` (unguarded in the reference)
         if let Some(len) = match_myanmar_digits(&line[i..]) {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.number, &line[i..i + len]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.number, &line[i..i + len]);
             i += len;
             continue;
         }
 
         // -- standalone punctuation --
         if line[i] == MYANMAR_SECTION {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.default, &line[i..i + 1]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.default, &line[i..i + 1]);
             i += 1;
             continue;
         }
         if matches!(line[i], u if [b'{' as u16, b'}' as u16, b'(' as u16, b')' as u16, b',' as u16].contains(&u))
         {
-            flush(&mut parts, &mut plain, c.default);
-            parts.push_str(&span(c.default, &line[i..i + 1]));
+            flush(&mut tokens, &mut plain, c.default);
+            tok!(c.default, &line[i..i + 1]);
             i += 1;
             continue;
         }
@@ -405,23 +439,30 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> String {
         plain.push(line[i]);
         i += 1;
     }
-    flush(&mut parts, &mut plain, c.default);
-    parts
+    flush(&mut tokens, &mut plain, c.default);
+    tokens
 }
 
-/// Port of the frozen JS `highlightMerustmarCode`:
-/// `<span class="line">…</span>` per line, joined by `\n`.
-pub fn highlight_merustmar_code(code: &str, is_dark: bool) -> String {
+/// Tokenize Merustmar code: one token list per line (`\n`-split). This is
+/// the IPC payload — the frontend slices these tokens for highlights and
+/// renders them itself.
+pub fn merustmar_tokens(code: &str, is_dark: bool) -> Vec<Vec<MerustmarToken>> {
     let c = if is_dark { &DARK } else { &LIGHT };
     let tables = Tables::new();
     code.split('\n')
         .map(|line| {
             let units: Vec<u16> = line.encode_utf16().collect();
-            format!(
-                "<span class=\"line\">{}</span>",
-                highlight_line(&units, c, &tables)
-            )
+            highlight_line(&units, c, &tables)
         })
+        .collect()
+}
+
+/// Port of the frozen JS `highlightMerustmarCode`:
+/// `<span class="line">…</span>` per line, joined by `\n`.
+pub fn highlight_merustmar_code(code: &str, is_dark: bool) -> String {
+    merustmar_tokens(code, is_dark)
+        .iter()
+        .map(|line| format!("<span class=\"line\">{}</span>", render_line_tokens(line)))
         .collect::<Vec<_>>()
         .join("\n")
 }

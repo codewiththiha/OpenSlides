@@ -8,7 +8,7 @@
  *   4. Clone text (syntax-highlighted, pixel-aligned per line, scales up)
  *
  * Data flow per step:
- *   useHighlightPlan (Rust: ranges + per-line clone HTML + eraser color)
+ *   useHighlightPlan (token slicing: ranges + per-line clone HTML + eraser color)
  *     → measureHighlight (JS: plan char ranges → real DOM pixel rects)
  *     → erasers + clone positioned by rect, 1:1 with the plan lines,
  *       so multi-line selections erase every covered line exactly.

@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { api, type SelectionRange } from "../../lib/tauri-api";
+import {
+  sliceSnippets,
+  type SelectionRange,
+} from "../../lib/highlight-tokens";
 import type { Highlight } from "../../types";
 
 /**
- * Plain-text snippet per highlight (settings panel rows), sliced in Rust.
- * Keyed by the ranges themselves so edits recompute; previous data is kept
- * while refetching so rows never flash an empty state.
+ * Plain-text snippet per highlight (settings panel rows), sliced client-side
+ * from the source string. Keyed by the ranges themselves so edits recompute;
+ * previous data is kept while refetching so rows never flash an empty state.
  */
 export function useHighlightSnippets(code: string, highlights: Highlight[]) {
   const ranges: SelectionRange[] = highlights.map(
@@ -22,7 +25,7 @@ export function useHighlightSnippets(code: string, highlights: Highlight[]) {
 
   return useQuery({
     queryKey: ["highlight-snippets", code, rangesKey],
-    queryFn: () => api.highlightSnippets(code, ranges),
+    queryFn: () => Promise.resolve(sliceSnippets(code, ranges)),
     placeholderData: (previous) => previous,
     staleTime: 30_000,
   });

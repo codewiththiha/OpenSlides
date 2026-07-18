@@ -38,6 +38,7 @@ import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { cn, escapeHtml } from "@/lib/utils";
 import { api } from "@/lib/tauri-api";
+import { renderTokenLines, selectionToRange } from "@/lib/highlight-tokens";
 import { markSavePending, clearPendingSave } from "@/lib/save-flush";
 import { isModKey } from "@/lib/keyboard";
 import {
@@ -345,9 +346,9 @@ export function CodeEditor({
       }
       if (lang === "merustmar") {
         api
-          .merustmarHighlightCode(src, dark)
-          .then((html) => {
-            if (hlReqRef.current === req) setHighlighted(html);
+          .merustmarTokens(src, dark)
+          .then((tokens) => {
+            if (hlReqRef.current === req) setHighlighted(renderTokenLines(tokens));
           })
           .catch(() => {
             // Frozen JS fallback (kept per repo policy) if IPC fails.
@@ -417,32 +418,11 @@ export function CodeEditor({
       const end = textarea.selectionEnd;
       if (start === end) return; // No selection
 
-      // Flat offsets → line/char range, computed in Rust (single
-      // implementation of line/char semantics, shared with the overlay).
-      const openMenu = (range: {
-        startLine: number;
-        startChar: number;
-        endLine: number;
-        endChar: number;
-      }) => {
-        setPendingSelection(range);
-        setContextMenuPosition({ x: e.clientX, y: e.clientY });
-        setContextMenuVisible(true);
-      };
-      api
-        .selectionRange(code, start, end)
-        .then(openMenu)
-        .catch(() => {
-          // Offline fallback (same math) if IPC is unavailable.
-          const beforeStart = code.slice(0, start);
-          const beforeEnd = code.slice(0, end);
-          openMenu({
-            startLine: (beforeStart.match(/\n/g) || []).length,
-            startChar: start - (beforeStart.lastIndexOf("\n") + 1),
-            endLine: (beforeEnd.match(/\n/g) || []).length,
-            endChar: end - (beforeEnd.lastIndexOf("\n") + 1),
-          });
-        });
+      // Flat offsets → line/char range — single implementation, shared with
+      // the overlay pipeline (src/lib/highlight-tokens.ts).
+      setPendingSelection(selectionToRange(code, start, end));
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      setContextMenuVisible(true);
     },
     [highlightMode, code],
   );

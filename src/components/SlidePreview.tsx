@@ -10,8 +10,13 @@ import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
 import { useShallow } from "zustand/react/shallow";
 import { getHighlighter } from "@/lib/shiki-instance";
-import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
 import { api } from "@/lib/tauri-api";
+import {
+  merustmarFallbackTokens,
+  plainTokenLines,
+  renderTokenLines,
+  type HighlightTokenLine,
+} from "@/lib/highlight-tokens";
 import {
   LIGHT_THEMES,
   themeBackground,
@@ -70,20 +75,21 @@ export function SlidePreview({
     highlighter && highlighter.getLoadedLanguages().includes(language);
   const needsMerustmar = language === "merustmar" && !canUseShiki;
 
-  // Merustmar fallback HTML — rendered in Rust (off the main thread; the
-  // old sync-in-render approach recomputed the whole slide per render step).
-  // The result is tracked with the code/theme it belongs to via a request
-  // token, so out-of-order resolves can never flash mismatched text; while
-  // Rust is answering, the previous frame simply stays visible (≤1 RPC of
-  // lag). The frozen JS seeds frame one (correct on mount) and stays as the
-  // failure fallback, per repo policy.
-  const [mmHtml, setMmHtml] = useState<{
+  // Merustmar token lines — tokenized in Rust (off the main thread; the old
+  // sync-in-render approach recomputed the whole slide per render step), then
+  // rendered here at the same token granularity Shiki would use. The result
+  // is tracked with the code/theme it belongs to via a request token, so
+  // out-of-order resolves can never flash mismatched text; while Rust is
+  // answering, the previous frame simply stays visible (≤1 RPC of lag). The
+  // frozen JS seeds frame one (correct on mount) and stays as the failure
+  // fallback, per repo policy.
+  const [mmTokens, setMmTokens] = useState<{
     code: string;
     dark: boolean;
-    html: string;
+    lines: HighlightTokenLine[];
   } | null>(() =>
     needsMerustmar
-      ? { code, dark: isDarkBg, html: highlightMerustmarCode(code, isDarkBg) }
+      ? { code, dark: isDarkBg, lines: merustmarFallbackTokens(code, isDarkBg) }
       : null,
   );
   const mmReqRef = useRef(0);
@@ -92,13 +98,13 @@ export function SlidePreview({
     const req = ++mmReqRef.current;
     const dark = isDarkBg;
     api
-      .merustmarHighlightCode(code, dark)
-      .then((html) => {
-        if (mmReqRef.current === req) setMmHtml({ code, dark, html });
+      .merustmarTokens(code, dark)
+      .then((lines) => {
+        if (mmReqRef.current === req) setMmTokens({ code, dark, lines });
       })
       .catch(() => {
         if (mmReqRef.current === req) {
-          setMmHtml({ code, dark, html: highlightMerustmarCode(code, dark) });
+          setMmTokens({ code, dark, lines: merustmarFallbackTokens(code, dark) });
         }
       });
   }, [needsMerustmar, code, isDarkBg]);
@@ -131,9 +137,9 @@ export function SlidePreview({
     : settings.fontSize;
 
   if (needsMerustmar) {
-    // Previous frame stays up while the Rust render for the latest code is
-    // in flight; empty only before the very first answer in this session.
-    const html = mmHtml?.html ?? "";
+    // Previous frame stays up while the Rust tokenization for the latest
+    // code is in flight; plain only before the very first answer.
+    const html = renderTokenLines(mmTokens?.lines ?? plainTokenLines(code));
     return (
       <div
         ref={containerRef}

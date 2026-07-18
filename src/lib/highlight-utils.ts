@@ -3,12 +3,12 @@
  *
  * Pure range/HTML parsing (which lines, which char-from/char-to per line,
  * slice extraction, eraser color) lives in Rust — see
- * `src-tauri/src/highlight.rs` and `api.computeHighlightPlan`. This module
+ * `highlight-tokens.ts` (selection slicing over structured tokens). This module
  * keeps only what must happen inside the webview: turning the plan's char
  * ranges into pixel rects by measuring the live DOM.
  */
 import type { Highlight } from "@/types";
-import type { HighlightPlan, HighlightPlanLine } from "@/lib/tauri-api";
+import type { HighlightPlan, HighlightPlanLine } from "@/lib/highlight-tokens";
 
 /** A single measured line box of a highlight, relative to the slide container. */
 export interface HighlightLineRect {

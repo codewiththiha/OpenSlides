@@ -1,6 +1,5 @@
 mod commands;
 mod db;
-mod highlight;
 mod merustmar;
 mod models;
 
@@ -58,10 +57,7 @@ pub fn run() {
             set_current_slide,
             export_project_to_json,
             import_project_from_json,
-            compute_highlight_plan,
-            highlight_snippets,
-            selection_range,
-            highlight_merustmar_code,
+            merustmar_tokens,
             finish_quit,
         ])
         .on_window_event(|window, event| {
