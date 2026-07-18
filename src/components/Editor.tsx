@@ -52,8 +52,10 @@ import { api } from "@/lib/tauri-api";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
 import { useAppMenu } from "@/hooks/useAppMenu";
+import { useHighlightNav } from "@/hooks/useHighlightNav";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { slideDisplayName } from "@/types";
+import { HighlightStepIndicator } from "./HighlightStepIndicator";
 
 /** Below this % of the horizontal group, code panel auto-collapses. */
 const CODE_COLLAPSE_THRESHOLD = 14;
@@ -102,6 +104,7 @@ export function Editor() {
     setCodePanelSize,
     slidesPanelSize,
     setSlidesPanelSize,
+    previewHighlightIndex,
   } = useUiStore();
 
   const exportMutation = useExportProject();
@@ -112,10 +115,6 @@ export function Editor() {
   const [editorExpanded, setEditorExpanded] = useState(false);
   const [editingSlideName, setEditingSlideName] = useState(false);
   const [slideNameDraft, setSlideNameDraft] = useState("");
-
-  // Highlight navigation state during presentation
-  const [activeHighlightIndex, setActiveHighlightIndex] = useState(-1);
-  const [isHighlightOutro, setIsHighlightOutro] = useState(false);
 
   const codePanelRef = useRef<ImperativePanelHandle>(null);
   const slidesPanelRef = useRef<ImperativePanelHandle>(null);
@@ -182,6 +181,20 @@ export function Editor() {
   const slides = project?.slides ?? [];
   const currentIndex = slides.findIndex((s) => s.id === currentSlideId);
 
+  // Highlight navigation: each →/click steps intro→crossfade→…→outro,
+  // and only shifts the slide after the final outro actually finished.
+  const {
+    highlightIndex: activeHighlightIndex,
+    goNext: goNextSlide,
+    goPrev: goPrevSlide,
+    handleExitComplete: handleHighlightExitComplete,
+  } = useHighlightNav({
+    slides,
+    currentIndex,
+    currentSlideId,
+    setCurrentSlideId,
+  });
+
   const toggleTheme = useCallback(() => {
     const next = !isDarkUi;
     setIsDarkUi(next);
@@ -189,105 +202,17 @@ export function Editor() {
     document.documentElement.classList.toggle("light", !next);
   }, [isDarkUi, setIsDarkUi]);
 
-  // Navigate forward: through highlights first, then to next slide
-  const goNext = useCallback(() => {
-    const currentSlide = slides[currentIndex];
-    const highlights = currentSlide?.highlights ?? [];
-
-    // If there are more highlights to show
-    if (activeHighlightIndex < highlights.length - 1) {
-      // If currently in outro, complete it first
-      if (isHighlightOutro) {
-        setIsHighlightOutro(false);
-      }
-      setActiveHighlightIndex((prev) => prev + 1);
-      return true;
-    }
-
-    // Otherwise go to next slide
-    if (currentIndex < slides.length - 1) {
-      // Trigger outro if we have an active highlight
-      if (activeHighlightIndex >= 0) {
-        setIsHighlightOutro(true);
-        setTimeout(() => {
-          setIsHighlightOutro(false);
-          setActiveHighlightIndex(-1);
-          setCurrentSlideId(slides[currentIndex + 1].id);
-        }, 600); // Wait for outro animation
-        return true;
-      }
-      setCurrentSlideId(slides[currentIndex + 1].id);
-      return true;
-    }
-    return false;
-  }, [currentIndex, slides, activeHighlightIndex, isHighlightOutro, setCurrentSlideId]);
-
-  // Navigate backward: through highlights first, then to previous slide
-  const goPrev = useCallback(() => {
-    // If we have an active highlight, go back through highlights
-    if (activeHighlightIndex > 0) {
-      setActiveHighlightIndex((prev) => prev - 1);
-      return true;
-    }
-
-    // If we're on the first highlight, go back to no highlight
-    if (activeHighlightIndex === 0) {
-      setIsHighlightOutro(true);
-      setTimeout(() => {
-        setIsHighlightOutro(false);
-        setActiveHighlightIndex(-1);
-      }, 600);
-      return true;
-    }
-
-    // Otherwise go to previous slide and show its last highlight if any
-    if (currentIndex > 0) {
-      const prevSlide = slides[currentIndex - 1];
-      const prevHighlights = prevSlide?.highlights ?? [];
-      setCurrentSlideId(prevSlide.id);
-      if (prevHighlights.length > 0) {
-        setActiveHighlightIndex(prevHighlights.length - 1);
-      }
-      return true;
-    }
-    return false;
-  }, [currentIndex, slides, activeHighlightIndex, setCurrentSlideId]);
-
-  const goNextSlide = goNext;
-  const goPrevSlide = goPrev;
-
-  // Reset highlight state when switching slides externally (not via highlight nav)
-  useEffect(() => {
-    setActiveHighlightIndex(-1);
-    setIsHighlightOutro(false);
-  }, [currentSlideId]);
-
-  // Auto-play: advance after each slide's duration (ms)
+  // Auto-play: advance after each slide's duration (ms). Stepping through
+  // highlights goes through the same goNext as manual nav, so every intro,
+  // crossfade and the closing outro all play before the slide moves on.
   useEffect(() => {
     if (!isAutoPlaying || !project) return;
     if (slides.length === 0 || currentIndex < 0) return;
 
-    const current = slides[currentIndex];
-    const highlights = current?.highlights ?? [];
-
-    // If there are highlights to cycle through
-    if (activeHighlightIndex < highlights.length - 1) {
-      const ms = Math.max(500, current?.duration ?? 3000);
-      const timer = window.setTimeout(() => {
-        setActiveHighlightIndex((prev) => prev + 1);
-      }, ms);
-      return () => window.clearTimeout(timer);
-    }
-
-    // Otherwise advance to next slide
-    const ms = Math.max(500, current?.duration ?? 3000);
+    const ms = Math.max(500, slides[currentIndex]?.duration ?? 3000);
     const timer = window.setTimeout(() => {
-      if (currentIndex >= slides.length - 1) {
-        setIsAutoPlaying(false);
-        return;
-      }
-      setActiveHighlightIndex(-1);
-      setCurrentSlideId(slides[currentIndex + 1].id);
+      const acted = goNextSlide();
+      if (!acted) setIsAutoPlaying(false); // deck finished
     }, ms);
 
     return () => window.clearTimeout(timer);
@@ -297,7 +222,7 @@ export function Editor() {
     slides,
     currentIndex,
     activeHighlightIndex,
-    setCurrentSlideId,
+    goNextSlide,
     setIsAutoPlaying,
   ]);
 
@@ -457,8 +382,6 @@ export function Editor() {
       toggleShortcutsOpen,
       setIsAutoPlaying,
       toggleAutoPlaying,
-      activeHighlightIndex,
-      isHighlightOutro,
     ],
   );
 
@@ -837,19 +760,33 @@ export function Editor() {
               to exit
             </button>
           </div>
-          {/* Full-bleed stage (true fullscreen when API available) */}
-          <div className="flex h-full w-full items-center justify-center p-0 sm:p-4">
-            <div className="aspect-video h-full max-h-full w-full max-w-full">
+          {/* Full-bleed stage (true fullscreen when API available).
+              Click = next step (highlight or slide), right-click = back. */}
+          <div
+            className="flex h-full w-full cursor-pointer items-center justify-center p-0 sm:p-4"
+            onClick={() => {
+              setIsAutoPlaying(false);
+              goNextSlide();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setIsAutoPlaying(false);
+              goPrevSlide();
+            }}
+          >
+            <div className="relative aspect-video h-full max-h-full w-full max-w-full">
               <SlidePreview
                 project={project}
                 isPresenting
                 activeHighlightIndex={activeHighlightIndex}
-                isHighlightOutro={isHighlightOutro}
-                onHighlightOutroComplete={() => {
-                  setIsHighlightOutro(false);
-                  setActiveHighlightIndex(-1);
-                }}
+                onHighlightExitComplete={handleHighlightExitComplete}
               />
+              <div className="pointer-events-none absolute inset-x-0 bottom-4 z-40 flex justify-center">
+                <HighlightStepIndicator
+                  total={activeSlide?.highlights?.length ?? 0}
+                  current={activeHighlightIndex}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -898,16 +835,27 @@ export function Editor() {
                   className="min-w-0"
                 >
                   <div className="flex h-full items-center justify-center bg-muted/20 p-4 pb-5">
-                    <div className="aspect-video h-full max-h-full w-full max-w-full">
+                    <div className="relative aspect-video h-full max-h-full w-full max-w-full">
                       <SlidePreview
                         project={project}
-                        activeHighlightIndex={activeHighlightIndex}
-                        isHighlightOutro={isHighlightOutro}
-                        onHighlightOutroComplete={() => {
-                          setIsHighlightOutro(false);
-                          setActiveHighlightIndex(-1);
-                        }}
+                        activeHighlightIndex={
+                          previewHighlightIndex >= 0
+                            ? previewHighlightIndex
+                            : activeHighlightIndex
+                        }
+                        onHighlightExitComplete={handleHighlightExitComplete}
                       />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-2.5 z-40 flex justify-center">
+                        <HighlightStepIndicator
+                          compact
+                          total={activeSlide?.highlights?.length ?? 0}
+                          current={
+                            previewHighlightIndex >= 0
+                              ? previewHighlightIndex
+                              : activeHighlightIndex
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
                 </Panel>
@@ -1072,6 +1020,7 @@ export function Editor() {
                   <BottomSlidesPanel
                     project={project}
                     collapsed={isBottomPanelCollapsed}
+                    activeHighlightIndex={activeHighlightIndex}
                     onToggleCollapse={() => {
                       if (isBottomPanelCollapsed) expandSlidesPanel();
                       else collapseSlidesPanel();

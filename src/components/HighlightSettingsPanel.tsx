@@ -1,54 +1,83 @@
 /**
- * Panel that shows existing highlights for the current slide.
- * Allows editing dim amount, size-up toggle, custom transitions, and deletion.
- * Appears in the CodeEditor when highlights exist.
+ * Panel showing the ordered highlight steps for the current slide.
+ *
+ * Each row: step number, the selected code snippet, line/char range,
+ * preview toggle (mirrors the step into the slide preview), per-highlight
+ * settings (dim / size-up / custom animation timings), reorder and delete.
+ *
+ * Order here IS the playback order when stepping with → / clicks.
  */
-import { Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import {
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
+import { extractHighlightText } from "@/lib/highlight-utils";
 import type { Highlight } from "@/types";
 
 interface HighlightSettingsPanelProps {
   highlights: Highlight[];
+  /** Current slide code — used to show the snippet on each row. */
+  code: string;
   expandedId: string | null;
+  /** Index currently mirrored into the slide preview (-1 = none). */
+  previewIndex: number;
   onToggleExpand: (id: string) => void;
   onUpdate: (id: string, patch: Partial<Highlight>) => void;
   onDelete: (id: string) => void;
   onPreview: (index: number) => void;
+  onMove: (id: string, dir: -1 | 1) => void;
 }
 
 export function HighlightSettingsPanel({
   highlights,
+  code,
   expandedId,
+  previewIndex,
   onToggleExpand,
   onUpdate,
   onDelete,
   onPreview,
+  onMove,
 }: HighlightSettingsPanelProps) {
   if (highlights.length === 0) return null;
 
   return (
     <div className="border-t border-border/50 bg-muted/20">
-      <div className="px-2 py-1.5">
+      <div className="flex items-center justify-between px-2 py-1.5">
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Highlights ({highlights.length})
+          Highlight steps ({highlights.length})
+        </span>
+        <span className="text-[9px] text-muted-foreground/70">
+          Plays in order on →
         </span>
       </div>
       <div className="max-h-[180px] overflow-y-auto px-2 pb-2 space-y-1">
         {highlights.map((hl, index) => {
           const isExpanded = expandedId === hl.id;
+          const isPreviewing = previewIndex === index;
+          const snippet =
+            extractHighlightText(code, hl).replace(/\s+/g, " ").trim() ||
+            "(empty selection)";
           return (
             <div
               key={hl.id}
               className={cn(
                 "rounded-md border transition-colors",
-                isExpanded
-                  ? "border-primary/40 bg-card/80"
-                  : "border-border/40 bg-card/40 hover:bg-card/60",
+                isPreviewing
+                  ? "border-primary/60 bg-primary/10"
+                  : isExpanded
+                    ? "border-primary/40 bg-card/80"
+                    : "border-border/40 bg-card/40 hover:bg-card/60",
               )}
             >
               {/* Header row */}
@@ -57,21 +86,48 @@ export function HighlightSettingsPanel({
                   type="button"
                   className="flex-1 flex items-center gap-1.5 text-left min-w-0"
                   onClick={() => onToggleExpand(hl.id)}
+                  title={`L${hl.startLine + 1}:${hl.startChar} → L${hl.endLine + 1}:${hl.endChar}`}
                 >
                   <span className="shrink-0 text-[10px] font-mono text-primary/80">
                     #{index + 1}
                   </span>
-                  <span className="truncate text-[10px] text-muted-foreground">
-                    L{hl.startLine + 1}:{hl.startChar} → L{hl.endLine + 1}:
-                    {hl.endChar}
+                  <span className="truncate font-mono text-[10px] text-foreground/80">
+                    {snippet}
                   </span>
                 </button>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-5 w-5 shrink-0"
+                  disabled={index === 0}
+                  onClick={() => onMove(hl.id, -1)}
+                  title="Move earlier in playback order"
+                >
+                  <ArrowUp className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 shrink-0"
+                  disabled={index === highlights.length - 1}
+                  onClick={() => onMove(hl.id, 1)}
+                  title="Move later in playback order"
+                >
+                  <ArrowDown className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-5 w-5 shrink-0",
+                    isPreviewing && "bg-primary/20 text-primary",
+                  )}
                   onClick={() => onPreview(index)}
-                  title="Preview this highlight"
+                  title={
+                    isPreviewing
+                      ? "Stop previewing this step"
+                      : "Preview this step in the slide"
+                  }
                 >
                   <Eye className="h-3 w-3" />
                 </Button>
@@ -92,6 +148,7 @@ export function HighlightSettingsPanel({
                   size="icon"
                   className="h-5 w-5 shrink-0 hover:text-destructive"
                   onClick={() => onDelete(hl.id)}
+                  title="Delete highlight"
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>

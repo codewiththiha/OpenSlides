@@ -68,6 +68,7 @@ export function CodeEditor({
     setLocalCode,
     setSaveStatus,
     editorShowLineNumbers,
+    previewHighlightIndex,
     setPreviewHighlightIndex,
   } = useUiStore();
 
@@ -452,6 +453,7 @@ export function CodeEditor({
   const handleDeleteHighlight = useCallback(
     (id: string) => {
       if (!slideId) return;
+      const deletedIndex = currentHighlights.findIndex((hl) => hl.id === id);
       const updated = currentHighlights.filter((hl) => hl.id !== id);
       settingsMutation.mutate({
         slideId,
@@ -460,14 +462,62 @@ export function CodeEditor({
       if (expandedHighlightId === id) {
         setExpandedHighlightId(null);
       }
+      // Fix preview index after removal (indices are positional)
+      if (deletedIndex >= 0) {
+        if (previewHighlightIndex === deletedIndex) {
+          setPreviewHighlightIndex(-1);
+        } else if (previewHighlightIndex > deletedIndex) {
+          setPreviewHighlightIndex(previewHighlightIndex - 1);
+        }
+      }
     },
-    [slideId, currentHighlights, settingsMutation, expandedHighlightId],
+    [
+      slideId,
+      currentHighlights,
+      settingsMutation,
+      expandedHighlightId,
+      previewHighlightIndex,
+      setPreviewHighlightIndex,
+    ],
   );
 
-  const handlePreviewHighlight = useCallback((index: number) => {
-    const current = useUiStore.getState().previewHighlightIndex;
-    setPreviewHighlightIndex(current === index ? -1 : index);
-  }, [setPreviewHighlightIndex]);
+  const handleMoveHighlight = useCallback(
+    (id: string, dir: -1 | 1) => {
+      if (!slideId) return;
+      const from = currentHighlights.findIndex((hl) => hl.id === id);
+      const to = from + dir;
+      if (from < 0 || to < 0 || to >= currentHighlights.length) return;
+      const updated = [...currentHighlights];
+      const [moved] = updated.splice(from, 1);
+      updated.splice(to, 0, moved);
+      settingsMutation.mutate({
+        slideId,
+        payload: { highlights: updated },
+      });
+      // Keep the preview pinned to the moved step if it was being previewed
+      if (previewHighlightIndex === from) {
+        setPreviewHighlightIndex(to);
+      } else if (previewHighlightIndex === to) {
+        setPreviewHighlightIndex(from);
+      }
+    },
+    [
+      slideId,
+      currentHighlights,
+      settingsMutation,
+      previewHighlightIndex,
+      setPreviewHighlightIndex,
+    ],
+  );
+
+  const handlePreviewHighlight = useCallback(
+    (index: number) => {
+      setPreviewHighlightIndex(
+        previewHighlightIndex === index ? -1 : index,
+      );
+    },
+    [previewHighlightIndex, setPreviewHighlightIndex],
+  );
 
   // Clear preview when leaving highlight mode or switching slides
   useEffect(() => {
@@ -708,16 +758,30 @@ export function CodeEditor({
         </div>
       </div>
 
+      {highlightMode && currentHighlights.length === 0 && (
+        <div className="shrink-0 border-t border-border/50 bg-muted/20 px-3 py-2">
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            Highlight mode is on — select code, then right-click and choose{" "}
+            <span className="font-medium text-foreground/80">Add Highlight</span>.
+            Steps play in order with <kbd className="rounded border border-border bg-background px-1 font-mono text-[9px]">→</kbd>{" "}
+            or a click before the next slide.
+          </p>
+        </div>
+      )}
+
       {highlightMode && (
         <HighlightSettingsPanel
           highlights={currentHighlights}
+          code={code}
           expandedId={expandedHighlightId}
+          previewIndex={previewHighlightIndex}
           onToggleExpand={(id) =>
             setExpandedHighlightId((prev) => (prev === id ? null : id))
           }
           onUpdate={handleUpdateHighlight}
           onDelete={handleDeleteHighlight}
           onPreview={handlePreviewHighlight}
+          onMove={handleMoveHighlight}
         />
       )}
     </div>

@@ -25,10 +25,8 @@ interface SlidePreviewProps {
   isPresenting?: boolean;
   /** Index of the active highlight (-1 or undefined = no highlight). */
   activeHighlightIndex?: number;
-  /** Whether the current highlight is in its outro phase. */
-  isHighlightOutro?: boolean;
-  /** Callback when the outro animation completes. */
-  onHighlightOutroComplete?: () => void;
+  /** Fired when the highlight outro fully completed (safe to change slide). */
+  onHighlightExitComplete?: () => void;
 }
 
 function resolveLanguage(project: Project, _slide: Slide): string {
@@ -44,8 +42,7 @@ export function SlidePreview({
   project,
   isPresenting = false,
   activeHighlightIndex = -1,
-  isHighlightOutro = false,
-  onHighlightOutroComplete,
+  onHighlightExitComplete,
 }: SlidePreviewProps) {
   const { currentSlideId, localCode } = useUiStore();
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
@@ -86,17 +83,13 @@ export function SlidePreview({
 
   const stagePad = isPresenting ? "p-16 md:p-24" : "p-8 md:p-12";
 
-  // Determine the active highlight for this slide
+  // Determine the active highlight for this slide.
+  // null = clean state; the layer plays the outro on the way down.
   const highlights = slide.highlights ?? [];
   const activeHighlight =
     activeHighlightIndex >= 0 && activeHighlightIndex < highlights.length
       ? highlights[activeHighlightIndex]
       : null;
-
-  const isHighlightActive =
-    activeHighlight !== null && !isHighlightOutro;
-  const isHighlightInOutro =
-    activeHighlight !== null && isHighlightOutro;
 
   const previewFontSize = isPresenting
     ? settings.fontSize * 1.15
@@ -133,23 +126,18 @@ export function SlidePreview({
           </div>
         </div>
 
-        {activeHighlight && (
-          <HighlightLayer
-            containerRef={containerRef}
-            codeContainerRef={codeContainerRef}
-            code={code}
-            highlight={activeHighlight}
-            highlighter={highlighter}
-            theme={theme}
-            language={language}
-            fontSize={previewFontSize}
-            lineHeight={settings.lineHeight}
-            isPresenting={isPresenting}
-            isActive={isHighlightActive}
-            isOutro={isHighlightInOutro}
-            onOutroComplete={onHighlightOutroComplete}
-          />
-        )}
+        <HighlightLayer
+          containerRef={containerRef}
+          codeContainerRef={codeContainerRef}
+          code={code}
+          highlight={activeHighlight}
+          highlighter={highlighter}
+          theme={theme}
+          language={language}
+          fontSize={previewFontSize}
+          lineHeight={settings.lineHeight}
+          onExitComplete={onHighlightExitComplete}
+        />
       </div>
     );
   }
@@ -221,23 +209,18 @@ export function SlidePreview({
         </div>
       </div>
 
-      {activeHighlight && (
-        <HighlightLayer
-          containerRef={containerRef}
-          codeContainerRef={codeContainerRef}
-          code={code}
-          highlight={activeHighlight}
-          highlighter={highlighter}
-          theme={theme}
-          language={language}
-          fontSize={previewFontSize}
-          lineHeight={settings.lineHeight}
-          isPresenting={isPresenting}
-          isActive={isHighlightActive}
-          isOutro={isHighlightInOutro}
-          onOutroComplete={onHighlightOutroComplete}
-        />
-      )}
+      <HighlightLayer
+        containerRef={containerRef}
+        codeContainerRef={codeContainerRef}
+        code={code}
+        highlight={activeHighlight}
+        highlighter={highlighter}
+        theme={theme}
+        language={language}
+        fontSize={previewFontSize}
+        lineHeight={settings.lineHeight}
+        onExitComplete={onHighlightExitComplete}
+      />
     </div>
   );
 }

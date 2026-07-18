@@ -51,6 +51,8 @@ const ITEM_WIDTH = 152;
 interface BottomSlidesPanelProps {
   project: Project;
   collapsed?: boolean;
+  /** Active highlight index on the selected slide (-1 = none). */
+  activeHighlightIndex?: number;
   onToggleCollapse?: () => void;
 }
 
@@ -69,6 +71,7 @@ function SlideCard({
   isActive = false,
   isRenaming = false,
   renameValue = "",
+  highlightProgress = -1,
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
@@ -84,6 +87,8 @@ function SlideCard({
   isActive?: boolean;
   isRenaming?: boolean;
   renameValue?: string;
+  /** Active highlight index while stepping (only meaningful when selected). */
+  highlightProgress?: number;
   onRenameValueChange?: (v: string) => void;
   onCommitRename?: () => void;
   onCancelRename?: () => void;
@@ -98,6 +103,8 @@ function SlideCard({
     (localCode[slide.id] ?? slide.code).split("\n")[0]?.slice(0, 28) || "Empty";
   const selected = currentSlideId === slide.id;
   const title = slideDisplayName(slide, index);
+  const hlCount = slide.highlights?.length ?? 0;
+  const progress = selected ? highlightProgress : -1;
 
   return (
     <div
@@ -207,13 +214,32 @@ function SlideCard({
         >
           {slide.language}
         </span>
-        {slide.highlights && slide.highlights.length > 0 && (
+        {hlCount > 0 && (
           <span
-            className="shrink-0 inline-flex items-center gap-0.5 rounded bg-primary/15 px-1 py-0.5 text-[9px] font-medium text-primary"
-            title={`${slide.highlights.length} highlight${slide.highlights.length > 1 ? "s" : ""}`}
+            className="inline-flex shrink-0 items-center gap-[3px] rounded bg-primary/10 px-1.5 py-[3px]"
+            title={`${hlCount} highlight${hlCount > 1 ? "s" : ""} — steps through with → before the next slide${
+              progress >= 0 ? ` · showing ${progress + 1}/${hlCount}` : ""
+            }`}
           >
-            <HighlighterIcon className="h-2.5 w-2.5" />
-            {slide.highlights.length}
+            <HighlighterIcon
+              className={cn(
+                "h-2.5 w-2.5 transition-colors",
+                progress >= 0 ? "text-primary" : "text-primary/50",
+              )}
+            />
+            {Array.from({ length: Math.min(hlCount, 10) }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full transition-all duration-200",
+                  i <= progress
+                    ? "scale-110 bg-primary"
+                    : progress >= 0
+                      ? "bg-muted-foreground/25"
+                      : "bg-primary/40",
+                )}
+              />
+            ))}
           </span>
         )}
       </div>
@@ -229,6 +255,7 @@ function SortableSlideItem({
   isDraggingId,
   isRenaming,
   renameValue,
+  highlightProgress,
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
@@ -240,6 +267,7 @@ function SortableSlideItem({
   isDraggingId: string | null;
   isRenaming: boolean;
   renameValue: string;
+  highlightProgress?: number;
   onRenameValueChange: (v: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
@@ -270,6 +298,7 @@ function SortableSlideItem({
       isActive={isDraggingId === slide.id}
       isRenaming={isRenaming}
       renameValue={renameValue}
+      highlightProgress={highlightProgress}
       onRenameValueChange={onRenameValueChange}
       onCommitRename={onCommitRename}
       onCancelRename={onCancelRename}
@@ -285,6 +314,7 @@ function SortableSlideItem({
 export function BottomSlidesPanel({
   project,
   collapsed,
+  activeHighlightIndex = -1,
   onToggleCollapse,
 }: BottomSlidesPanelProps) {
   const {
@@ -497,6 +527,7 @@ export function BottomSlidesPanel({
                 isDraggingId={activeId}
                 isRenaming={renamingId === slide.id}
                 renameValue={renameValue}
+                highlightProgress={activeHighlightIndex}
                 onRenameValueChange={setRenameValue}
                 onCommitRename={commitRename}
                 onCancelRename={() => setRenamingId(null)}
