@@ -304,8 +304,11 @@ export function CodeEditor({
   const plainEscaped = useMemo(() => escapeHtml(code), [code]);
 
   const [highlighted, setHighlighted] = useState(plainEscaped);
+  // Monotonic token so a late async result can never overwrite a newer one.
+  const hlReqRef = useRef(0);
 
-  // Debounce Shiki highlight so rapid keystrokes don't block the main thread
+  // Debounce highlight so rapid keystrokes don't block the main thread.
+  // Merustmar renders in Rust (off-thread); everything else stays on Shiki.
   const runHighlight = useDebouncedCallback(
     (
       src: string,
@@ -314,6 +317,7 @@ export function CodeEditor({
       dark: boolean,
       h: Highlighter | null,
     ) => {
+      const req = ++hlReqRef.current;
       if (h) {
         const loaded = h.getLoadedLanguages().includes(lang);
         if (loaded) {
@@ -330,7 +334,17 @@ export function CodeEditor({
         }
       }
       if (lang === "merustmar") {
-        setHighlighted(highlightMerustmarCode(src, dark));
+        api
+          .merustmarHighlightCode(src, dark)
+          .then((html) => {
+            if (hlReqRef.current === req) setHighlighted(html);
+          })
+          .catch(() => {
+            // Frozen JS fallback (kept per repo policy) if IPC fails.
+            if (hlReqRef.current === req) {
+              setHighlighted(highlightMerustmarCode(src, dark));
+            }
+          });
         return;
       }
       setHighlighted(escapeHtml(src));
@@ -339,7 +353,9 @@ export function CodeEditor({
   );
 
   useEffect(() => {
-    // Immediate cheap fallback so caret/overlay stay aligned while waiting
+    // Immediate cheap fallback so caret/overlay stay aligned while waiting;
+    // also invalidates any in-flight async highlight from the older code.
+    hlReqRef.current++;
     setHighlighted(plainEscaped);
     if (!slide) return;
     runHighlight(code, language, theme, isDarkBg, highlighter);

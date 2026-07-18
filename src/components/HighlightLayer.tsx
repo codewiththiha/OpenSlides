@@ -78,6 +78,7 @@ export function HighlightLayer({
 }: HighlightLayerProps) {
   const [measurement, setMeasurement] = useState<HighlightMeasurement | null>(null);
   const rafRef = useRef(0);
+  const roRafRef = useRef(0);
   const settleRef = useRef(0);
 
   // Rust-side plan: per-line char ranges + clone HTML + eraser color.
@@ -103,7 +104,16 @@ export function HighlightLayer({
         return;
       }
       if (!ro) {
-        ro = new ResizeObserver(measure);
+        // Coalesce observer callbacks to ≤1 measure per animation frame —
+        // panel drags fire the observer continuously and a full DOM-range
+        // measure per callback would thrash layout during the resize.
+        ro = new ResizeObserver(() => {
+          if (disposed || roRafRef.current) return;
+          roRafRef.current = requestAnimationFrame(() => {
+            roRafRef.current = 0;
+            measure();
+          });
+        });
         ro.observe(container);
         ro.observe(codeRoot);
       }
@@ -122,6 +132,8 @@ export function HighlightLayer({
     return () => {
       disposed = true;
       cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(roRafRef.current);
+      roRafRef.current = 0;
       window.clearTimeout(settleRef.current);
       ro?.disconnect();
     };

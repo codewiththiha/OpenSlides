@@ -2,12 +2,16 @@
  * useHighlightPlan — compute the Rust-side render plan for the active
  * highlight step.
  *
- * Shiki highlighting itself stays in JS (the WASM highlighter lives here),
- * but everything after it — line splitting of the emitted HTML, entity-aware
- * char slicing, range decomposition, eraser color mixing — runs natively via
- * `api.computeHighlightPlan`, once per highlight activation (not per frame).
+ * The entire data path runs in one async effect, off the render path:
+ *   1. highlighted HTML — Shiki (sync, WASM lives in JS) or Merustmar
+ *      (Rust IPC, frozen JS as failure fallback),
+ *   2. `api.computeHighlightPlan` — line splitting of the emitted HTML,
+ *      entity-aware char slicing, range decomposition, eraser color mixing.
+ *
+ * Runs once per highlight activation (not per frame — Rust state, not per
+ * render either, so stepping slides never blocks the main thread).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Highlighter } from "shiki";
 import type { Highlight } from "@/types";
 import { LIGHT_THEMES, themeBackground } from "@/types";
@@ -22,13 +26,13 @@ interface UseHighlightPlanArgs {
   language: string;
 }
 
-/** Render `code` to highlighted HTML (Shiki, or the Merustmar fallback). */
-function renderCodeHtml(
+/** Render `code` to highlighted HTML (Shiki, or Merustmar in Rust). */
+async function renderCodeHtml(
   code: string,
   highlighter: Highlighter | null,
   language: string,
   theme: string,
-): string {
+): Promise<string> {
   if (highlighter?.getLoadedLanguages().includes(language)) {
     try {
       return highlighter.codeToHtml(code, { lang: language, theme });
@@ -37,7 +41,12 @@ function renderCodeHtml(
     }
   }
   if (language === "merustmar") {
-    return highlightMerustmarCode(code, !LIGHT_THEMES.has(theme));
+    try {
+      return await api.merustmarHighlightCode(code, !LIGHT_THEMES.has(theme));
+    } catch {
+      // Frozen JS fallback (kept per repo policy) if IPC fails.
+      return highlightMerustmarCode(code, !LIGHT_THEMES.has(theme));
+    }
   }
   return "";
 }
@@ -56,13 +65,6 @@ export function useHighlightPlan({
     null,
   );
 
-  // The highlighted HTML is only recomputed when the actual inputs change —
-  // stepping between highlights on the same slide reuses it.
-  const html = useMemo(() => {
-    if (!highlight || !code) return "";
-    return renderCodeHtml(code, highlighter, language, theme);
-  }, [highlight, highlighter, code, language, theme]);
-
   useEffect(() => {
     if (!highlight) {
       setEntry(null);
@@ -70,24 +72,29 @@ export function useHighlightPlan({
     }
     let stale = false;
     const { id, startLine, startChar, endLine, endChar } = highlight;
-    api
-      .computeHighlightPlan({
-        code,
-        html,
-        range: { startLine, startChar, endLine, endChar },
-        themeBg: themeBackground(theme),
-        dimPercent: highlight.dimAmount ?? 75,
-      })
-      .then((plan) => {
+    void (async () => {
+      // "" signals the plain-text fallback path inside computeHighlightPlan.
+      const html = code
+        ? await renderCodeHtml(code, highlighter, language, theme)
+        : "";
+      if (stale) return;
+      try {
+        const plan = await api.computeHighlightPlan({
+          code,
+          html,
+          range: { startLine, startChar, endLine, endChar },
+          themeBg: themeBackground(theme),
+          dimPercent: highlight.dimAmount ?? 75,
+        });
         if (!stale) setEntry({ id, plan });
-      })
-      .catch(() => {
+      } catch {
         if (!stale) setEntry(null);
-      });
+      }
+    })();
     return () => {
       stale = true;
     };
-  }, [highlight, code, html, theme]);
+  }, [highlight, code, highlighter, language, theme]);
 
   return highlight && entry?.id === highlight.id ? entry.plan : null;
 }

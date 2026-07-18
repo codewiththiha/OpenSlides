@@ -11,13 +11,28 @@ use serde_json::Value as JsonValue;
 use tauri::{AppHandle, State};
 use uuid::Uuid;
 
+/// Structured IPC error for import/export so the frontend can tell "the
+/// user just closed the dialog" (stay silent) from real failures (toast) —
+/// without matching fragile hardcoded message strings across the bridge.
+/// Serializes as `{ "code": "CANCELLED" | "ERROR", "message": string }`.
+#[derive(Debug, serde::Serialize)]
+#[serde(tag = "code", content = "message")]
+pub enum IoCommandError {
+    #[serde(rename = "CANCELLED")]
+    Cancelled(String),
+    #[serde(rename = "ERROR")]
+    Failed(String),
+}
+
 #[tauri::command]
 pub async fn export_project_to_json(
     app: AppHandle,
     pool: State<'_, DbPool>,
     project_id: String,
-) -> Result<String, String> {
-    let project = fetch_project(pool.inner(), &project_id).await?;
+) -> Result<String, IoCommandError> {
+    let project = fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(IoCommandError::Failed)?;
 
     let export = serde_json::json!({
         "id": project.id,
@@ -53,13 +68,14 @@ pub async fn export_project_to_json(
         dialog_pick_path(&app_handle, DialogMode::Save, Some(&default_name))
     })
     .await
-    .map_err(|e| format!("Dialog task failed: {e}"))?
-    .ok_or_else(|| "Export cancelled".to_string())?;
+    .map_err(|e| IoCommandError::Failed(format!("Dialog task failed: {e}")))?
+    .ok_or_else(|| IoCommandError::Cancelled("Export cancelled".to_string()))?;
 
-    let pretty =
-        serde_json::to_string_pretty(&export).map_err(|e| format!("JSON serialize failed: {e}"))?;
+    let pretty = serde_json::to_string_pretty(&export)
+        .map_err(|e| IoCommandError::Failed(format!("JSON serialize failed: {e}")))?;
 
-    std::fs::write(&path, pretty).map_err(|e| format!("Failed to write file: {e}"))?;
+    std::fs::write(&path, pretty)
+        .map_err(|e| IoCommandError::Failed(format!("Failed to write file: {e}")))?;
 
     Ok(path.display().to_string())
 }
@@ -69,18 +85,19 @@ pub async fn export_project_to_json(
 pub async fn import_project_from_json(
     app: AppHandle,
     pool: State<'_, DbPool>,
-) -> Result<Project, String> {
+) -> Result<Project, IoCommandError> {
     let app_handle = app.clone();
     let path = tauri::async_runtime::spawn_blocking(move || {
         dialog_pick_path(&app_handle, DialogMode::Open, None)
     })
     .await
-    .map_err(|e| format!("Dialog task failed: {e}"))?
-    .ok_or_else(|| "Import cancelled".to_string())?;
+    .map_err(|e| IoCommandError::Failed(format!("Dialog task failed: {e}")))?
+    .ok_or_else(|| IoCommandError::Cancelled("Import cancelled".to_string()))?;
 
-    let raw = std::fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {e}"))?;
-    let value: JsonValue =
-        serde_json::from_str(&raw).map_err(|e| format!("Invalid JSON: {e}"))?;
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|e| IoCommandError::Failed(format!("Failed to read file: {e}")))?;
+    let value: JsonValue = serde_json::from_str(&raw)
+        .map_err(|e| IoCommandError::Failed(format!("Invalid JSON: {e}")))?;
 
     let name = value
         .get("name")
@@ -100,7 +117,9 @@ pub async fn import_project_from_json(
         .unwrap_or_default();
 
     if slides_val.is_empty() {
-        return Err("Import file has no slides".into());
+        return Err(IoCommandError::Failed(
+            "Import file has no slides".to_string(),
+        ));
     }
 
     let language = value
@@ -202,13 +221,13 @@ pub async fn import_project_from_json(
         }
     }
 
-    let settings_json = settings_to_json(&settings)?;
+    let settings_json = settings_to_json(&settings).map_err(IoCommandError::Failed)?;
 
     let mut tx = pool
         .inner()
         .begin()
         .await
-        .map_err(|e| format!("TX begin failed: {e}"))?;
+        .map_err(|e| IoCommandError::Failed(format!("TX begin failed: {e}")))?;
 
     sqlx::query(
         r#"
@@ -224,7 +243,7 @@ pub async fn import_project_from_json(
     .bind(ts)
     .execute(&mut *tx)
     .await
-    .map_err(|e| format!("Failed to insert project: {e}"))?;
+    .map_err(|e| IoCommandError::Failed(format!("Failed to insert project: {e}")))?;
 
     for (i, (id, code, duration, transition, stagger, sname)) in parsed_slides.iter().enumerate() {
         sqlx::query(
@@ -245,13 +264,14 @@ pub async fn import_project_from_json(
         .bind(sname)
         .execute(&mut *tx)
         .await
-        .map_err(|e| format!("Failed to insert slide: {e}"))?;
+        .map_err(|e| IoCommandError::Failed(format!("Failed to insert slide: {e}")))?;
     }
 
     tx.commit()
         .await
-        .map_err(|e| format!("TX commit failed: {e}"))?;
+        .map_err(|e| IoCommandError::Failed(format!("TX commit failed: {e}")))?;
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(IoCommandError::Failed)
 }
-

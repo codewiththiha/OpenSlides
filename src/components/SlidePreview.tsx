@@ -10,6 +10,7 @@ import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
 import { getHighlighter } from "@/lib/shiki-instance";
 import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
+import { api } from "@/lib/tauri-api";
 import {
   LIGHT_THEMES,
   themeBackground,
@@ -53,6 +54,49 @@ export function SlidePreview({
   const slide =
     project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
 
+  /* These feed hooks below, so they must be computed before the early
+     `!slide` return (code is "" then — that branch never renders anyway). */
+  const code = slide ? (localCode[slide.id] ?? slide.code) : "";
+  const language = resolveProjectLanguage(project);
+  const theme = project.theme;
+  const isDarkBg = !LIGHT_THEMES.has(theme);
+  const canUseShiki =
+    highlighter && highlighter.getLoadedLanguages().includes(language);
+  const needsMerustmar = language === "merustmar" && !canUseShiki;
+
+  // Merustmar fallback HTML — rendered in Rust (off the main thread; the
+  // old sync-in-render approach recomputed the whole slide per render step).
+  // The result is tracked with the code/theme it belongs to via a request
+  // token, so out-of-order resolves can never flash mismatched text; while
+  // Rust is answering, the previous frame simply stays visible (≤1 RPC of
+  // lag). The frozen JS seeds frame one (correct on mount) and stays as the
+  // failure fallback, per repo policy.
+  const [mmHtml, setMmHtml] = useState<{
+    code: string;
+    dark: boolean;
+    html: string;
+  } | null>(() =>
+    needsMerustmar
+      ? { code, dark: isDarkBg, html: highlightMerustmarCode(code, isDarkBg) }
+      : null,
+  );
+  const mmReqRef = useRef(0);
+  useEffect(() => {
+    if (!needsMerustmar) return;
+    const req = ++mmReqRef.current;
+    const dark = isDarkBg;
+    api
+      .merustmarHighlightCode(code, dark)
+      .then((html) => {
+        if (mmReqRef.current === req) setMmHtml({ code, dark, html });
+      })
+      .catch(() => {
+        if (mmReqRef.current === req) {
+          setMmHtml({ code, dark, html: highlightMerustmarCode(code, dark) });
+        }
+      });
+  }, [needsMerustmar, code, isDarkBg]);
+
   if (!slide) {
     return (
       <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -61,14 +105,8 @@ export function SlidePreview({
     );
   }
 
-  const code = localCode[slide.id] ?? slide.code;
-  const language = resolveProjectLanguage(project);
-  const theme = project.theme;
   const settings = project.settings;
   const bg = themeBackground(theme);
-  const isDarkBg = !LIGHT_THEMES.has(theme);
-  const canUseShiki =
-    highlighter && highlighter.getLoadedLanguages().includes(language);
   const codeAlign = settings.codeAlign === "center" ? "center" : "left";
   const centerBlock = codeAlign === "center";
 
@@ -86,8 +124,10 @@ export function SlidePreview({
     ? settings.fontSize * 1.15
     : settings.fontSize;
 
-  if (language === "merustmar" && !canUseShiki) {
-    const html = highlightMerustmarCode(code, isDarkBg);
+  if (needsMerustmar) {
+    // Previous frame stays up while the Rust render for the latest code is
+    // in flight; empty only before the very first answer in this session.
+    const html = mmHtml?.html ?? "";
     return (
       <div
         ref={containerRef}

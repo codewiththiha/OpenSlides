@@ -2,7 +2,7 @@
  * Project dashboard — lists SQLite-backed projects via TanStack Query.
  * Supports create, rename, import, export, delete.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -40,7 +40,8 @@ import {
   useRenameProject,
 } from "@/hooks/queries";
 import { formatRelative } from "@/lib/utils";
-import { useUiStore } from "@/store/useUiStore";
+import { isTypingTarget } from "@/lib/keyboard";
+import { useUiStore, applyUiTheme } from "@/store/useUiStore";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { modKeyLabel } from "@/lib/platform";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -60,7 +61,7 @@ export function Dashboard() {
   const {
     setIsCommandOpen,
     isDarkUi,
-    setIsDarkUi,
+    toggleTheme,
     isShortcutsOpen,
     setIsShortcutsOpen,
     toggleShortcutsOpen,
@@ -73,23 +74,15 @@ export function Dashboard() {
       .catch(() => undefined);
   }, []);
 
-  // Apply persisted UI theme on mount
+  // Apply persisted UI theme on mount (hydration skips store actions)
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDarkUi);
-    document.documentElement.classList.toggle("light", !isDarkUi);
+    applyUiTheme(isDarkUi);
   }, [isDarkUi]);
 
   // Global `?` shortcuts help on dashboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement | null;
-      const typing =
-        t &&
-        (t.tagName === "INPUT" ||
-          t.tagName === "TEXTAREA" ||
-          t.tagName === "SELECT" ||
-          t.isContentEditable);
-      if (e.key === "?" && !typing && !e.metaKey && !e.ctrlKey) {
+      if (e.key === "?" && !isTypingTarget(e.target) && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         toggleShortcutsOpen();
       }
@@ -138,13 +131,6 @@ export function Dashboard() {
       /* toast */
     }
   };
-
-  const toggleTheme = useCallback(() => {
-    const next = !isDarkUi;
-    setIsDarkUi(next);
-    document.documentElement.classList.toggle("dark", next);
-    document.documentElement.classList.toggle("light", !next);
-  }, [isDarkUi, setIsDarkUi]);
 
   const menuHandlers = useMemo(
     () => ({

@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod highlight;
+mod merustmar;
 mod models;
 
 use commands::*;
@@ -42,6 +43,7 @@ pub fn run() {
             compute_highlight_plan,
             highlight_snippets,
             selection_range,
+            highlight_merustmar_code,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

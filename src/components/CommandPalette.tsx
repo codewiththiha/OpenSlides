@@ -42,7 +42,7 @@ export function CommandPalette({
     setIsShortcutsOpen,
     toggleZenMode,
     isDarkUi,
-    setIsDarkUi,
+    toggleTheme,
   } = useUiStore();
   const [search, setSearch] = useState("");
   const mod = modKeyLabel();
@@ -129,14 +129,7 @@ export function CommandPalette({
             <Item
               icon={isDarkUi ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               label={isDarkUi ? "Switch to Light UI" : "Switch to Dark UI"}
-              onSelect={() =>
-                run(() => {
-                  const next = !isDarkUi;
-                  setIsDarkUi(next);
-                  document.documentElement.classList.toggle("dark", next);
-                  document.documentElement.classList.toggle("light", !next);
-                })
-              }
+              onSelect={() => run(() => toggleTheme())}
             />
             <Item
               icon={<Keyboard className="h-4 w-4" />}

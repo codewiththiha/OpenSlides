@@ -49,6 +49,7 @@ import {
   useUpdateSlideSettings,
 } from "@/hooks/queries";
 import { useCollapsiblePanel } from "@/hooks/useCollapsiblePanel";
+import { isTypingTarget } from "@/lib/keyboard";
 import { api } from "@/lib/tauri-api";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
@@ -94,7 +95,7 @@ export function Editor() {
     setIsShortcutsOpen,
     toggleShortcutsOpen,
     isDarkUi,
-    setIsDarkUi,
+    toggleTheme,
     saveStatus,
     resetEditorUi,
     isBottomPanelCollapsed,
@@ -119,8 +120,6 @@ export function Editor() {
 
   const codePanelRef = useRef<ImperativePanelHandle>(null);
   const slidesPanelRef = useRef<ImperativePanelHandle>(null);
-  const codeCollapseLock = useRef(false);
-  const slidesCollapseLock = useRef(false);
 
   useEffect(() => {
     const title = project ? `OpenSlides — ${project.name}` : "OpenSlides";
@@ -151,26 +150,33 @@ export function Editor() {
   }, [resetEditorUi]);
 
   // Panel rails: imperative collapse state ⇆ persisted store, expand
-  // restores last size, collapse snapshots it first (shared logic).
-  const { expand: expandCodePanel, collapse: collapseCodePanel } =
-    useCollapsiblePanel({
-      panelRef: codePanelRef,
-      isCollapsed: isCodePanelCollapsed,
-      setCollapsed: setIsCodePanelCollapsed,
-      size: codePanelSize,
-      setSize: setCodePanelSize,
-      collapseThreshold: CODE_COLLAPSE_THRESHOLD,
-    });
+  // restores last size, collapse snapshots it first, onResize auto-collapses
+  // on drag (shared logic).
+  const {
+    expand: expandCodePanel,
+    collapse: collapseCodePanel,
+    onResize: onCodePanelResize,
+  } = useCollapsiblePanel({
+    panelRef: codePanelRef,
+    isCollapsed: isCodePanelCollapsed,
+    setCollapsed: setIsCodePanelCollapsed,
+    size: codePanelSize,
+    setSize: setCodePanelSize,
+    collapseThreshold: CODE_COLLAPSE_THRESHOLD,
+  });
 
-  const { expand: expandSlidesPanel, collapse: collapseSlidesPanel } =
-    useCollapsiblePanel({
-      panelRef: slidesPanelRef,
-      isCollapsed: isBottomPanelCollapsed,
-      setCollapsed: setIsBottomPanelCollapsed,
-      size: slidesPanelSize,
-      setSize: setSlidesPanelSize,
-      collapseThreshold: SLIDES_COLLAPSE_THRESHOLD,
-    });
+  const {
+    expand: expandSlidesPanel,
+    collapse: collapseSlidesPanel,
+    onResize: onSlidesPanelResize,
+  } = useCollapsiblePanel({
+    panelRef: slidesPanelRef,
+    isCollapsed: isBottomPanelCollapsed,
+    setCollapsed: setIsBottomPanelCollapsed,
+    size: slidesPanelSize,
+    setSize: setSlidesPanelSize,
+    collapseThreshold: SLIDES_COLLAPSE_THRESHOLD,
+  });
 
   const slides = project?.slides ?? [];
   const currentIndex = slides.findIndex((s) => s.id === currentSlideId);
@@ -188,13 +194,6 @@ export function Editor() {
     currentSlideId,
     setCurrentSlideId,
   });
-
-  const toggleTheme = useCallback(() => {
-    const next = !isDarkUi;
-    setIsDarkUi(next);
-    document.documentElement.classList.toggle("dark", next);
-    document.documentElement.classList.toggle("light", !next);
-  }, [isDarkUi, setIsDarkUi]);
 
   // Auto-play: advance after each slide's duration (ms). Stepping through
   // highlights goes through the same goNext as manual nav, so every intro,
@@ -225,15 +224,6 @@ export function Editor() {
   useEffect(() => {
     return () => setIsAutoPlaying(false);
   }, [setIsAutoPlaying]);
-
-  /** True when focus is in a text field where arrows should move the caret, not slides. */
-  const isTypingTarget = (target: EventTarget | null) => {
-    if (!(target instanceof HTMLElement)) return false;
-    const tag = target.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-    if (target.isContentEditable) return true;
-    return Boolean(target.closest("[contenteditable='true'], [role='textbox'], .cm-editor, .cm-content"));
-  };
 
   const exitPresent = useCallback(async () => {
     setIsPresenting(false);
@@ -812,37 +802,7 @@ export function Editor() {
                       collapsible
                       collapsedSize={CODE_COLLAPSED_SIZE}
                       className="min-w-0"
-                      onResize={(size) => {
-                        if (codeCollapseLock.current) return;
-
-                        // Drag-open from collapsed rail
-                        if (isCodePanelCollapsed && size > CODE_COLLAPSE_THRESHOLD) {
-                          codeCollapseLock.current = true;
-                          setIsCodePanelCollapsed(false);
-                          setCodePanelSize(size);
-                          window.setTimeout(() => {
-                            codeCollapseLock.current = false;
-                          }, 150);
-                          return;
-                        }
-
-                        if (!isCodePanelCollapsed && size >= CODE_COLLAPSE_THRESHOLD) {
-                          setCodePanelSize(size);
-                        }
-
-                        if (!isCodePanelCollapsed && size < CODE_COLLAPSE_THRESHOLD) {
-                          codeCollapseLock.current = true;
-                          setIsCodePanelCollapsed(true);
-                          try {
-                            codePanelRef.current?.collapse();
-                          } catch {
-                            /* ignore */
-                          }
-                          window.setTimeout(() => {
-                            codeCollapseLock.current = false;
-                          }, 200);
-                        }
-                      }}
+                      onResize={onCodePanelResize}
                       onCollapse={() => setIsCodePanelCollapsed(true)}
                       onExpand={() => setIsCodePanelCollapsed(false)}
                     >
@@ -906,46 +866,7 @@ export function Editor() {
                   collapsible
                   collapsedSize={SLIDES_COLLAPSED_SIZE}
                   className="min-h-0"
-                  onResize={(size) => {
-                    if (slidesCollapseLock.current) return;
-
-                    // Drag-open from collapsed strip
-                    if (
-                      isBottomPanelCollapsed &&
-                      size > SLIDES_COLLAPSE_THRESHOLD
-                    ) {
-                      slidesCollapseLock.current = true;
-                      setIsBottomPanelCollapsed(false);
-                      setSlidesPanelSize(size);
-                      window.setTimeout(() => {
-                        slidesCollapseLock.current = false;
-                      }, 150);
-                      return;
-                    }
-
-                    if (
-                      !isBottomPanelCollapsed &&
-                      size >= SLIDES_COLLAPSE_THRESHOLD
-                    ) {
-                      setSlidesPanelSize(size);
-                    }
-
-                    if (
-                      !isBottomPanelCollapsed &&
-                      size < SLIDES_COLLAPSE_THRESHOLD
-                    ) {
-                      slidesCollapseLock.current = true;
-                      setIsBottomPanelCollapsed(true);
-                      try {
-                        slidesPanelRef.current?.collapse();
-                      } catch {
-                        /* ignore */
-                      }
-                      window.setTimeout(() => {
-                        slidesCollapseLock.current = false;
-                      }, 200);
-                    }
-                  }}
+                  onResize={onSlidesPanelResize}
                   onCollapse={() => setIsBottomPanelCollapsed(true)}
                   onExpand={() => setIsBottomPanelCollapsed(false)}
                 >

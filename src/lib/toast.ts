@@ -130,6 +130,3 @@ export const notify = {
 
   dismiss: (id?: string | number) => sonnerToast.dismiss(id),
 };
-
-/** @deprecated Prefer `notify` */
-export const toast = notify;

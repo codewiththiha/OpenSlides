@@ -6,10 +6,12 @@
 mod helpers;
 mod highlight;
 mod io;
+mod merustmar;
 mod projects;
 mod slides;
 
 pub use highlight::*;
 pub use io::*;
+pub use merustmar::*;
 pub use projects::*;
 pub use slides::*;

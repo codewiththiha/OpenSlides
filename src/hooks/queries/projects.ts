@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { notify } from "../../lib/toast";
-import { api, type SettingsPatch } from "../../lib/tauri-api";
+import { api, isCancelledError, type SettingsPatch } from "../../lib/tauri-api";
 import { projectKeys } from "./keys";
 
 export function useProjects() {
@@ -92,7 +92,8 @@ export function useExportProject() {
     mutationFn: (projectId: string) => api.exportProjectToJson(projectId),
     onSuccess: (path) => notify.success(`Exported to ${path}`),
     onError: (err: Error) => {
-      if (err.message !== "Export cancelled") {
+      // User closed the save dialog — not a failure.
+      if (!isCancelledError(err)) {
         notify.error(`Export failed: ${err.message}`);
       }
     },
@@ -108,7 +109,8 @@ export function useImportProject() {
       notify.success("Project imported");
     },
     onError: (err: Error) => {
-      if (err.message !== "Import cancelled") {
+      // User closed the open dialog — not a failure.
+      if (!isCancelledError(err)) {
         notify.error(`Import failed: ${err.message}`);
       }
     },

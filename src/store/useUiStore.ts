@@ -42,6 +42,7 @@ interface UiState {
   setIsShortcutsOpen: (v: boolean) => void;
   toggleShortcutsOpen: () => void;
   setIsDarkUi: (v: boolean) => void;
+  toggleTheme: () => void;
   setEditorShowLineNumbers: (v: boolean) => void;
   setLocalCode: (slideId: string, code: string) => void;
   clearLocalCode: (slideId: string) => void;
@@ -52,6 +53,16 @@ interface UiState {
 
 const DEFAULT_CODE_SIZE = 42;
 const DEFAULT_SLIDES_SIZE = 22;
+
+/** Apply the UI theme class to <html> (single place that owns the DOM side
+ *  effect — previously duplicated in Dashboard, Editor and CommandPalette).
+ *  Exported for the one legitimate non-action caller: re-applying the
+ *  persisted theme on app start (zustand-persist hydrates state without
+ *  running actions, so Dashboard syncs the DOM once on mount). */
+export function applyUiTheme(dark: boolean) {
+  document.documentElement.classList.toggle("dark", dark);
+  document.documentElement.classList.toggle("light", !dark);
+}
 
 export const useUiStore = create<UiState>()(
   persist(
@@ -93,7 +104,15 @@ export const useUiStore = create<UiState>()(
       setIsCommandOpen: (v) => set({ isCommandOpen: v }),
       setIsShortcutsOpen: (v) => set({ isShortcutsOpen: v }),
       toggleShortcutsOpen: () => set((s) => ({ isShortcutsOpen: !s.isShortcutsOpen })),
-      setIsDarkUi: (v) => set({ isDarkUi: v }),
+      setIsDarkUi: (v) => {
+        applyUiTheme(v);
+        set({ isDarkUi: v });
+      },
+      toggleTheme: () =>
+        set((s) => {
+          applyUiTheme(!s.isDarkUi);
+          return { isDarkUi: !s.isDarkUi };
+        }),
       setEditorShowLineNumbers: (v) => set({ editorShowLineNumbers: v }),
       setLocalCode: (slideId, code) =>
         set((s) => ({ localCode: { ...s.localCode, [slideId]: code } })),

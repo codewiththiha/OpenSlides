@@ -15,13 +15,48 @@ export type SlideSettingsPatch = Partial<{
 
 export type SettingsPatch = Partial<ProjectSettings>;
 
+/**
+ * Error thrown for failed Tauri commands. Rust can attach a machine-readable
+ * `code` (see IoCommandError in src-tauri/src/commands/io.rs, which
+ * serializes as `{ "code": "CANCELLED" | "ERROR", "message": string }`) so
+ * callers can branch on the failure kind instead of matching message text
+ * across the IPC bridge.
+ */
+export interface CommandError extends Error {
+  code?: string;
+}
+
+function normalizeCommandError(err: unknown): CommandError {
+  // Structured backend error: { code, message }
+  if (typeof err === "object" && err !== null) {
+    const e = err as { code?: unknown; message?: unknown };
+    if (typeof e.message === "string") {
+      const out: CommandError = new Error(e.message);
+      if (typeof e.code === "string") out.code = e.code;
+      return out;
+    }
+  }
+  // Plain string rejection (most Rust commands still map_err(String)).
+  if (typeof err === "string") return new Error(err);
+  return new Error((err as Error)?.message ?? String(err));
+}
+
+/** True when the backend reported a user cancellation (e.g. closing the
+ *  native save/open dialog) — callers stay silent for these instead of
+ *  showing an error toast. */
+export function isCancelledError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: unknown }).code === "CANCELLED"
+  );
+}
+
 async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   try {
     return await invoke<T>(cmd, args);
   } catch (err) {
-    const message =
-      typeof err === "string" ? err : (err as Error)?.message ?? String(err);
-    throw new Error(message);
+    throw normalizeCommandError(err);
   }
 }
 
@@ -91,6 +126,11 @@ export const api = {
 
   selectionRange: (code: string, start: number, end: number) =>
     call<SelectionRange>("selection_range", { code, start, end }),
+
+  /** Merustmar syntax highlighting rendered natively in Rust (exactly
+   *  mirrors the frozen JS fallback in src/lib/merustmar-highlight.ts). */
+  merustmarHighlightCode: (code: string, isDark: boolean) =>
+    call<string>("highlight_merustmar_code", { code, isDark }),
 };
 
 /* ----------------------------------------------------------------------- *
