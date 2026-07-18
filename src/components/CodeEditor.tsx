@@ -594,7 +594,7 @@ export function CodeEditor({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-7 w-7 shrink-0",
+              "relative h-7 w-7 shrink-0",
               highlightMode && "bg-primary/15 text-primary",
             )}
             onClick={() => setHighlightMode((v) => !v)}
@@ -605,6 +605,11 @@ export function CodeEditor({
             }
           >
             <HighlighterIcon className="h-3.5 w-3.5" />
+            {currentHighlights.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-3 min-w-3 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground">
+                {currentHighlights.length}
+              </span>
+            )}
           </Button>
 
           {onToggleExpand && (
@@ -769,7 +774,10 @@ export function CodeEditor({
         </div>
       )}
 
-      {highlightMode && (
+      {/* Management panel stays available whenever the slide has highlights,
+          not only while highlight mode is on — otherwise saved highlights
+          become un-editable/un-deletable after a reload. */}
+      {(highlightMode || currentHighlights.length > 0) && (
         <HighlightSettingsPanel
           highlights={currentHighlights}
           code={code}

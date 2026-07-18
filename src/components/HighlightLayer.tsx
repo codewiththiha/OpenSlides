@@ -171,97 +171,112 @@ export function HighlightLayer({
   const dimAmount = (highlight?.dimAmount ?? 75) / 100;
   const scaleTarget = highlight?.sizeUpEnabled ? SCALE_FACTOR : 1;
   const bg = themeBackground(theme);
+  // The eraser must match the *dimmed* card (bg + black overlay), not the
+  // raw slide bg — otherwise it shows as an obvious bright rectangle.
+  const eraserBg = mixTowardBlack(bg, dimAmount);
 
-  const active = highlight && measurement && measurement.lines.length > 0;
+  const active = Boolean(
+    highlight && measurement && measurement.lines.length > 0,
+  );
   const union = measurement?.union;
 
-  return (
-    <AnimatePresence onExitComplete={onExitComplete}>
-      {active && union && (
+  // Flat pieces under ONE AnimatePresence so every part (dim, erasers, clone)
+  // plays its own exit when the highlight is dismissed. With a nested
+  // AnimatePresence the inner exits never ran on unmount — which killed the
+  // outro for single/last highlights before a slide change.
+  const pieces: React.ReactNode[] = [];
+  if (highlight && active && union) {
+    pieces.push(
+      /* Dim overlay — persists across highlight steps within this slide */
+      <motion.div
+        key="hl-dim"
+        className="pointer-events-none absolute inset-0 z-20"
+        style={{ backgroundColor: "rgba(0, 0, 0, 1)" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: dimAmount }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: dimDuration, ease: EASE_DIM }}
+      />,
+    );
+
+    /* Per-line erasers keyed by step — crossfade between highlights */
+    measurement.lines.forEach((rect, i) => {
+      pieces.push(
         <motion.div
-          key="highlight-layer"
-          className="pointer-events-none absolute inset-0 z-20 overflow-hidden"
-          style={{ borderRadius: "inherit" }}
-          initial={{ opacity: 1 }}
+          key={`${highlight.id}-eraser-${i}`}
+          className="pointer-events-none absolute z-20"
+          style={{
+            left: rect.x,
+            top: rect.y,
+            width: rect.width,
+            height: rect.height,
+            backgroundColor: eraserBg,
+          }}
+          initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 1 }}
-        >
-          {/* Dim overlay — persists across highlight steps within this slide */}
-          <motion.div
-            key="hl-dim"
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgba(0, 0, 0, 1)" }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: dimAmount }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: dimDuration, ease: EASE_DIM }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: dimDuration, ease: EASE_DIM }}
+        />,
+      );
+    });
+
+    pieces.push(
+      /* Clone — scales up from the selection center, settles back on outro */
+      <motion.div
+        key={`${highlight.id}-clone`}
+        className="pointer-events-none absolute z-20 font-mono font-medium tracking-wide"
+        style={{
+          left: union.x,
+          top: union.y,
+          width: union.width,
+          height: union.height,
+          fontSize: `${fontSize}px`,
+          lineHeight: lineHeight.toString(),
+          transformOrigin: "center center",
+          willChange: "transform, opacity",
+        }}
+        initial={{ scale: 1, opacity: 0 }}
+        animate={{ scale: scaleTarget, opacity: 1 }}
+        exit={{ scale: 1, opacity: 0 }}
+        transition={{
+          scale: { duration: sizeDuration, ease: EASE_SCALE },
+          opacity: { duration: dimDuration, ease: EASE_DIM },
+        }}
+      >
+        {measurement.lines.map((rect, i) => (
+          <pre
+            key={i}
+            className="absolute whitespace-pre"
+            style={{
+              left: rect.x - union.x,
+              top: rect.y - union.y,
+              margin: 0,
+              padding: 0,
+              background: "transparent",
+              fontFamily: "inherit",
+              fontSize: "inherit",
+              lineHeight: "inherit",
+              letterSpacing: "inherit",
+            }}
+            dangerouslySetInnerHTML={{
+              __html: cloneLineHtmls[i] ?? "",
+            }}
           />
+        ))}
+      </motion.div>,
+    );
+  }
 
-          {/* Step-scoped pieces: erasers + clone crossfade between highlights */}
-          <AnimatePresence>
-            {measurement.lines.map((rect, i) => (
-              <motion.div
-                key={`${highlight.id}-eraser-${i}`}
-                className="absolute"
-                style={{
-                  left: rect.x,
-                  top: rect.y,
-                  width: rect.width,
-                  height: rect.height,
-                  backgroundColor: bg,
-                }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: dimDuration, ease: EASE_DIM }}
-              />
-            ))}
-
-            <motion.div
-              key={`${highlight.id}-clone`}
-              className="absolute font-mono font-medium tracking-wide"
-              style={{
-                left: union.x,
-                top: union.y,
-                width: union.width,
-                height: union.height,
-                fontSize: `${fontSize}px`,
-                lineHeight: lineHeight.toString(),
-                transformOrigin: "center center",
-                willChange: "transform, opacity",
-              }}
-              initial={{ scale: 1, opacity: 0 }}
-              animate={{ scale: scaleTarget, opacity: 1 }}
-              exit={{ scale: 1, opacity: 0 }}
-              transition={{
-                scale: { duration: sizeDuration, ease: EASE_SCALE },
-                opacity: { duration: dimDuration, ease: EASE_DIM },
-              }}
-            >
-              {measurement.lines.map((rect, i) => (
-                <pre
-                  key={i}
-                  className="absolute whitespace-pre"
-                  style={{
-                    left: rect.x - union.x,
-                    top: rect.y - union.y,
-                    margin: 0,
-                    padding: 0,
-                    background: "transparent",
-                    fontFamily: "inherit",
-                    fontSize: "inherit",
-                    lineHeight: "inherit",
-                    letterSpacing: "inherit",
-                  }}
-                  dangerouslySetInnerHTML={{
-                    __html: cloneLineHtmls[i] ?? "",
-                  }}
-                />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-      )}
-    </AnimatePresence>
+  return (
+    <AnimatePresence onExitComplete={onExitComplete}>{pieces}</AnimatePresence>
   );
+}
+
+/** Mix a #rrggbb color toward black by t (0 = unchanged, 1 = black). */
+function mixTowardBlack(hex: string, t: number): string {
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return hex;
+  const mix = (part: string) =>
+    Math.round(parseInt(part, 16) * (1 - Math.min(Math.max(t, 0), 1)));
+  return `rgb(${mix(m.slice(0, 2))}, ${mix(m.slice(2, 4))}, ${mix(m.slice(4, 6))})`;
 }
