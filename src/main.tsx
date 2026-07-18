@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { AppToaster } from "./components/ui/toaster";
 import { installAppMenu } from "./lib/app-menu";
+import { flushPendingSave } from "./lib/save-flush";
+import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -33,6 +36,20 @@ try {
 
 // Native macOS menu bar / Windows-Linux window menu
 void installAppMenu();
+
+// Quit handshake: Rust intercepts window close / Cmd+Q and asks us to flush
+// the pending debounced slide-code save before letting the process die
+// (it force-exits after ~4s even if this never resolves, so quit can't hang).
+void listen("app://quit-request", async () => {
+  await flushPendingSave();
+  await invoke("finish_quit");
+});
+
+// Belt-and-braces for the browser/dev context: fire the pending write on
+// unload too (the IPC goes out immediately; the write usually lands in ms).
+window.addEventListener("beforeunload", () => {
+  void flushPendingSave();
+});
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

@@ -73,7 +73,9 @@ export function redoHistory(slideId: string): string | null {
   return next;
 }
 
-/** Drop history for a slide (e.g. after delete). */
+/** Drop history for a slide. Called when the slide is deleted — without
+ *  this, the module-level bucket map grew unboundedly for every edited
+ *  slide across the whole app session. */
 export function clearHistory(slideId: string) {
   buckets.delete(slideId);
 }

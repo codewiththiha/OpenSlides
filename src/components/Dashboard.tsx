@@ -40,7 +40,7 @@ import {
   useRenameProject,
 } from "@/hooks/queries";
 import { formatRelative } from "@/lib/utils";
-import { isTypingTarget } from "@/lib/keyboard";
+import { isModKey, isTypingTarget } from "@/lib/keyboard";
 import { useUiStore, applyUiTheme } from "@/store/useUiStore";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { modKeyLabel } from "@/lib/platform";
@@ -58,14 +58,12 @@ export function Dashboard() {
   const [newName, setNewName] = useState("Untitled Deck");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const {
-    setIsCommandOpen,
-    isDarkUi,
-    toggleTheme,
-    isShortcutsOpen,
-    setIsShortcutsOpen,
-    toggleShortcutsOpen,
-  } = useUiStore();
+  const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen);
+  const isDarkUi = useUiStore((s) => s.isDarkUi);
+  const toggleTheme = useUiStore((s) => s.toggleTheme);
+  const isShortcutsOpen = useUiStore((s) => s.isShortcutsOpen);
+  const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen);
+  const toggleShortcutsOpen = useUiStore((s) => s.toggleShortcutsOpen);
 
   useEffect(() => {
     document.title = "OpenSlides — Projects";
@@ -82,7 +80,7 @@ export function Dashboard() {
   // Global `?` shortcuts help on dashboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "?" && !isTypingTarget(e.target) && !e.metaKey && !e.ctrlKey) {
+      if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) {
         e.preventDefault();
         toggleShortcutsOpen();
       }

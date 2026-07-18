@@ -13,6 +13,7 @@ import {
   PanelResizeHandle,
   type ImperativePanelHandle,
 } from "react-resizable-panels";
+import { useShallow } from "zustand/react/shallow";
 import {
   Home,
   MonitorPlay,
@@ -49,7 +50,7 @@ import {
   useUpdateSlideSettings,
 } from "@/hooks/queries";
 import { useCollapsiblePanel } from "@/hooks/useCollapsiblePanel";
-import { isTypingTarget } from "@/lib/keyboard";
+import { isModKey, isTypingTarget } from "@/lib/keyboard";
 import { api } from "@/lib/tauri-api";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
@@ -77,6 +78,9 @@ export function Editor() {
   const navigate = useNavigate();
   const { data: project, isLoading, isError, error } = useProject(projectId);
 
+  // Whole-store destructure would re-render the ENTIRE editor tree (title
+  // bar, panels, preview, strip) on every keystroke / saveStatus cycle.
+  // useShallow re-renders only when one of these specific fields changes.
   const {
     currentSlideId,
     setCurrentSlideId,
@@ -107,7 +111,39 @@ export function Editor() {
     slidesPanelSize,
     setSlidesPanelSize,
     previewHighlightIndex,
-  } = useUiStore();
+  } = useUiStore(
+    useShallow((s) => ({
+      currentSlideId: s.currentSlideId,
+      setCurrentSlideId: s.setCurrentSlideId,
+      isPresenting: s.isPresenting,
+      setIsPresenting: s.setIsPresenting,
+      isAutoPlaying: s.isAutoPlaying,
+      setIsAutoPlaying: s.setIsAutoPlaying,
+      toggleAutoPlaying: s.toggleAutoPlaying,
+      isZenMode: s.isZenMode,
+      toggleZenMode: s.toggleZenMode,
+      isSettingsOpen: s.isSettingsOpen,
+      setIsSettingsOpen: s.setIsSettingsOpen,
+      isCommandOpen: s.isCommandOpen,
+      setIsCommandOpen: s.setIsCommandOpen,
+      isShortcutsOpen: s.isShortcutsOpen,
+      setIsShortcutsOpen: s.setIsShortcutsOpen,
+      toggleShortcutsOpen: s.toggleShortcutsOpen,
+      isDarkUi: s.isDarkUi,
+      toggleTheme: s.toggleTheme,
+      saveStatus: s.saveStatus,
+      resetEditorUi: s.resetEditorUi,
+      isBottomPanelCollapsed: s.isBottomPanelCollapsed,
+      setIsBottomPanelCollapsed: s.setIsBottomPanelCollapsed,
+      isCodePanelCollapsed: s.isCodePanelCollapsed,
+      setIsCodePanelCollapsed: s.setIsCodePanelCollapsed,
+      codePanelSize: s.codePanelSize,
+      setCodePanelSize: s.setCodePanelSize,
+      slidesPanelSize: s.slidesPanelSize,
+      setSlidesPanelSize: s.setSlidesPanelSize,
+      previewHighlightIndex: s.previewHighlightIndex,
+    })),
+  );
 
   const exportMutation = useExportProject();
   const createSlide = useCreateSlide(projectId ?? "");
@@ -297,7 +333,7 @@ export function Editor() {
           e.preventDefault();
           setIsAutoPlaying(false);
           goPrevSlide();
-        } else if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey) {
+        } else if (e.key.toLowerCase() === "p" && !isModKey(e)) {
           e.preventDefault();
           toggleAutoPlaying();
         }
@@ -316,7 +352,7 @@ export function Editor() {
         }
       }
 
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+      if (isModKey(e) && e.key.toLowerCase() === "b") {
         e.preventDefault();
         toggleZenMode();
       }
@@ -324,8 +360,7 @@ export function Editor() {
       // `?` opens shortcuts help (Shift+/). Ignore when typing.
       if (
         e.key === "?" &&
-        !e.metaKey &&
-        !e.ctrlKey &&
+        !isModKey(e) &&
         !e.altKey &&
         !isTypingTarget(e.target) &&
         !isCommandOpen
@@ -339,8 +374,7 @@ export function Editor() {
       if (
         (e.key === "ArrowRight" || e.key === "ArrowLeft") &&
         !isTypingTarget(e.target) &&
-        !e.metaKey &&
-        !e.ctrlKey &&
+        !isModKey(e) &&
         !e.altKey &&
         !isSettingsOpen &&
         !isCommandOpen &&

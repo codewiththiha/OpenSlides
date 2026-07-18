@@ -6,11 +6,28 @@ mod models;
 
 use commands::*;
 use db::init_db;
-use tauri::Manager;
+use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{Emitter, Manager};
+
+/// Set by `finish_quit` once the frontend flushed the pending debounced
+/// slide-code save — the *second* close/exit request is then let through
+/// instead of being intercepted again.
+pub(crate) static QUIT_FLUSHED: AtomicBool = AtomicBool::new(false);
+
+/// Ask the webview to flush pending saves before terminating, and arm a
+/// hard-exit fallback so a wedged frontend can never trap the OS-level
+/// quit (the app force-exits a few seconds later regardless).
+fn request_flush_before_quit<E: Emitter + ?Sized>(emitter: &E) {
+    let _ = emitter.emit("app://quit-request", ());
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_secs(4));
+        std::process::exit(0);
+    });
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -44,7 +61,28 @@ pub fn run() {
             highlight_snippets,
             selection_range,
             highlight_merustmar_code,
+            finish_quit,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .on_window_event(|window, event| {
+            // Window X / native close: flush the debounced auto-save first —
+            // without this, the last <500ms of keystrokes could vanish.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if !QUIT_FLUSHED.load(Ordering::SeqCst) {
+                    api.prevent_close();
+                    request_flush_before_quit(window);
+                }
+            }
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    app.run(|app_handle, event| {
+        // Cmd+Q / OS-level quit goes through the same flush handshake.
+        if let tauri::RunEvent::ExitRequested { api, .. } = event {
+            if !QUIT_FLUSHED.load(Ordering::SeqCst) {
+                api.prevent_exit();
+                request_flush_before_quit(app_handle);
+            }
+        }
+    });
 }

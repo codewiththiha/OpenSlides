@@ -21,7 +21,10 @@ interface SettingsDrawerProps {
 export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) {
   const updateSettings = useUpdateSettings(project.id);
   const updateTheme = useUpdateTheme(project.id);
-  const { editorShowLineNumbers, setEditorShowLineNumbers } = useUiStore();
+  const editorShowLineNumbers = useUiStore((s) => s.editorShowLineNumbers);
+  const setEditorShowLineNumbers = useUiStore(
+    (s) => s.setEditorShowLineNumbers,
+  );
   const s = project.settings;
   // editorShowLineNumbers stays settings-only (no toolbar toggle)
 

@@ -37,6 +37,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { slideDisplayName, type Project, type Slide } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
+import { clearHistory } from "@/lib/code-history";
 import { notify } from "@/lib/toast";
 import {
   useCreateSlide,
@@ -98,9 +99,15 @@ function SlideCard({
   setNodeRef?: (node: HTMLElement | null) => void;
   style?: React.CSSProperties;
 }) {
-  const { currentSlideId, setCurrentSlideId, localCode } = useUiStore();
+  // Per-card fine-grained subscriptions: typing updates `localCode` every
+  // keystroke — a whole-store subscribe re-rendered EVERY card per keystroke
+  // (and again when saveStatus cycled), though only this card's first-line
+  // preview can change.
+  const currentSlideId = useUiStore((s) => s.currentSlideId);
+  const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
+  const codeOverride = useUiStore((s) => s.localCode[slide.id]);
   const preview =
-    (localCode[slide.id] ?? slide.code).split("\n")[0]?.slice(0, 28) || "Empty";
+    (codeOverride ?? slide.code).split("\n")[0]?.slice(0, 28) || "Empty";
   const selected = currentSlideId === slide.id;
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;
@@ -317,12 +324,12 @@ export function BottomSlidesPanel({
   activeHighlightIndex = -1,
   onToggleCollapse,
 }: BottomSlidesPanelProps) {
-  const {
-    setCurrentSlideId,
-    currentSlideId,
-    isBottomPanelCollapsed,
-    setIsBottomPanelCollapsed,
-  } = useUiStore();
+  const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
+  const currentSlideId = useUiStore((s) => s.currentSlideId);
+  const isBottomPanelCollapsed = useUiStore((s) => s.isBottomPanelCollapsed);
+  const setIsBottomPanelCollapsed = useUiStore(
+    (s) => s.setIsBottomPanelCollapsed,
+  );
 
   const isCollapsed = collapsed ?? isBottomPanelCollapsed;
   const toggleCollapse =
@@ -422,6 +429,9 @@ export function BottomSlidesPanel({
 
       deleteSlide.mutate(id, {
         onSuccess: (proj) => {
+          // Free the per-slide undo stack — restore (Undo) intentionally
+          // starts a fresh history for the revived slide id.
+          clearHistory(id);
           if (currentSlideId === id) {
             const fallback =
               proj.settings.currentSlideId ?? proj.slides[0]?.id ?? null;

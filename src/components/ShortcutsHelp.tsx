@@ -65,7 +65,8 @@ function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 export function ShortcutsHelp() {
-  const { isShortcutsOpen, setIsShortcutsOpen } = useUiStore();
+  const isShortcutsOpen = useUiStore((s) => s.isShortcutsOpen);
+  const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen);
   const mod = modKeyLabel();
 
   if (!isShortcutsOpen) return null;

@@ -19,6 +19,7 @@ import { useUiStore } from "@/store/useUiStore";
 import { THEME_OPTIONS } from "@/types";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
+import { isModKey } from "@/lib/keyboard";
 
 interface CommandPaletteProps {
   projectId?: string;
@@ -34,22 +35,20 @@ export function CommandPalette({
   onTheme,
 }: CommandPaletteProps) {
   const navigate = useNavigate();
-  const {
-    isCommandOpen,
-    setIsCommandOpen,
-    setIsPresenting,
-    setIsSettingsOpen,
-    setIsShortcutsOpen,
-    toggleZenMode,
-    isDarkUi,
-    toggleTheme,
-  } = useUiStore();
+  const isCommandOpen = useUiStore((s) => s.isCommandOpen);
+  const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen);
+  const setIsPresenting = useUiStore((s) => s.setIsPresenting);
+  const setIsSettingsOpen = useUiStore((s) => s.setIsSettingsOpen);
+  const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen);
+  const toggleZenMode = useUiStore((s) => s.toggleZenMode);
+  const isDarkUi = useUiStore((s) => s.isDarkUi);
+  const toggleTheme = useUiStore((s) => s.toggleTheme);
   const [search, setSearch] = useState("");
   const mod = modKeyLabel();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if (isModKey(e) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandOpen(!isCommandOpen);
       }

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
+import { useShallow } from "zustand/react/shallow";
 import { getHighlighter } from "@/lib/shiki-instance";
 import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
 import { api } from "@/lib/tauri-api";
@@ -36,7 +37,12 @@ export function SlidePreview({
   activeHighlightIndex = -1,
   onHighlightExitComplete,
 }: SlidePreviewProps) {
-  const { currentSlideId, localCode } = useUiStore();
+  const { currentSlideId, localCode } = useUiStore(
+    useShallow((s) => ({
+      currentSlideId: s.currentSlideId,
+      localCode: s.localCode,
+    })),
+  );
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const codeContainerRef = useRef<HTMLDivElement>(null);

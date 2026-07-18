@@ -13,7 +13,6 @@ export function detectPlatform(): AppPlatform {
 }
 
 export const isMacOS = () => detectPlatform() === "macos";
-export const isWindows = () => detectPlatform() === "windows";
 
 /** Modifier label for UI hints. */
 export function modKeyLabel(): string {

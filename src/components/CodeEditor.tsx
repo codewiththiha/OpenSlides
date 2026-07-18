@@ -38,6 +38,8 @@ import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { cn, escapeHtml } from "@/lib/utils";
 import { api } from "@/lib/tauri-api";
+import { markSavePending, clearPendingSave } from "@/lib/save-flush";
+import { isModKey } from "@/lib/keyboard";
 import {
   seedHistory,
   pushHistory,
@@ -63,16 +65,18 @@ export function CodeEditor({
   onToggleExpand,
   onCollapse,
 }: CodeEditorProps) {
-  const {
-    currentSlideId,
-    setCurrentSlideId,
-    localCode,
-    setLocalCode,
-    setSaveStatus,
-    editorShowLineNumbers,
-    previewHighlightIndex,
-    setPreviewHighlightIndex,
-  } = useUiStore();
+  // Fine-grained selectors: subscribing to the whole store would re-render
+  // this editor (and everything below it) on every unrelated store update.
+  const currentSlideId = useUiStore((s) => s.currentSlideId);
+  const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
+  const localCode = useUiStore((s) => s.localCode);
+  const setLocalCode = useUiStore((s) => s.setLocalCode);
+  const setSaveStatus = useUiStore((s) => s.setSaveStatus);
+  const editorShowLineNumbers = useUiStore((s) => s.editorShowLineNumbers);
+  const previewHighlightIndex = useUiStore((s) => s.previewHighlightIndex);
+  const setPreviewHighlightIndex = useUiStore(
+    (s) => s.setPreviewHighlightIndex,
+  );
 
   const slide =
     project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
@@ -122,7 +126,10 @@ export function CodeEditor({
       codeMutation.mutate(
         { slideId: id, code: value },
         {
-          onSuccess: () => setSaveStatus("saved"),
+          onSuccess: () => {
+            setSaveStatus("saved");
+            clearPendingSave(id, value);
+          },
           onError: () => setSaveStatus("error"),
         },
       );
@@ -156,6 +163,7 @@ export function CodeEditor({
         pushHistory(slideId, value);
       }
       setLocalCode(slideId, value);
+      markSavePending(slideId, value);
       debouncedSave(slideId, value);
     },
     [slideId, setLocalCode, debouncedSave],
@@ -174,6 +182,7 @@ export function CodeEditor({
     if (prev === null) return;
     applyingHistory.current = true;
     setLocalCode(slideId, prev);
+    markSavePending(slideId, prev);
     debouncedSave(slideId, prev);
     applyingHistory.current = false;
     // Restore caret near end of change is hard; keep current selection best-effort
@@ -185,6 +194,7 @@ export function CodeEditor({
     if (next === null) return;
     applyingHistory.current = true;
     setLocalCode(slideId, next);
+    markSavePending(slideId, next);
     debouncedSave(slideId, next);
     applyingHistory.current = false;
   }, [slideId, setLocalCode, debouncedSave]);
@@ -192,7 +202,7 @@ export function CodeEditor({
   // Expose undo/redo for menu events + capture-phase so we beat native handlers
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
+      const mod = isModKey(e);
       if (!mod || !slideId) return;
       // Only when focus is in our editor (or nothing focused in expanded mode)
       const t = e.target as HTMLElement | null;
@@ -245,7 +255,7 @@ export function CodeEditor({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Let capture-phase window handler own undo/redo; still block native
-      const mod = e.metaKey || e.ctrlKey;
+      const mod = isModKey(e);
       if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
         return;

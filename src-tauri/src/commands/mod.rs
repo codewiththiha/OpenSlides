@@ -8,10 +8,12 @@ mod highlight;
 mod io;
 mod merustmar;
 mod projects;
+mod quit;
 mod slides;
 
 pub use highlight::*;
 pub use io::*;
 pub use merustmar::*;
 pub use projects::*;
+pub use quit::*;
 pub use slides::*;
