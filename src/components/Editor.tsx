@@ -109,6 +109,11 @@ export function Editor() {
   }, [projectId, currentSlideId]);
 
   useEffect(() => {
+    // Clear transient preview overrides when switching projects to avoid leaking
+    useUiStore.getState().clearAllPreviewSettings();
+  }, [projectId]);
+
+  useEffect(() => {
     return () => resetEditorUi();
   }, [resetEditorUi]);
 

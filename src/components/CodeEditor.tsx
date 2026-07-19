@@ -5,6 +5,7 @@
  * - NSSpellServer timeout: aggressive spellcheck/autocorrect disabling
  * - Triple pipeline removed: previously shikiSync (blocking 2-5ms) + runHighlight (debounced) + plainEscaped (4 regex O(n) per keystroke)
  *   Now: single worker pipeline + cheap merustmar sync fallback (no regex), no plain flash.
+ * - Laggy DebouncedSlider: now uses instant preview Zustand overrides for live SlidePreview.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -67,6 +68,15 @@ export function CodeEditor({
   );
   const setCaretPosition = useUiStore((s) => s.setCaretPosition);
 
+  // preview overrides
+  const previewProject = useUiStore((s) => s.previewProject);
+  const previewSlides = useUiStore((s) => s.previewSlides);
+  const setPreviewProjectSetting = useUiStore((s) => s.setPreviewProjectSetting);
+  const setPreviewSlideSetting = useUiStore((s) => s.setPreviewSlideSetting);
+  const clearPreviewProjectSetting = useUiStore((s) => s.clearPreviewProjectSetting);
+  const clearPreviewSlideSetting = useUiStore((s) => s.clearPreviewSlideSetting);
+  const clearPreviewHighlightSetting = useUiStore((s) => s.clearPreviewHighlightSetting);
+
   const slide =
     project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
   const slideId = slide?.id;
@@ -78,7 +88,6 @@ export function CodeEditor({
   const gutterRef = useRef<HTMLDivElement>(null);
 
   // ── Uncontrolled textarea, by design ─────────────
-  // Now restores caret per slide from Zustand (massive UX win for multi-slide editing)
   useEffect(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
@@ -91,14 +100,11 @@ export function CodeEditor({
     if (isNewValue) {
       el.value = next;
     }
-    // Restore caret if we have a stored position for this slide
     const saved = useUiStore.getState().caretPositions[slideId];
     if (saved) {
       const len = next.length;
       const start = Math.min(Math.max(saved.start, 0), len);
       const end = Math.min(Math.max(saved.end, 0), len);
-      // Only restore if value changed OR we have a saved pos that differs from current
-      // This prevents always jumping to end on slide switch
       requestAnimationFrame(() => {
         try {
           el.selectionStart = start;
@@ -106,7 +112,6 @@ export function CodeEditor({
         } catch {}
       });
     } else {
-      // No saved caret: for new slide content, put at end if value changed, else keep current
       if (isNewValue) {
         requestAnimationFrame(() => {
           try {
@@ -118,7 +123,6 @@ export function CodeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slideId]);
 
-  // Save caret position on select / keyup / mouseup
   const saveCaret = useCallback(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
@@ -148,17 +152,14 @@ export function CodeEditor({
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
   const isDarkBg = !LIGHT_THEMES.has(theme);
-  const editorFontSize = project.settings.editorFontSize || 14;
+
+  // Effective editor font size with preview override — live during drag
+  const rawEditorFontSize = project.settings.editorFontSize || 14;
+  const editorFontSize = previewProject.editorFontSize ?? rawEditorFontSize;
   const lineHeight = 1.55;
 
   const lineCount = useMemo(() => Math.max(1, code.split("\n").length), [code]);
 
-  // ── Single Web Worker pipeline (merged 1+2, removed 3) ───────────────
-  // Previously:
-  //   - shikiSync useMemo (blocking 2-5ms)
-  //   - runHighlight debounced async
-  //   - plainEscaped regex x4 per keystroke (pure waste)
-  // Now: worker owns all Shiki tokenization off main thread. Merustmar sync is cheap and stays in main.
   const highlightedHtml = useShikiWorker({
     code,
     language,
@@ -220,7 +221,6 @@ export function CodeEditor({
     };
   }, []);
 
-  /** Insert spaces on Tab; unindent on Shift+Tab. */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key !== "Tab" || !slideId) return;
@@ -277,7 +277,6 @@ export function CodeEditor({
   const currentIndex = project.slides.findIndex((s) => s.id === slideId);
 
   const goSlide = (dir: -1 | 1) => {
-    // Save caret of current slide before leaving (UX win)
     try {
       const el = textareaRef.current;
       if (el && slideId) {
@@ -334,12 +333,20 @@ export function CodeEditor({
       const updated = currentHighlights.map((hl) =>
         hl.id === id ? { ...hl, ...patch } : hl,
       );
-      settingsMutation.mutate({
-        slideId,
-        payload: { highlights: updated },
-      });
+      settingsMutation.mutate(
+        {
+          slideId,
+          payload: { highlights: updated },
+        },
+        {
+          onSuccess: () => {
+            // Sync preview back to DB state after successful save
+            clearPreviewHighlightSetting(id);
+          },
+        },
+      );
     },
-    [slideId, currentHighlights, settingsMutation],
+    [slideId, currentHighlights, settingsMutation, clearPreviewHighlightSetting],
   );
 
   const handleDeleteHighlight = useCallback(
@@ -347,10 +354,15 @@ export function CodeEditor({
       if (!slideId) return;
       const deletedIndex = currentHighlights.findIndex((hl) => hl.id === id);
       const updated = currentHighlights.filter((hl) => hl.id !== id);
-      settingsMutation.mutate({
-        slideId,
-        payload: { highlights: updated },
-      });
+      settingsMutation.mutate(
+        {
+          slideId,
+          payload: { highlights: updated },
+        },
+        {
+          onSuccess: () => clearPreviewHighlightSetting(id),
+        },
+      );
       if (expandedHighlightId === id) {
         setExpandedHighlightId(null);
       }
@@ -369,6 +381,7 @@ export function CodeEditor({
       expandedHighlightId,
       previewHighlightIndex,
       setPreviewHighlightIndex,
+      clearPreviewHighlightSetting,
     ],
   );
 
@@ -428,15 +441,25 @@ export function CodeEditor({
 
   const gutterWidth = Math.max(2, String(lineCount).length) * 0.65 + 1.25;
 
-  const transitionLabel = useGlobalTransition
-    ? `Transition (${project.settings.globalTransitionDuration}ms · global)`
-    : `Transition (${slide.transitionDuration}ms)`;
-  const staggerLabel = useGlobalStagger
-    ? `Stagger (${project.settings.globalStagger} · global)`
-    : `Stagger (${slide.stagger})`;
-  const durationLabel = `Duration (${slide.duration}ms)`;
+  // Effective per-slide values with preview overrides for instant feedback
+  const previewForThisSlide = slideId ? previewSlides[slideId] : undefined;
+  const effTransition = useGlobalTransition
+    ? (previewProject.globalTransitionDuration ??
+      project.settings.globalTransitionDuration)
+    : (previewForThisSlide?.transitionDuration ?? slide.transitionDuration);
+  const effStagger = useGlobalStagger
+    ? (previewProject.globalStagger ?? project.settings.globalStagger)
+    : (previewForThisSlide?.stagger ?? slide.stagger);
+  const effDuration = previewForThisSlide?.duration ?? slide.duration;
 
-  // Theme default foreground for monochrome fallback (no regex, React escapes)
+  const transitionLabel = useGlobalTransition
+    ? `Transition (${effTransition}ms · global)`
+    : `Transition (${effTransition}ms)`;
+  const staggerLabel = useGlobalStagger
+    ? `Stagger (${effStagger} · global)`
+    : `Stagger (${effStagger})`;
+  const durationLabel = `Duration (${effDuration}ms)`;
+
   const defaultFg = isDarkBg ? "#abb2bf" : "#383a42";
 
   return (
@@ -566,15 +589,9 @@ export function CodeEditor({
                 }}
               />
             ) : (
-              // Fallback while worker boots: single-color, exact content, React-escaped (no regex)
-              // Prevents plain white flash and avoids O(n) regex waste
               <code style={{ color: defaultFg }}>{code + "\n"}</code>
             )}
           </pre>
-          {/* NSSpellServer fix: aggressive disable
-              - macOS WKWebView spell server times out on large code selections
-              - Solution: disable spellcheck, autocorrect, autocomplete, grammar, etc.
-              - Also disable via data-* attrs for Chrome extensions */}
           <textarea
             ref={textareaRef}
             data-openslides-editor
@@ -602,13 +619,14 @@ export function CodeEditor({
             inputMode="text"
             enterKeyHint="enter"
             className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-white outline-none"
-            style={{
-              fontSize: editorFontSize,
-              lineHeight,
-              tabSize: 2,
-              // Extra webkit prefixes to hint no correction
-              WebkitTextSizeAdjust: "100%",
-            } as React.CSSProperties}
+            style={
+              {
+                fontSize: editorFontSize,
+                lineHeight,
+                tabSize: 2,
+                WebkitTextSizeAdjust: "100%",
+              } as React.CSSProperties
+            }
             wrap="off"
           />
         </div>
@@ -636,15 +654,38 @@ export function CodeEditor({
             disabled={useGlobalTransition}
             value={[
               useGlobalTransition
-                ? project.settings.globalTransitionDuration
-                : slide.transitionDuration,
+                ? (previewProject.globalTransitionDuration ??
+                  project.settings.globalTransitionDuration)
+                : (previewSlides[slide.id]?.transitionDuration ??
+                  slide.transitionDuration),
             ]}
+            onValueChange={([v]) => {
+              if (useGlobalTransition) {
+                setPreviewProjectSetting("globalTransitionDuration", v);
+              } else {
+                setPreviewSlideSetting(slide.id, "transitionDuration", v);
+              }
+            }}
             onValueCommit={([v]) => {
-              if (useGlobalTransition) return;
-              settingsMutation.mutate({
-                slideId: slide.id,
-                payload: { transitionDuration: v },
-              });
+              if (useGlobalTransition) {
+                projectSettingsMutation.mutate(
+                  { globalTransitionDuration: v },
+                  {
+                    onSuccess: () => clearPreviewProjectSetting("globalTransitionDuration"),
+                  },
+                );
+                return;
+              }
+              settingsMutation.mutate(
+                {
+                  slideId: slide.id,
+                  payload: { transitionDuration: v },
+                },
+                {
+                  onSuccess: () =>
+                    clearPreviewSlideSetting(slide.id, "transitionDuration"),
+                },
+              );
             }}
           />
         </div>
@@ -660,13 +701,37 @@ export function CodeEditor({
             max={50}
             step={1}
             disabled={useGlobalStagger}
-            value={[useGlobalStagger ? project.settings.globalStagger : slide.stagger]}
+            value={[
+              useGlobalStagger
+                ? (previewProject.globalStagger ?? project.settings.globalStagger)
+                : (previewSlides[slide.id]?.stagger ?? slide.stagger),
+            ]}
+            onValueChange={([v]) => {
+              if (useGlobalStagger) {
+                setPreviewProjectSetting("globalStagger", v);
+              } else {
+                setPreviewSlideSetting(slide.id, "stagger", v);
+              }
+            }}
             onValueCommit={([v]) => {
-              if (useGlobalStagger) return;
-              settingsMutation.mutate({
-                slideId: slide.id,
-                payload: { stagger: v },
-              });
+              if (useGlobalStagger) {
+                projectSettingsMutation.mutate(
+                  { globalStagger: v },
+                  {
+                    onSuccess: () => clearPreviewProjectSetting("globalStagger"),
+                  },
+                );
+                return;
+              }
+              settingsMutation.mutate(
+                {
+                  slideId: slide.id,
+                  payload: { stagger: v },
+                },
+                {
+                  onSuccess: () => clearPreviewSlideSetting(slide.id, "stagger"),
+                },
+              );
             }}
           />
         </div>
@@ -681,12 +746,18 @@ export function CodeEditor({
             min={500}
             max={10000}
             step={100}
-            value={[slide.duration]}
+            value={[previewSlides[slide.id]?.duration ?? slide.duration]}
+            onValueChange={([v]) => setPreviewSlideSetting(slide.id, "duration", v)}
             onValueCommit={([v]) =>
-              settingsMutation.mutate({
-                slideId: slide.id,
-                payload: { duration: v },
-              })
+              settingsMutation.mutate(
+                {
+                  slideId: slide.id,
+                  payload: { duration: v },
+                },
+                {
+                  onSuccess: () => clearPreviewSlideSetting(slide.id, "duration"),
+                },
+              )
             }
           />
         </div>

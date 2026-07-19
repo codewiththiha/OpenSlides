@@ -6,6 +6,8 @@
  * settings (dim / size-up / custom animation timings), reorder and delete.
  *
  * Order here IS the playback order when stepping with → / clicks.
+ * Fix: sliders now update Zustand previewHighlights instantly for live preview,
+ * while DB save happens on commit. Preview cleared via parent onSuccess to avoid flicker.
  */
 import {
   Trash2,
@@ -22,6 +24,7 @@ import { DebouncedSlider } from "./ui/debounced-slider";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { useHighlightSnippets } from "@/hooks/queries/highlights";
+import { useUiStore } from "@/store/useUiStore";
 import type { Highlight } from "@/types";
 
 interface HighlightSettingsPanelProps {
@@ -49,8 +52,9 @@ export function HighlightSettingsPanel({
   onPreview,
   onMove,
 }: HighlightSettingsPanelProps) {
-  // Snippets are sliced in Rust (same parsing the overlay plans use).
   const { data: snippets } = useHighlightSnippets(code, highlights);
+  const previewHighlights = useUiStore((s) => s.previewHighlights);
+  const setPreviewHighlightSetting = useUiStore((s) => s.setPreviewHighlightSetting);
 
   if (highlights.length === 0) return null;
 
@@ -73,6 +77,10 @@ export function HighlightSettingsPanel({
             rawSnippet === undefined
               ? "…"
               : rawSnippet.replace(/\s+/g, " ").trim() || "(empty selection)";
+
+          const preview = previewHighlights[hl.id];
+          const eff = preview ? { ...hl, ...preview } : hl;
+
           return (
             <div
               key={hl.id}
@@ -85,7 +93,6 @@ export function HighlightSettingsPanel({
                     : "border-border/40 bg-card/40 hover:bg-card/60",
               )}
             >
-              {/* Header row */}
               <div className="flex items-center gap-1 px-2 py-1">
                 <button
                   type="button"
@@ -159,7 +166,6 @@ export function HighlightSettingsPanel({
                 </Button>
               </div>
 
-              {/* Expanded settings */}
               <AnimatePresence>
                 {isExpanded && (
                   <motion.div
@@ -169,46 +175,47 @@ export function HighlightSettingsPanel({
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.15 }}
                   >
-                    {/* Dim amount */}
                     <div className="space-y-1">
                       <Label className="text-[9px] text-muted-foreground">
-                        Dim ({hl.dimAmount}%)
+                        Dim ({eff.dimAmount}%)
                       </Label>
                       <DebouncedSlider
                         min={0}
                         max={100}
                         step={5}
-                        value={[hl.dimAmount]}
-                        onValueCommit={([v]) =>
-                          onUpdate(hl.id, { dimAmount: v })
+                        value={[eff.dimAmount]}
+                        onValueChange={([v]) =>
+                          setPreviewHighlightSetting(hl.id, { dimAmount: v })
                         }
+                        onValueCommit={([v]) => onUpdate(hl.id, { dimAmount: v })}
                       />
                     </div>
 
-                    {/* Size up toggle */}
                     <div className="flex items-center justify-between">
                       <Label className="text-[9px] text-muted-foreground">
                         Size Up
                       </Label>
                       <Switch
-                        checked={hl.sizeUpEnabled}
+                        checked={eff.sizeUpEnabled}
                         onCheckedChange={(v) =>
                           onUpdate(hl.id, { sizeUpEnabled: v })
                         }
                       />
                     </div>
 
-                    {/* Size up amount (only when size-up is on) */}
-                    {hl.sizeUpEnabled && (
+                    {eff.sizeUpEnabled && (
                       <div className="space-y-1">
                         <Label className="text-[9px] text-muted-foreground">
-                          Size Up Amount ({hl.sizeUpAmount ?? 125}%)
+                          Size Up Amount ({eff.sizeUpAmount ?? 125}%)
                         </Label>
                         <DebouncedSlider
                           min={105}
                           max={250}
                           step={5}
-                          value={[hl.sizeUpAmount ?? 125]}
+                          value={[eff.sizeUpAmount ?? 125]}
+                          onValueChange={([v]) =>
+                            setPreviewHighlightSetting(hl.id, { sizeUpAmount: v })
+                          }
                           onValueCommit={([v]) =>
                             onUpdate(hl.id, { sizeUpAmount: v })
                           }
@@ -216,46 +223,52 @@ export function HighlightSettingsPanel({
                       </div>
                     )}
 
-                    {/* Custom transition toggle */}
                     <div className="flex items-center justify-between">
                       <Label className="text-[9px] text-muted-foreground">
                         Custom Animations
                       </Label>
                       <Switch
-                        checked={hl.useCustomTransition}
+                        checked={eff.useCustomTransition}
                         onCheckedChange={(v) =>
                           onUpdate(hl.id, { useCustomTransition: v })
                         }
                       />
                     </div>
 
-                    {/* Transition sliders (only when custom is on) */}
-                    {hl.useCustomTransition && (
+                    {eff.useCustomTransition && (
                       <>
                         <div className="space-y-1">
                           <Label className="text-[9px] text-muted-foreground">
-                            Dim Transition ({hl.dimTransition}ms)
+                            Dim Transition ({eff.dimTransition}ms)
                           </Label>
                           <DebouncedSlider
                             min={100}
                             max={2000}
                             step={50}
-                            value={[hl.dimTransition]}
+                            value={[eff.dimTransition]}
+                            onValueChange={([v]) =>
+                              setPreviewHighlightSetting(hl.id, { dimTransition: v })
+                            }
                             onValueCommit={([v]) =>
                               onUpdate(hl.id, { dimTransition: v })
                             }
                           />
                         </div>
-                        {hl.sizeUpEnabled && (
+                        {eff.sizeUpEnabled && (
                           <div className="space-y-1">
                             <Label className="text-[9px] text-muted-foreground">
-                              Size Up Transition ({hl.sizeUpTransition}ms)
+                              Size Up Transition ({eff.sizeUpTransition}ms)
                             </Label>
                             <DebouncedSlider
                               min={100}
                               max={2000}
                               step={50}
-                              value={[hl.sizeUpTransition]}
+                              value={[eff.sizeUpTransition]}
+                              onValueChange={([v]) =>
+                                setPreviewHighlightSetting(hl.id, {
+                                  sizeUpTransition: v,
+                                })
+                              }
                               onValueCommit={([v]) =>
                                 onUpdate(hl.id, { sizeUpTransition: v })
                               }

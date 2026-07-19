@@ -1,8 +1,10 @@
 /**
  * Live slide preview using shared Shiki singleton + magic-move.
  * Fixed: now uses per-slide atom for code to avoid re-render storm.
+ * Fix: reads instant preview overrides from Zustand (previewProject / previewSlides / previewHighlights)
+ * so fontSize / lineHeight / transitions update live during drag, not only on commit.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
 import { getHighlighter } from "@/lib/shiki-instance";
@@ -46,6 +48,13 @@ export function SlidePreview({
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const codeContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- instant preview overrides ---
+  const previewProject = useUiStore((s) => s.previewProject);
+  const previewSlide = useUiStore((s) =>
+    slide ? s.previewSlides[slide.id] : undefined,
+  );
+  const previewHighlightsMap = useUiStore((s) => s.previewHighlights);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,14 +107,46 @@ export function SlidePreview({
     );
   }
 
-  const settings = project.settings;
+  // Effective settings: preview overrides win over DB
+  const s = project.settings;
+  const effectiveFontSize = previewProject.fontSize ?? s.fontSize;
+  const effectiveLineHeight = previewProject.lineHeight ?? s.lineHeight;
+  const effectiveGlobalTransition =
+    previewProject.globalTransitionDuration ?? s.globalTransitionDuration;
+  const effectiveGlobalStagger = previewProject.globalStagger ?? s.globalStagger;
+
+  const effectiveSlideTransition =
+    previewSlide?.transitionDuration ??
+    (s.useGlobalTransition ? effectiveGlobalTransition : slide.transitionDuration);
+  const effectiveSlideStagger =
+    previewSlide?.stagger ?? (s.useGlobalStagger ? effectiveGlobalStagger : slide.stagger);
+
+  const settings = {
+    ...s,
+    fontSize: effectiveFontSize,
+    lineHeight: effectiveLineHeight,
+    globalTransitionDuration: effectiveGlobalTransition,
+    globalStagger: effectiveGlobalStagger,
+  };
+
   const bg = themeBackground(theme);
   const codeAlign = settings.codeAlign === "center" ? "center" : "left";
   const centerBlock = codeAlign === "center";
 
   const stagePad = isPresenting ? "p-16 md:p-24" : "p-8 md:p-12";
 
-  const highlights = slide.highlights ?? [];
+  const rawHighlights = slide.highlights ?? [];
+  // Merge per-highlight preview overrides
+  const highlights = useMemo(
+    () =>
+      rawHighlights.map((hl) => {
+        const preview = previewHighlightsMap[hl.id];
+        if (!preview) return hl;
+        return { ...hl, ...preview };
+      }),
+    [rawHighlights, previewHighlightsMap],
+  );
+
   const activeHighlight =
     activeHighlightIndex >= 0 && activeHighlightIndex < highlights.length
       ? highlights[activeHighlightIndex]
@@ -210,18 +251,14 @@ export function SlidePreview({
           }
         >
           <ShikiMagicMove
-            key={`${theme}-${settings.showLineNumbers}-${settings.fontSize}-${language}`}
+            key={`${theme}-${settings.showLineNumbers}-${settings.fontSize}-${settings.lineHeight}-${language}-${effectiveSlideTransition}-${effectiveSlideStagger}`}
             lang={language}
             theme={theme}
             highlighter={highlighter}
             code={code}
             options={{
-              duration: settings.useGlobalTransition
-                ? settings.globalTransitionDuration
-                : slide.transitionDuration,
-              stagger: settings.useGlobalStagger
-                ? settings.globalStagger
-                : slide.stagger,
+              duration: effectiveSlideTransition,
+              stagger: effectiveSlideStagger,
               lineNumbers: settings.showLineNumbers,
             }}
             className="shiki-magic-move-container font-mono font-medium tracking-wide"

@@ -1,6 +1,9 @@
 /**
  * Right-side settings drawer for global project options.
  * Preview line numbers (slide view) are separate from editor gutter numbers.
+ * Fix: fontSize / lineHeight / editorFontSize / global durations now update
+ * preview instantly via Zustand previewProject overrides, while DB save
+ * happens only on commit.
  */
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
@@ -25,11 +28,45 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
   const setEditorShowLineNumbers = useUiStore(
     (s) => s.setEditorShowLineNumbers,
   );
+
+  const previewProject = useUiStore((s) => s.previewProject);
+  const setPreviewProjectSetting = useUiStore((s) => s.setPreviewProjectSetting);
+  const clearPreviewProjectSetting = useUiStore((s) => s.clearPreviewProjectSetting);
+
   const s = project.settings;
-  // editorShowLineNumbers stays settings-only (no toolbar toggle)
+
+  // effective values (preview wins)
+  const effFontSize = previewProject.fontSize ?? s.fontSize;
+  const effLineHeight = previewProject.lineHeight ?? s.lineHeight;
+  const effEditorFontSize = previewProject.editorFontSize ?? s.editorFontSize;
+  const effGlobalTransition =
+    previewProject.globalTransitionDuration ?? s.globalTransitionDuration;
+  const effGlobalStagger = previewProject.globalStagger ?? s.globalStagger;
 
   const patch = (partial: Parameters<typeof updateSettings.mutate>[0]) => {
-    updateSettings.mutate(partial);
+    updateSettings.mutate(partial, {
+      onSuccess: () => {
+        // Sync preview back to DB state after successful save:
+        // clear the preview override for the keys we just saved.
+        for (const k of Object.keys(partial)) {
+          if (
+            k === "fontSize" ||
+            k === "lineHeight" ||
+            k === "editorFontSize" ||
+            k === "globalTransitionDuration" ||
+            k === "globalStagger" ||
+            k === "codeAlign" ||
+            k === "showLineNumbers" ||
+            k === "useGlobalTransition" ||
+            k === "useGlobalStagger"
+          ) {
+            clearPreviewProjectSetting(
+              k as keyof typeof previewProject,
+            );
+          }
+        }
+      },
+    });
   };
 
   return (
@@ -138,39 +175,44 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
 
             <div className="space-y-1.5 pt-2">
               <Label className="text-xs text-muted-foreground">
-                Preview font size ({s.fontSize}px)
+                Preview font size ({effFontSize}px)
               </Label>
               <DebouncedSlider
                 min={12}
                 max={32}
                 step={2}
-                value={[s.fontSize]}
+                value={[effFontSize]}
+                onValueChange={([v]) => setPreviewProjectSetting("fontSize", v)}
                 onValueCommit={([v]) => patch({ fontSize: v })}
               />
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
-                Line height ({s.lineHeight.toFixed(2)})
+                Line height ({effLineHeight.toFixed(2)})
               </Label>
               <DebouncedSlider
                 min={1.1}
                 max={2.2}
                 step={0.05}
-                value={[s.lineHeight]}
+                value={[effLineHeight]}
+                onValueChange={([v]) => setPreviewProjectSetting("lineHeight", v)}
                 onValueCommit={([v]) => patch({ lineHeight: v })}
               />
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">
-                Editor font size ({s.editorFontSize}px)
+                Editor font size ({effEditorFontSize}px)
               </Label>
               <DebouncedSlider
                 min={11}
                 max={22}
                 step={1}
-                value={[s.editorFontSize]}
+                value={[effEditorFontSize]}
+                onValueChange={([v]) =>
+                  setPreviewProjectSetting("editorFontSize", v)
+                }
                 onValueCommit={([v]) => patch({ editorFontSize: v })}
               />
             </div>
@@ -195,13 +237,16 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             {s.useGlobalTransition && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
-                  Transition ({s.globalTransitionDuration}ms)
+                  Transition ({effGlobalTransition}ms)
                 </Label>
                 <DebouncedSlider
                   min={100}
                   max={2000}
                   step={50}
-                  value={[s.globalTransitionDuration]}
+                  value={[effGlobalTransition]}
+                  onValueChange={([v]) =>
+                    setPreviewProjectSetting("globalTransitionDuration", v)
+                  }
                   onValueCommit={([v]) => patch({ globalTransitionDuration: v })}
                 />
               </div>
@@ -217,13 +262,16 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             {s.useGlobalStagger && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
-                  Stagger ({s.globalStagger})
+                  Stagger ({effGlobalStagger})
                 </Label>
                 <DebouncedSlider
                   min={0}
                   max={50}
                   step={1}
-                  value={[s.globalStagger]}
+                  value={[effGlobalStagger]}
+                  onValueChange={([v]) =>
+                    setPreviewProjectSetting("globalStagger", v)
+                  }
                   onValueCommit={([v]) => patch({ globalStagger: v })}
                 />
               </div>

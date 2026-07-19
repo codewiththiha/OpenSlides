@@ -1,6 +1,7 @@
 /**
  * UI state — panel layout prefs persist across restarts via localStorage.
  * Project/slide data still lives in TanStack Query + Rust SQLite.
+ * Preview overrides are transient (not persisted) for instant slider feedback.
  */
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -9,6 +10,20 @@ import {
   clearLocalCodeAtom,
   clearAllLocalCodeAtoms,
 } from "./localCodeAtoms";
+
+export type PreviewProjectSettings = {
+  fontSize?: number;
+  lineHeight?: number;
+  editorFontSize?: number;
+  globalTransitionDuration?: number;
+  globalStagger?: number;
+};
+
+export type PreviewSlideSettings = {
+  transitionDuration?: number;
+  stagger?: number;
+  duration?: number;
+};
 
 export interface UiState {
   currentSlideId: string | null;
@@ -34,6 +49,11 @@ export interface UiState {
   /** Caret position per slide — massive UX win for multi-slide editing */
   caretPositions: Record<string, { start: number; end: number }>;
 
+  /** Instant UI preview overrides (not persisted) — separate from DB state */
+  previewProject: PreviewProjectSettings;
+  previewSlides: Record<string, PreviewSlideSettings>;
+  previewHighlights: Record<string, Partial<import("@/types").Highlight>>;
+
   setCurrentSlideId: (id: string | null) => void;
   setIsPresenting: (v: boolean) => void;
   setIsAutoPlaying: (v: boolean) => void;
@@ -57,6 +77,30 @@ export interface UiState {
   setPreviewHighlightIndex: (v: number) => void;
   setCaretPosition: (slideId: string, start: number, end: number) => void;
   resetEditorUi: () => void;
+
+  setPreviewProjectSetting: <K extends keyof PreviewProjectSettings>(
+    key: K,
+    value: PreviewProjectSettings[K] | null,
+  ) => void;
+  setPreviewSlideSetting: <K extends keyof PreviewSlideSettings>(
+    slideId: string,
+    key: K,
+    value: PreviewSlideSettings[K] | null,
+  ) => void;
+  setPreviewHighlightSetting: (
+    highlightId: string,
+    patch: Partial<import("@/types").Highlight>,
+  ) => void;
+  clearPreviewProjectSetting: (key: keyof PreviewProjectSettings) => void;
+  clearPreviewSlideSetting: (
+    slideId: string,
+    key?: keyof PreviewSlideSettings,
+  ) => void;
+  clearPreviewHighlightSetting: (
+    highlightId: string,
+    key?: keyof import("@/types").Highlight,
+  ) => void;
+  clearAllPreviewSettings: () => void;
 }
 
 const DEFAULT_CODE_SIZE = 42;
@@ -92,6 +136,9 @@ export const useUiStore = create<UiState>()(
       saveStatus: "idle",
       previewHighlightIndex: -1,
       caretPositions: {},
+      previewProject: {},
+      previewSlides: {},
+      previewHighlights: {},
 
       setCurrentSlideId: (id) => set({ currentSlideId: id }),
       setIsPresenting: (v) => set({ isPresenting: v }),
@@ -141,6 +188,119 @@ export const useUiStore = create<UiState>()(
         set((s) => ({
           caretPositions: { ...s.caretPositions, [slideId]: { start, end } },
         })),
+
+      setPreviewProjectSetting: (key, value) =>
+        set((s) => {
+          if (value === null || value === undefined) {
+            const next = { ...s.previewProject };
+            delete (next as Record<string, unknown>)[key];
+            return { previewProject: next };
+          }
+          return {
+            previewProject: { ...s.previewProject, [key]: value },
+          };
+        }),
+      setPreviewSlideSetting: (slideId, key, value) =>
+        set((s) => {
+          const current = s.previewSlides[slideId] ?? {};
+          if (value === null || value === undefined) {
+            const nextSlide = { ...current };
+            delete (nextSlide as Record<string, unknown>)[key];
+            if (Object.keys(nextSlide).length === 0) {
+              const nextAll = { ...s.previewSlides };
+              delete nextAll[slideId];
+              return { previewSlides: nextAll };
+            }
+            return {
+              previewSlides: { ...s.previewSlides, [slideId]: nextSlide },
+            };
+          }
+          return {
+            previewSlides: {
+              ...s.previewSlides,
+              [slideId]: { ...current, [key]: value },
+            },
+          };
+        }),
+      setPreviewHighlightSetting: (highlightId, patch) =>
+        set((s) => {
+          const current = s.previewHighlights[highlightId] ?? {};
+          const next: Record<string, unknown> = { ...current };
+          for (const [k, v] of Object.entries(patch as Record<string, unknown>)) {
+            if (v === null || v === undefined) {
+              delete next[k];
+            } else {
+              next[k] = v;
+            }
+          }
+          if (Object.keys(next).length === 0) {
+            const nextAll = { ...s.previewHighlights };
+            delete nextAll[highlightId];
+            return { previewHighlights: nextAll };
+          }
+          return {
+            previewHighlights: {
+              ...s.previewHighlights,
+              [highlightId]: next as Partial<import("@/types").Highlight>,
+            },
+          };
+        }),
+      clearPreviewProjectSetting: (key) =>
+        set((s) => {
+          const next = { ...s.previewProject };
+          delete (next as Record<string, unknown>)[key];
+          return { previewProject: next };
+        }),
+      clearPreviewSlideSetting: (slideId, key) =>
+        set((s) => {
+          if (key) {
+            const cur = s.previewSlides[slideId];
+            if (!cur) return s;
+            const nextSlide = { ...cur };
+            delete (nextSlide as Record<string, unknown>)[key];
+            if (Object.keys(nextSlide).length === 0) {
+              const nextAll = { ...s.previewSlides };
+              delete nextAll[slideId];
+              return { previewSlides: nextAll };
+            }
+            return {
+              previewSlides: { ...s.previewSlides, [slideId]: nextSlide },
+            };
+          }
+          const nextAll = { ...s.previewSlides };
+          delete nextAll[slideId];
+          return { previewSlides: nextAll };
+        }),
+      clearPreviewHighlightSetting: (highlightId, key) =>
+        set((s) => {
+          if (key) {
+            const cur = s.previewHighlights[highlightId];
+            if (!cur) return s;
+            const next = { ...cur } as Record<string, unknown>;
+            delete next[key];
+            if (Object.keys(next).length === 0) {
+              const nextAll = { ...s.previewHighlights };
+              delete nextAll[highlightId];
+              return { previewHighlights: nextAll };
+            }
+            return {
+              previewHighlights: {
+                ...s.previewHighlights,
+                [highlightId]: next as Partial<import("@/types").Highlight>,
+              },
+            };
+          }
+          const nextAll = { ...s.previewHighlights };
+          delete nextAll[highlightId];
+          return { previewHighlights: nextAll };
+        }),
+      clearAllPreviewSettings: () =>
+        set({
+          previewProject: {},
+          previewSlides: {},
+          previewHighlights: {},
+        }),
+
       resetEditorUi: () => {
         clearAllLocalCodeAtoms();
         return set({
@@ -154,7 +314,9 @@ export const useUiStore = create<UiState>()(
           saveStatus: "idle",
           previewHighlightIndex: -1,
           caretPositions: {},
-          // keep panel collapse prefs / sizes / theme across navigations
+          previewProject: {},
+          previewSlides: {},
+          previewHighlights: {},
         });
       },
     }),
