@@ -84,6 +84,7 @@ interface SlideCardProps {
   isRenaming?: boolean;
   renameValue?: string;
   highlightProgress?: number;
+  flexible?: boolean;
   onRenameValueChange?: (v: string) => void;
   onCommitRename?: () => void;
   onCancelRename?: () => void;
@@ -102,6 +103,7 @@ const SlideCard = memo(function SlideCard({
   isRenaming = false,
   renameValue = "",
   highlightProgress = -1,
+  flexible = false,
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
@@ -121,10 +123,16 @@ const SlideCard = memo(function SlideCard({
   const hlCount = slide.highlights?.length ?? 0;
   const progress = isSelected ? highlightProgress : -1;
 
+  const baseStyle: React.CSSProperties = isOverlay
+    ? { width: ITEM_WIDTH, ...style }
+    : flexible
+      ? { width: "100%", minWidth: ITEM_WIDTH, flex: "1 1 0", ...style }
+      : { width: ITEM_WIDTH, ...style };
+
   return (
     <div
       ref={setNodeRef}
-      style={{ width: ITEM_WIDTH, ...style }}
+      style={baseStyle}
       onClick={() => {
         if (isOverlay || isRenaming) return;
         setCurrentSlideId(slide.id);
@@ -136,8 +144,9 @@ const SlideCard = memo(function SlideCard({
         onRename(slide.id, title);
       }}
       className={cn(
-        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
-        "will-change-transform min-w-0",
+        "group relative flex h-full cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
+        flexible && !isOverlay ? "flex-1 min-w-0" : "shrink-0 min-w-0",
+        "will-change-transform",
         isOverlay
           ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
           : isSelected
@@ -272,6 +281,7 @@ const SlideCard = memo(function SlideCard({
   if (prev.isRenaming !== next.isRenaming) return false;
   if (prev.renameValue !== next.renameValue) return false;
   if (prev.highlightProgress !== next.highlightProgress) return false;
+  if (prev.flexible !== next.flexible) return false;
   if (prev.style !== next.style) return false;
   if (prev.dragHandleProps !== next.dragHandleProps) return false;
   return true;
@@ -286,6 +296,7 @@ function SortableSlideItem({
   isRenaming,
   renameValue,
   highlightProgress,
+  flexible = false,
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
@@ -298,6 +309,7 @@ function SortableSlideItem({
   isRenaming: boolean;
   renameValue: string;
   highlightProgress?: number;
+  flexible?: boolean;
   onRenameValueChange: (v: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
@@ -329,6 +341,7 @@ function SortableSlideItem({
       isRenaming={isRenaming}
       renameValue={renameValue}
       highlightProgress={highlightProgress}
+      flexible={flexible}
       onRenameValueChange={onRenameValueChange}
       onCommitRename={onCommitRename}
       onCancelRename={onCancelRename}
@@ -631,12 +644,13 @@ export function BottomSlidesPanel({
                 })}
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 gap-2 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-0.5">
+              <div className="flex min-h-0 flex-1 gap-2 px-3 pb-3 pt-0.5 overflow-x-auto overflow-y-hidden">
                 {ordered.map((slide, index) => (
                   <SortableSlideItem
                     key={slide.id}
                     slide={slide}
                     index={index}
+                    flexible={!isDragging}
                     onRemove={handleRemove}
                     onRename={startRename}
                     isDraggingId={activeId}
