@@ -101,7 +101,7 @@ pub async fn delete_slide(
     };
 
     // Batch re-index remaining slides into single CASE query (was N queries)
-    if (!remaining.is_empty()) {
+    if !remaining.is_empty() {
         let mut case_sql = String::from("UPDATE slides SET order_index = CASE id ");
         for _ in 0..remaining.len() {
             case_sql.push_str("WHEN ? THEN ? ");

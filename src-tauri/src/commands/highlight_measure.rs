@@ -65,8 +65,7 @@ fn decompose(code: &str, req: &MeasureHighlightRequest) -> Vec<(i64, i64, i64)> 
 
     let mut out = Vec::new();
     for i in start_line..=end_line {
-        let line_len = lines[i as usize].chars().count() as i64; // JS length is UTF-16, but chars approx; for monospace we use char count
-        // For more accurate JS parity, use UTF-16 length:
+        // JS string length is UTF-16 code units — use encode_utf16 count for parity
         let line_len_utf16 = lines[i as usize].encode_utf16().count() as i64;
         let raw_start = if i == start_line { req.start_char } else { 0 };
         let raw_end = if i == end_line { req.end_char } else { line_len_utf16 };
