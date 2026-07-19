@@ -149,60 +149,6 @@ export const api = {
       },
     );
   },
-
-  measureHighlightPure: (req: {
-    code: string;
-    startLine: number;
-    startChar: number;
-    endLine: number;
-    endChar: number;
-    fontSize: number;
-    lineHeight: number;
-    charWidth: number;
-    containerWidth: number;
-    lineNumbersWidth: number;
-    paddingX: number;
-    paddingY: number;
-    codeAlign: string;
-  }) =>
-    call<{
-      segments: Array<{
-        lineIndex: number;
-        startChar: number;
-        endChar: number;
-        rect: { x: number; y: number; width: number; height: number };
-        isEmpty: boolean;
-      }>;
-      union: { x: number; y: number; width: number; height: number };
-    }>("measure_highlight_pure", { req }),
-
-  measureHighlightFromPlan: (req: {
-    planLines: Array<{
-      lineIndex: number;
-      startChar: number;
-      endChar: number;
-      isEmpty: boolean;
-    }>;
-    fontSize: number;
-    lineHeight: number;
-    charWidth: number;
-    containerWidth: number;
-    lineNumbersWidth: number;
-    paddingX: number;
-    paddingY: number;
-    codeAlign: string;
-    maxLineLength: number;
-  }) =>
-    call<{
-      segments: Array<{
-        lineIndex: number;
-        startChar: number;
-        endChar: number;
-        rect: { x: number; y: number; width: number; height: number };
-        isEmpty: boolean;
-      }>;
-      union: { x: number; y: number; width: number; height: number };
-    }>("measure_highlight_from_plan", { req }),
 };
 
 /* Highlight DTOs (SelectionRange, HighlightPlan, HighlightTokenLine …) now

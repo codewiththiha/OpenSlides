@@ -58,8 +58,6 @@ pub fn run() {
             export_project_to_json,
             import_project_from_json,
             merustmar_tokens,
-            measure_highlight_pure,
-            measure_highlight_from_plan,
             finish_quit,
         ])
         .on_window_event(|window, event| {
