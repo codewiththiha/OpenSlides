@@ -1,15 +1,9 @@
 /**
- * Horizontal slide strip — now virtualized to handle 150+ slides.
+ * Horizontal slide strip — virtualized for 150+ slides, now fills vertically.
  *
- * BEFORE: ordered.map(...) rendered 150 DOM nodes, 150 DnD sensors,
- * 150 Shiki preview snippets → scroll jank + drag-lag.
- *
- * AFTER:
- * - @tanstack/react-virtual horizontal virtualizer
- * - Only visible 10-15 slides + overscan 10 mounted in DOM
- * - During drag, fallback to full render for accurate closestCenter detection
- * - Memoed SlideCard + per-slide atom preserves previous re-render storm fix
- * - Auto-scroll into view for renaming / current slide via virtualizer.scrollToIndex
+ * BEFORE: ordered.map(...) rendered 150 nodes → jank.
+ * AFTER: @tanstack/react-virtual horizontal, only visible mounted.
+ * Fix vertical fill: cards now h-full fill panel height (resizable), horizontal stays rigid fixed 152px (unfilled as requested).
  */
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import {
@@ -58,7 +52,7 @@ import {
 } from "@/hooks/queries";
 
 const ITEM_WIDTH = 152;
-const GAP = 8; // gap-2 = 0.5rem
+const GAP = 8;
 const ESTIMATED_SIZE = ITEM_WIDTH + GAP;
 
 interface BottomSlidesPanelProps {
@@ -84,7 +78,6 @@ interface SlideCardProps {
   isRenaming?: boolean;
   renameValue?: string;
   highlightProgress?: number;
-  flexible?: boolean;
   onRenameValueChange?: (v: string) => void;
   onCommitRename?: () => void;
   onCancelRename?: () => void;
@@ -103,7 +96,6 @@ const SlideCard = memo(function SlideCard({
   isRenaming = false,
   renameValue = "",
   highlightProgress = -1,
-  flexible = false,
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
@@ -123,16 +115,10 @@ const SlideCard = memo(function SlideCard({
   const hlCount = slide.highlights?.length ?? 0;
   const progress = isSelected ? highlightProgress : -1;
 
-  const baseStyle: React.CSSProperties = isOverlay
-    ? { width: ITEM_WIDTH, ...style }
-    : flexible
-      ? { width: "100%", minWidth: ITEM_WIDTH, flex: "1 1 0", ...style }
-      : { width: ITEM_WIDTH, ...style };
-
   return (
     <div
       ref={setNodeRef}
-      style={baseStyle}
+      style={{ width: ITEM_WIDTH, ...style }}
       onClick={() => {
         if (isOverlay || isRenaming) return;
         setCurrentSlideId(slide.id);
@@ -144,8 +130,7 @@ const SlideCard = memo(function SlideCard({
         onRename(slide.id, title);
       }}
       className={cn(
-        "group relative flex h-full cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
-        flexible && !isOverlay ? "flex-1 min-w-0" : "shrink-0 min-w-0",
+        "group relative flex h-full min-h-0 shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
         "will-change-transform",
         isOverlay
           ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
@@ -281,7 +266,6 @@ const SlideCard = memo(function SlideCard({
   if (prev.isRenaming !== next.isRenaming) return false;
   if (prev.renameValue !== next.renameValue) return false;
   if (prev.highlightProgress !== next.highlightProgress) return false;
-  if (prev.flexible !== next.flexible) return false;
   if (prev.style !== next.style) return false;
   if (prev.dragHandleProps !== next.dragHandleProps) return false;
   return true;
@@ -296,7 +280,6 @@ function SortableSlideItem({
   isRenaming,
   renameValue,
   highlightProgress,
-  flexible = false,
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
@@ -309,7 +292,6 @@ function SortableSlideItem({
   isRenaming: boolean;
   renameValue: string;
   highlightProgress?: number;
-  flexible?: boolean;
   onRenameValueChange: (v: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
@@ -341,7 +323,6 @@ function SortableSlideItem({
       isRenaming={isRenaming}
       renameValue={renameValue}
       highlightProgress={highlightProgress}
-      flexible={flexible}
       onRenameValueChange={onRenameValueChange}
       onCommitRename={onCommitRename}
       onCancelRename={onCancelRename}
@@ -405,7 +386,6 @@ export function BottomSlidesPanel({
 
   const ids = useMemo(() => ordered.map((s) => s.id), [ordered]);
 
-  // --- Virtualizer setup ---
   const parentRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
     count: ordered.length,
@@ -421,7 +401,6 @@ export function BottomSlidesPanel({
   const isDragging = activeId !== null;
   const shouldVirtualize = ordered.length > 20 && !isDragging;
 
-  // Auto-scroll to renaming slide / current slide
   useEffect(() => {
     if (!renamingId) return;
     const idx = ordered.findIndex((s) => s.id === renamingId);
@@ -432,7 +411,6 @@ export function BottomSlidesPanel({
 
   useEffect(() => {
     if (!currentSlideId) return;
-    // Only auto-scroll if the current slide is outside viewport
     const idx = ordered.findIndex((s) => s.id === currentSlideId);
     if (idx < 0) return;
     const vItems = rowVirtualizer.getVirtualItems();
@@ -532,9 +510,8 @@ export function BottomSlidesPanel({
       {
         onSuccess: (slide) => {
           setCurrentSlideId(slide.id);
-          // Scroll new slide into view after it appears
           requestAnimationFrame(() => {
-            const idx = ordered.length; // appended at end
+            const idx = ordered.length;
             rowVirtualizer.scrollToIndex(idx, { align: "end", behavior: "smooth" });
           });
         },
@@ -600,14 +577,15 @@ export function BottomSlidesPanel({
         onDragCancel={onDragCancel}
       >
         <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
+          {/* parentRef is flex-1 + h-full so it fills vertical space from column */}
           <div
             ref={parentRef}
-            className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
+            className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
             style={{ touchAction: "pan-x" }}
           >
             {shouldVirtualize ? (
               <div
-                className="relative h-full"
+                className="relative h-full min-h-[96px]"
                 style={{ width: `${totalSize}px` }}
               >
                 {virtualItems.map((virtualRow) => {
@@ -617,50 +595,51 @@ export function BottomSlidesPanel({
                     <div
                       key={slide.id}
                       data-index={virtualRow.index}
+                      className="absolute top-0 bottom-0"
                       style={{
-                        position: "absolute",
-                        top: 0,
                         left: 0,
                         width: `${ITEM_WIDTH}px`,
-                        height: "100%",
                         transform: `translateX(${virtualRow.start}px)`,
                       }}
                     >
-                      <SortableSlideItem
-                        slide={slide}
-                        index={virtualRow.index}
-                        onRemove={handleRemove}
-                        onRename={startRename}
-                        isDraggingId={activeId}
-                        isRenaming={renamingId === slide.id}
-                        renameValue={renameValue}
-                        highlightProgress={activeHighlightIndex}
-                        onRenameValueChange={setRenameValue}
-                        onCommitRename={commitRename}
-                        onCancelRename={() => setRenamingId(null)}
-                      />
+                      <div className="h-full py-0.5">
+                        <SortableSlideItem
+                          slide={slide}
+                          index={virtualRow.index}
+                          onRemove={handleRemove}
+                          onRename={startRename}
+                          isDraggingId={activeId}
+                          isRenaming={renamingId === slide.id}
+                          renameValue={renameValue}
+                          highlightProgress={activeHighlightIndex}
+                          onRenameValueChange={setRenameValue}
+                          onCommitRename={commitRename}
+                          onCancelRename={() => setRenamingId(null)}
+                        />
+                      </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 gap-2 px-3 pb-3 pt-0.5 overflow-x-auto overflow-y-hidden">
+              /* non-virtualized: h-full so cards stretch vertically, rigid fixed width horizontally */
+              <div className="flex h-full min-h-[96px] gap-2 px-3 pb-3 pt-0.5">
                 {ordered.map((slide, index) => (
-                  <SortableSlideItem
-                    key={slide.id}
-                    slide={slide}
-                    index={index}
-                    flexible={!isDragging}
-                    onRemove={handleRemove}
-                    onRename={startRename}
-                    isDraggingId={activeId}
-                    isRenaming={renamingId === slide.id}
-                    renameValue={renameValue}
-                    highlightProgress={activeHighlightIndex}
-                    onRenameValueChange={setRenameValue}
-                    onCommitRename={commitRename}
-                    onCancelRename={() => setRenamingId(null)}
-                  />
+                  <div key={slide.id} className="h-full">
+                    <SortableSlideItem
+                      slide={slide}
+                      index={index}
+                      onRemove={handleRemove}
+                      onRename={startRename}
+                      isDraggingId={activeId}
+                      isRenaming={renamingId === slide.id}
+                      renameValue={renameValue}
+                      highlightProgress={activeHighlightIndex}
+                      onRenameValueChange={setRenameValue}
+                      onCommitRename={commitRename}
+                      onCancelRename={() => setRenamingId(null)}
+                    />
+                  </div>
                 ))}
               </div>
             )}
