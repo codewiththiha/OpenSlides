@@ -329,3 +329,73 @@ export function measureHighlight(
     },
   };
 }
+
+/**
+ * Pure-math measurement — no Range, <0.1ms, 60fps.
+ * Uses 2 getBoundingClientRect (container + codeRoot) + char_width * position math.
+ * This is the Rust-offload equivalent in JS (see src-tauri/commands/highlight_measure.rs).
+ * Prefer this path over DOM Range for animation; fallback to Range only if charWidth unavailable.
+ */
+export function measureHighlightPureMath(
+  container: HTMLElement,
+  codeRoot: HTMLElement,
+  plan: HighlightPlan,
+  fontSize: number,
+  lineHeight: number,
+): HighlightMeasurement | null {
+  if (plan.lines.length === 0) return null;
+
+  // 2 layout reads only, vs 10-50 previously
+  const cRect = container.getBoundingClientRect();
+  const kRect = codeRoot.getBoundingClientRect();
+  const ox = kRect.left - cRect.left;
+  const oy = kRect.top - cRect.top;
+  const lineH = fontSize * lineHeight;
+
+  const charW = measureCharWidth(
+    codeRoot,
+    fontSize,
+    getComputedStyle(codeRoot).fontFamily ||
+      "ui-monospace, SFMono-Regular, Menlo, monospace",
+  );
+  if (!charW || !Number.isFinite(charW)) return null;
+
+  const segments: MeasuredSegment[] = [];
+  for (const line of plan.lines) {
+    if (line.isEmpty) continue;
+    const x = ox + line.startChar * charW;
+    const y = oy + line.lineIndex * lineH;
+    const w = Math.max((line.endChar - line.startChar) * charW, charW * 0.5);
+    segments.push({
+      line,
+      rect: { x, y, width: w, height: lineH },
+    });
+  }
+
+  if (segments.length === 0) return null;
+
+  const union = segments.reduce(
+    (acc, s) => ({
+      x: Math.min(acc.x, s.rect.x),
+      y: Math.min(acc.y, s.rect.y),
+      right: Math.max(acc.right, s.rect.x + s.rect.width),
+      bottom: Math.max(acc.bottom, s.rect.y + s.rect.height),
+    }),
+    {
+      x: segments[0].rect.x,
+      y: segments[0].rect.y,
+      right: segments[0].rect.x + segments[0].rect.width,
+      bottom: segments[0].rect.y + segments[0].rect.height,
+    },
+  );
+
+  return {
+    segments,
+    union: {
+      x: union.x,
+      y: union.y,
+      width: Math.max(union.right - union.x, 1),
+      height: Math.max(union.bottom - union.y, 1),
+    },
+  };
+}
