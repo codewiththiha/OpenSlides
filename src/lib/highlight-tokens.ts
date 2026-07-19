@@ -168,8 +168,6 @@ export function sliceTokenLine(
 }
 
 function tokenStyleAttr(token: HighlightToken): string {
-  // Declarations joined with ";" and NO trailing ";" — matching both the
-  // frozen merustmar output and Shiki's own HTML renderer byte-for-byte.
   const decls: string[] = [];
   if (token.color) decls.push(`color:${token.color}`);
   if (token.bgColor) decls.push(`background-color:${token.bgColor}`);
@@ -251,8 +249,6 @@ export function buildPlan(
           sliceTokenLine(tokenLine, lr.start, lr.end),
         );
       }
-      // No sliceable tokens (language not highlighted, or whitespace-only
-      // line) → escaped plain text; the clone still shows.
       if (sliceHtml.trim() === "") {
         sliceHtml = escapeHtml(plain);
       }
@@ -276,8 +272,7 @@ export function buildPlan(
   };
 }
 
-/** Plain-text snippet for each range (highlight settings panel rows) —
- *  the deleted `highlight_snippets` command, done in plain JS. */
+/** Plain-text snippet for each range (highlight settings panel rows) */
 export function sliceSnippets(
   code: string,
   ranges: SelectionRange[],
@@ -290,66 +285,16 @@ export function sliceSnippets(
   );
 }
 
-/* ----------------------------------------------------------------------- *
- * Merustmar HTML fallback → tokens converter
- * ----------------------------------------------------------------------- */
-
-/**
- * Convert the frozen JS fallback's HTML output to token lines.
- * The frozen file's shape is FIXED (that's why it may stay frozen):
- *   `<span class="line">` … `</span>` per line, inner =
- *   `<span style="color:#rrggbb">ESCAPED</span>` segments only.
- * Locked byte-for-byte by the committed parity fixtures
- * (parse → tokens → render === frozen HTML, all 24 corpus samples × 2 themes).
- * Throws if the shape is not what the frozen file emits — callers then
- * degrade to plain-text tokens instead of rendering garbage.
- */
-export function merustmarHtmlToTokens(
-  html: string,
-  plainColor: string,
-): HighlightTokenLine[] {
-  if (html === "") return [[{ content: "", color: plainColor }]];
-  const decodeEntities = (s: string) =>
-    s
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&amp;/g, "&"); // &amp; LAST — it's '&'+'lt;' composites
-  return html.split("\n").map((line) => {
-    const m = /^<span class="line">([\s\S]*)<\/span>$/.exec(line);
-    if (!m) throw new Error("merustmar fallback: unexpected line shape");
-    const inner = m[1];
-    const tokens: HighlightTokenLine = [];
-    const re = /<span style="color:(#[0-9a-fA-F]{6})">([\s\S]*?)<\/span>/g;
-    let pos = 0;
-    let match: RegExpExecArray | null;
-    while ((match = re.exec(inner)) !== null) {
-      if (match.index !== pos) {
-        throw new Error("merustmar fallback: unexpected content between spans");
-      }
-      if (match[2] !== "") {
-        tokens.push({ content: decodeEntities(match[2]), color: match[1] });
-      } else {
-        tokens.push({ content: "", color: match[1] });
-      }
-      pos = match.index + match[0].length;
-    }
-    if (pos !== inner.length) {
-      throw new Error("merustmar fallback: trailing un-spanned content");
-    }
-    return tokens;
-  });
-}
-
 /** Plain-fallback token lines (uncolored single token per line). */
 export function plainTokenLines(code: string): HighlightTokenLine[] {
   return code.split("\n").map((l) => [{ content: l }]);
 }
 
 /**
- * Token lines for Merustmar — previously used frozen JS fallback (merustmar-highlight.ts),
- * now removed since Rust IPC failure rate <0.1% and Shiki worker handles merustmar grammar.
- * Falls back to plain tokens (monochrome) — still exact content, colored via worker when available.
+ * Token lines for Merustmar — Rust IPC + Shiki worker handle 99.9% cases.
+ * Previously used frozen JS fallback with complex HTML regex parser (merustmarHtmlToTokens),
+ * now removed as dead weight. Falls back to plain tokens (monochrome) — exact content,
+ * colored via worker when available.
  */
 export function merustmarFallbackTokens(code: string, _isDark?: boolean): HighlightTokenLine[] {
   return plainTokenLines(code);
