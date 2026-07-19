@@ -77,8 +77,19 @@ export function CodeEditor({
   const clearPreviewSlideSetting = useUiStore((s) => s.clearPreviewSlideSetting);
   const clearPreviewHighlightSetting = useUiStore((s) => s.clearPreviewHighlightSetting);
 
+  const slideMap = useMemo(() => {
+    const sMap = new Map<string, (typeof project.slides)[number]>();
+    const iMap = new Map<string, number>();
+    project.slides.forEach((s, i) => {
+      sMap.set(s.id, s);
+      iMap.set(s.id, i);
+    });
+    return { sMap, iMap };
+  }, [project.slides]);
+
   const slide =
-    project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
+    (currentSlideId ? slideMap.sMap.get(currentSlideId) : undefined) ??
+    project.slides[0];
   const slideId = slide?.id;
 
   const localCodeAtom = useLocalCodeAtom(slideId);
@@ -280,7 +291,7 @@ export function CodeEditor({
     }
   };
 
-  const currentIndex = project.slides.findIndex((s) => s.id === slideId);
+  const currentIndex = slideId ? (slideMap.iMap.get(slideId) ?? -1) : -1;
 
   const goSlide = (dir: -1 | 1) => {
     try {

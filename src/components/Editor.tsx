@@ -119,9 +119,20 @@ export function Editor() {
 
   // -- Highlight navigation (stable callbacks via refs internally) --
   const slides = project?.slides ?? [];
-  const currentIndex = slides.findIndex((s) => s.id === currentSlideId);
-  const activeSlide =
-    slides.find((s) => s.id === currentSlideId) ?? slides[0];
+
+  // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans per render)
+  const { slideMap, indexMap } = useMemo(() => {
+    const sMap = new Map<string, (typeof slides)[number]>();
+    const iMap = new Map<string, number>();
+    slides.forEach((s, i) => {
+      sMap.set(s.id, s);
+      iMap.set(s.id, i);
+    });
+    return { slideMap: sMap, indexMap: iMap };
+  }, [slides]);
+
+  const currentIndex = currentSlideId ? (indexMap.get(currentSlideId) ?? -1) : -1;
+  const activeSlide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? slides[0];
 
   const {
     highlightIndex: activeHighlightIndex,

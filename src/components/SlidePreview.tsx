@@ -39,8 +39,15 @@ export function SlidePreview({
   onHighlightExitComplete,
 }: SlidePreviewProps) {
   const currentSlideId = useUiStore((s) => s.currentSlideId);
+
+  // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans)
+  const slideMap = useMemo(
+    () => new Map(project.slides.map((s) => [s.id, s] as const)),
+    [project.slides],
+  );
   const slide =
-    project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
+    (currentSlideId ? slideMap.get(currentSlideId) : undefined) ??
+    project.slides[0];
   // Per-slide atom: only re-renders when THIS slide's override changes
   const codeOverride = useLocalCodeAtom(slide?.id);
   const code = codeOverride ?? slide?.code ?? "";
@@ -257,7 +264,7 @@ export function SlidePreview({
           }
         >
           <ShikiMagicMove
-            key={`${theme}-${settings.showLineNumbers}-${settings.fontSize}-${settings.lineHeight}-${language}-${effectiveSlideTransition}-${effectiveSlideStagger}`}
+            key={`${theme}-${language}`}
             lang={language}
             theme={theme}
             highlighter={highlighter}

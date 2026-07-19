@@ -24,6 +24,7 @@ import type { Highlight } from "@/types";
 import {
   measureHighlight,
   measureHighlightPureMath,
+  clearLineNodesCache,
   type HighlightMeasurement,
 } from "@/lib/highlight-utils";
 import { useHighlightPlan } from "@/hooks/useHighlightPlan";
@@ -64,10 +65,11 @@ export function HighlightLayer({
   const rafRef = useRef<number>(0);
   const roRafRef = useRef<number>(0);
   const roRef = useRef<ResizeObserver | null>(null);
+  const moRef = useRef<MutationObserver | null>(null);
 
   const plan = useHighlightPlan({ highlight, code, highlighter, theme, language });
 
-  // Optimized measure: container only, no codeRoot observer, no 12× retry, no 280ms hack
+  // Optimized measure: container ResizeObserver + codeRoot MutationObserver (no textContent read)
   useLayoutEffect(() => {
     let disposed = false;
 
@@ -77,16 +79,13 @@ export function HighlightLayer({
       const codeRoot = codeContainerRef.current;
 
       if (!container || !codeRoot) {
-        // Single retry next frame (not 12×) — refs attach async due to commit ordering
         rafRef.current = requestAnimationFrame(measure);
         return;
       }
 
-      // Lazy init observer only once, only on container
       if (!roRef.current) {
         roRef.current = new ResizeObserver(() => {
           if (disposed) return;
-          // Coalesce to 1 rAF — panel drag fires continuously
           if (roRafRef.current) return;
           roRafRef.current = requestAnimationFrame(() => {
             roRafRef.current = 0;
@@ -94,8 +93,27 @@ export function HighlightLayer({
           });
         });
         roRef.current.observe(container);
-        // NOTE: intentionally NOT observing codeRoot — it changes only when plan/code changes,
-        // which already triggers this effect via `plan` dep. Observing it caused double triggers.
+      }
+
+      // MutationObserver instead of reading textContent.length (which forces layout O(n))
+      // Only fires when DOM actually changes, not on every measure
+      if (!moRef.current) {
+        moRef.current = new MutationObserver(() => {
+          if (disposed) return;
+          const cr = codeContainerRef.current;
+          if (cr) clearLineNodesCache(cr);
+          // Coalesce to rAF
+          if (roRafRef.current) return;
+          roRafRef.current = requestAnimationFrame(() => {
+            roRafRef.current = 0;
+            if (!disposed) measure();
+          });
+        });
+        moRef.current.observe(codeRoot, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
       }
 
       if (!plan) {
@@ -103,25 +121,19 @@ export function HighlightLayer({
         return;
       }
 
-      // Pure-math measurement — 2 getBoundingClientRect + char_width*pos math, <0.1ms, 60fps
-      // Previously: Range per line (10-50 allocs) + TreeWalker + forced layout = 5-15ms
-      // Trust JS math (already <0.1ms), no Rust shadow-call needed
       let m = measureHighlightPureMath(container, codeRoot, plan, fontSize, lineHeight);
       if (!m) {
-        // Fallback to DOM Range path if charWidth unavailable
         m = measureHighlight(container, codeRoot, plan, fontSize, lineHeight);
       }
       if (!disposed && m) setMeasurement(m);
     };
 
-    // Immediate measure + double rAF for late font/layout (replaces 280ms timeout)
     measure();
     const r1 = requestAnimationFrame(() => {
       if (disposed) return;
       const r2 = requestAnimationFrame(() => {
         if (!disposed) measure();
       });
-      // Store second rAF id for cleanup (first already fired)
       (roRef as any)._settleRaf = r2;
     });
     rafRef.current = r1 as unknown as number;
@@ -135,6 +147,8 @@ export function HighlightLayer({
       roRafRef.current = 0;
       roRef.current?.disconnect();
       roRef.current = null;
+      moRef.current?.disconnect();
+      moRef.current = null;
     };
   }, [containerRef, codeContainerRef, plan, fontSize, lineHeight, theme]);
 

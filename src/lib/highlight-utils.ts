@@ -1,19 +1,10 @@
 /**
  * Highlight-mode geometry utilities — optimized for 60fps.
- *
- * BEFORE: per measure
- *  - document.createRange() per line (10-50×)
- *  - collectLineTextNodes walked entire DOM each time (TreeWalker per span)
- *  - getBoundingClientRect() per line forces layout each call
- *  - ResizeObserver on both container + codeRoot → double triggers during drag
- *  - 12× rAF retry loop indicates race, plus 280ms setTimeout settle hack
- *
- * AFTER:
- * - Single shared Range reused across lines
- * - WeakMap cache for line Text nodes per codeRoot, invalidated on child count change
- * - Container rect measured once per batch, all line rects read in one frame
- * - ResizeObserver only on container (not codeRoot)
- * - No 12× retry, no 280ms hack — double rAF for font load
+ * - Single shared Range reused
+ * - WeakMap cache for line Text nodes, invalidated via MutationObserver (no textContent read)
+ * - Container rect once per batch, batched reads
+ * - ResizeObserver only on container
+ * - LRU for char width (32 entries)
  */
 
 import type { Highlight } from "@/types";
@@ -62,25 +53,12 @@ export function createDefaultHighlight(
 }
 
 /* ------------------------------------------------------------------ */
-/* Line text node collection — cached per codeRoot                    */
+/* Line text node collection — cached per codeRoot, MutationObserver invalidation */
 /* ------------------------------------------------------------------ */
 
-interface CachedNodes {
-  nodes: Text[][];
-  childSignature: number; // cheap invalidation: childNodes.length + total text length
-}
-
-const nodesCache = new WeakMap<HTMLElement, CachedNodes>();
-
-function signatureForRoot(root: HTMLElement): number {
-  // Fast signature: total child nodes + textContent length (cheap, catches edits)
-  // Using textContent.length is O(n) but still cheaper than TreeWalker per line + Range per line
-  // We only compute signature when cache miss/hit check; overall still less work than full walk each resize
-  return root.childNodes.length * 1000000 + (root.textContent?.length ?? 0);
-}
+const nodesCache = new WeakMap<HTMLElement, Text[][]>();
 
 function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
-  // Shape A: explicit line spans (merustmar fallback / plain shiki html)
   const lineSpans = root.querySelectorAll("span.line");
   if (lineSpans.length > 0) {
     const lines: Text[][] = [];
@@ -97,7 +75,6 @@ function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
     return lines;
   }
 
-  // Shape B: token spans separated by <br> (shiki-magic-move)
   const current: Text[][] = [[]];
   const walk = (node: Node) => {
     node.childNodes.forEach((child) => {
@@ -131,26 +108,24 @@ function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
 }
 
 function getLineTextNodes(root: HTMLElement): Text[][] {
-  const sig = signatureForRoot(root);
   const cached = nodesCache.get(root);
-  if (cached && cached.childSignature === sig) {
-    return cached.nodes;
-  }
+  if (cached) return cached;
   const nodes = collectLineTextNodesUncached(root);
-  nodesCache.set(root, { nodes, childSignature: sig });
+  nodesCache.set(root, nodes);
   return nodes;
+}
+
+export function clearLineNodesCache(root: HTMLElement) {
+  nodesCache.delete(root);
 }
 
 /* ------------------------------------------------------------------ */
 /* Range measurement — reuse single Range instance                    */
 /* ------------------------------------------------------------------ */
 
-// Shared Range — reused across lines to avoid 10-50 allocations per measure
 let sharedRange: Range | null = null;
 function getSharedRange(): Range {
-  if (!sharedRange) {
-    sharedRange = document.createRange();
-  }
+  if (!sharedRange) sharedRange = document.createRange();
   return sharedRange;
 }
 
@@ -190,7 +165,6 @@ function rectForCharRange(
   }
 
   if (!started) return null;
-
   if (!endSet) {
     const last = nodes[nodes.length - 1];
     try {
@@ -200,7 +174,6 @@ function rectForCharRange(
     }
   }
 
-  // getBoundingClientRect forces layout but we batch all calls in one frame
   try {
     return range.getBoundingClientRect();
   } catch {
@@ -209,9 +182,10 @@ function rectForCharRange(
 }
 
 /* ------------------------------------------------------------------ */
-/* Char width cache — already optimized                               */
+/* Char width cache — LRU 32 entries (16 themes × 2 font sizes)       */
 /* ------------------------------------------------------------------ */
 
+const CHAR_WIDTH_MAX = 32;
 const charWidthCache = new Map<string, number>();
 
 export function measureCharWidth(
@@ -221,7 +195,12 @@ export function measureCharWidth(
 ): number {
   const key = `${fontSize}|${fontFamily}`;
   const cached = charWidthCache.get(key);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) {
+    // Move to end for LRU
+    charWidthCache.delete(key);
+    charWidthCache.set(key, cached);
+    return cached;
+  }
 
   const test = document.createElement("span");
   test.style.position = "absolute";
@@ -234,7 +213,12 @@ export function measureCharWidth(
   container.appendChild(test);
   const width = test.getBoundingClientRect().width / 10;
   container.removeChild(test);
+
   charWidthCache.set(key, width);
+  if (charWidthCache.size > CHAR_WIDTH_MAX) {
+    const firstKey = charWidthCache.keys().next().value;
+    if (firstKey) charWidthCache.delete(firstKey);
+  }
   return width;
 }
 
@@ -251,13 +235,11 @@ export function measureHighlight(
 ): HighlightMeasurement | null {
   if (plan.lines.length === 0) return null;
 
-  // Single layout read for container — batch
   const cRect = container.getBoundingClientRect();
   const lineNodes = getLineTextNodes(codeRoot);
   const segments: MeasuredSegment[] = [];
   const range = getSharedRange();
 
-  // Batch: all range creations reuse same Range object, all rect reads in one frame
   for (const line of plan.lines) {
     if (line.isEmpty) continue;
     const nodes = lineNodes[line.lineIndex];
@@ -275,13 +257,11 @@ export function measureHighlight(
     });
   }
 
-  // Fallback: char-width math for unmeasurable states (mid-animation)
   if (segments.length === 0) {
     const cws = measureCharWidth(
       codeRoot,
       fontSize,
-      getComputedStyle(codeRoot).fontFamily ||
-        "ui-monospace, SFMono-Regular, Menlo, monospace",
+      getComputedStyle(codeRoot).fontFamily || "ui-monospace, SFMono-Regular, Menlo, monospace",
     );
     if (!cws || !Number.isFinite(cws)) return null;
     const kRect = codeRoot.getBoundingClientRect();
@@ -332,9 +312,6 @@ export function measureHighlight(
 
 /**
  * Pure-math measurement — no Range, <0.1ms, 60fps.
- * Uses 2 getBoundingClientRect (container + codeRoot) + char_width * position math.
- * This is the Rust-offload equivalent in JS (see src-tauri/commands/highlight_measure.rs).
- * Prefer this path over DOM Range for animation; fallback to Range only if charWidth unavailable.
  */
 export function measureHighlightPureMath(
   container: HTMLElement,
@@ -345,7 +322,6 @@ export function measureHighlightPureMath(
 ): HighlightMeasurement | null {
   if (plan.lines.length === 0) return null;
 
-  // 2 layout reads only, vs 10-50 previously
   const cRect = container.getBoundingClientRect();
   const kRect = codeRoot.getBoundingClientRect();
   const ox = kRect.left - cRect.left;
@@ -355,8 +331,7 @@ export function measureHighlightPureMath(
   const charW = measureCharWidth(
     codeRoot,
     fontSize,
-    getComputedStyle(codeRoot).fontFamily ||
-      "ui-monospace, SFMono-Regular, Menlo, monospace",
+    getComputedStyle(codeRoot).fontFamily || "ui-monospace, SFMono-Regular, Menlo, monospace",
   );
   if (!charW || !Number.isFinite(charW)) return null;
 

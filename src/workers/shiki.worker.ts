@@ -96,6 +96,24 @@ export interface WorkerResponse {
 }
 
 const abortedIds = new Set<number>();
+const ABORTED_MAX = 64; // bounded LRU — prevents unbounded growth if aborts arrive while sync codeToHtml busy
+
+function addAborted(id: number) {
+  abortedIds.add(id);
+  if (abortedIds.size > ABORTED_MAX) {
+    // Delete oldest half (Set preserves insertion order)
+    const it = abortedIds.values();
+    const toDelete = Math.floor(ABORTED_MAX / 2);
+    for (let i = 0; i < toDelete; i++) {
+      const v = it.next().value;
+      if (v !== undefined) abortedIds.delete(v);
+    }
+    if (abortedIds.size > ABORTED_MAX) {
+      // Fallback: clear all if still too large (should not happen)
+      abortedIds.clear();
+    }
+  }
+}
 
 function isAborted(id: number): boolean {
   return abortedIds.has(id);
@@ -104,12 +122,10 @@ function isAborted(id: number): boolean {
 self.onmessage = async (e: MessageEvent<WorkerIncoming>) => {
   const data = e.data as any;
 
-  // Handle abort signal from main thread
+  // Handle abort signal from main thread — bounded set prevents memory growth
   if (data?.type === "abort" && typeof data.id === "number") {
     const abortId = data.id as number;
-    abortedIds.add(abortId);
-    // If currently processing this id, we can't interrupt synchronous codeToHtml mid-flight,
-    // but we flag it so we skip posting result after.
+    addAborted(abortId);
     return;
   }
 
