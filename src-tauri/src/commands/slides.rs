@@ -100,21 +100,35 @@ pub async fn delete_slide(
         fetch_slides(pool.inner(), &project_id, &settings.language).await?
     };
 
-    // Batch re-index remaining slides into single CASE query (was N queries)
+    // Batch re-index remaining slides using JSON + json_each — infinitely scalable
+    // Previously CASE with N WHEN clauses could hit SQLITE_MAX_EXPR_DEPTH for 300+ slides.
+    // Now: single UPDATE FROM with JSON array of {id, new_order}, no parser bloat.
     if !remaining.is_empty() {
-        let mut case_sql = String::from("UPDATE slides SET order_index = CASE id ");
-        for _ in 0..remaining.len() {
-            case_sql.push_str("WHEN ? THEN ? ");
-        }
-        case_sql.push_str("ELSE order_index END WHERE project_id = ?");
-        let mut q = sqlx::query(&case_sql);
-        for (i, s) in remaining.iter().enumerate() {
-            q = q.bind(&s.id).bind(i as i64);
-        }
-        q = q.bind(&project_id);
-        q.execute(pool.inner())
-            .await
-            .map_err(|e| e.to_string())?;
+        let json = serde_json::to_string(
+            &remaining
+                .iter()
+                .enumerate()
+                .map(|(i, s)| serde_json::json!({ "id": s.id, "new_order": i as i64 }))
+                .collect::<Vec<_>>(),
+        )
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            r#"
+            UPDATE slides SET order_index = new_order
+            FROM (
+              SELECT json_extract(value, '$.id') as id,
+                     CAST(json_extract(value, '$.new_order') AS INTEGER) as new_order
+              FROM json_each(?)
+            )
+            WHERE slides.id = id AND slides.project_id = ?
+            "#,
+        )
+        .bind(&json)
+        .bind(&project_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| e.to_string())?;
     }
 
     let mut settings = load_settings(pool.inner(), &project_id).await?;
@@ -298,30 +312,41 @@ pub async fn reorder_slides(
         return fetch_project(pool.inner(), &project_id).await;
     }
 
-    // Batch into single UPDATE with CASE — previously N queries
-    // Single query: UPDATE slides SET order_index = CASE id WHEN ? THEN ? ... ELSE order_index END WHERE project_id = ?
-    // 1 round-trip instead of N, reduces WAL lock contention and is atomic.
+    // Scalable JSON + json_each approach — avoids massive CASE with 300 WHEN clauses
+    // that can hit SQLITE_MAX_EXPR_DEPTH and parser limits.
+    // Pass JSON array [{"id":"uuid","new_order":0},...] and use UPDATE FROM json_each(?)
+    // Infinitely scalable, no SQL string bloat.
     let mut tx = pool
         .inner()
         .begin()
         .await
         .map_err(|e| format!("TX begin failed: {e}"))?;
 
-    let mut case_sql = String::from("UPDATE slides SET order_index = CASE id ");
-    for _ in 0..slide_ids.len() {
-        case_sql.push_str("WHEN ? THEN ? ");
-    }
-    case_sql.push_str("ELSE order_index END WHERE project_id = ?");
+    let json = serde_json::to_string(
+        &slide_ids
+            .iter()
+            .enumerate()
+            .map(|(i, id)| serde_json::json!({ "id": id, "new_order": i as i64 }))
+            .collect::<Vec<_>>(),
+    )
+    .map_err(|e| e.to_string())?;
 
-    let mut q = sqlx::query(&case_sql);
-    for (i, id) in slide_ids.iter().enumerate() {
-        q = q.bind(id).bind(i as i64);
-    }
-    q = q.bind(&project_id);
-
-    q.execute(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to reorder slides batch: {e}"))?;
+    sqlx::query(
+        r#"
+        UPDATE slides SET order_index = new_order
+        FROM (
+          SELECT json_extract(value, '$.id') as id,
+                 CAST(json_extract(value, '$.new_order') AS INTEGER) as new_order
+          FROM json_each(?)
+        )
+        WHERE slides.id = id AND slides.project_id = ?
+        "#,
+    )
+    .bind(&json)
+    .bind(&project_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| format!("Failed to reorder slides batch: {e}"))?;
 
     sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
         .bind(now_ms())
