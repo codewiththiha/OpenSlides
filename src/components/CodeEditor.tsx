@@ -35,7 +35,7 @@ import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
 import { cn } from "@/lib/utils";
 import { selectionToRange } from "@/lib/highlight-tokens";
-import { markSavePending, clearPendingSave } from "@/lib/save-flush";
+import { markSavePending, clearPendingSave } from "@/lib/code-save";
 import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
 import { createDefaultHighlight } from "@/lib/highlight-utils";

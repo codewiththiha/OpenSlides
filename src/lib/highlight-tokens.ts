@@ -14,7 +14,6 @@
  * regression-locked by scripts/test-highlight.mjs against the same fixtures
  * and quirk outputs the Rust tests asserted.
  */
-import { highlightMerustmarCode } from "./merustmar-highlight";
 
 /** HTML-escape for rendered fragments: `&`, `<`, `>`, `"` — exactly the set
  *  both predecessors used (the frozen merustmar `esc` and the deleted Rust
@@ -347,25 +346,11 @@ export function plainTokenLines(code: string): HighlightTokenLine[] {
   return code.split("\n").map((l) => [{ content: l }]);
 }
 
-/** Frozen palette defaults (mirror of merustmar-highlight.ts) used only when
- *  decoding content outside a styled span. */
-const MERUSTMAR_DEFAULTS = { dark: "#abb2bf", light: "#383a42" } as const;
-
 /**
- * Token lines from the FROZEN JS fallback (src/lib/merustmar-highlight.ts —
- * do not modify): renders its HTML synchronously, then converts. Degrades
- * to plain tokens on any shape mismatch rather than rendering garbage.
+ * Token lines for Merustmar — previously used frozen JS fallback (merustmar-highlight.ts),
+ * now removed since Rust IPC failure rate <0.1% and Shiki worker handles merustmar grammar.
+ * Falls back to plain tokens (monochrome) — still exact content, colored via worker when available.
  */
-export function merustmarFallbackTokens(
-  code: string,
-  isDark: boolean,
-): HighlightTokenLine[] {
-  try {
-    return merustmarHtmlToTokens(
-      highlightMerustmarCode(code, isDark),
-      isDark ? MERUSTMAR_DEFAULTS.dark : MERUSTMAR_DEFAULTS.light,
-    );
-  } catch {
-    return plainTokenLines(code);
-  }
+export function merustmarFallbackTokens(code: string, _isDark?: boolean): HighlightTokenLine[] {
+  return plainTokenLines(code);
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { notify } from "../../lib/toast";
 import { api, type SlideSettingsPatch } from "../../lib/tauri-api";
-import { enqueueCodeSave } from "../../lib/code-save-queue";
+import { enqueueCodeSave } from "../../lib/code-save";
 import { useUiStore } from "../../store/useUiStore";
 import type { Project, Slide } from "../../types";
 import { projectKeys } from "./keys";
@@ -24,7 +24,7 @@ export function mergeSlidePreservingEditorCode(
 export function useUpdateSlideCode() {
   const qc = useQueryClient();
   return useMutation({
-    // Serialized per slide (see lib/code-save-queue.ts): guarantees DB write
+    // Serialized per slide (see lib/code-save.ts): guarantees DB write
     // order and completion order match schedule order, so the cache stamp in
     // onSuccess below can never be an older value overwriting a newer one.
     mutationFn: ({ slideId, code }: { slideId: string; code: string }) =>

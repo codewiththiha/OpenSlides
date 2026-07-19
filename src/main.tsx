@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { AppToaster } from "./components/ui/toaster";
 import { installAppMenu } from "./lib/app-menu";
-import { flushPendingSave } from "./lib/save-flush";
+import { flushPendingSave } from "./lib/code-save";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import "./index.css";

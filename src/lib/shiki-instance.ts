@@ -3,7 +3,7 @@
  * Both the code editor and slide preview share one WASM instance.
  *
  * NOTE: merustmar language registration is intentional and must stay.
- * Do not edit merustmar-language.ts / merustmar-highlight.ts.
+ * Do not edit merustmar-language.ts.
  */
 import { createHighlighter, type Highlighter } from "shiki";
 import { SUPPORTED_LANGUAGES } from "../types";

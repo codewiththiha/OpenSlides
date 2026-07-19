@@ -159,42 +159,27 @@ export function resolveProjectLanguage(project: Project): string {
   );
 }
 
+const THEME_BG = new Map<string, string>([
+  ["github-light", "#ffffff"],
+  ["dracula", "#282a36"],
+  ["github-dark", "#24292e"],
+  ["nord", "#2e3440"],
+  ["poimandres", "#1b1e28"],
+  ["min-light", "#ffffff"],
+  ["min-dark", "#1f1f1f"],
+  ["monokai", "#272822"],
+  ["solarized-dark", "#002b36"],
+  ["solarized-light", "#fdf6e3"],
+  ["andromeeda", "#23262e"],
+  ["aurora-x", "#07090f"],
+  ["catppuccin-latte", "#eff1f5"],
+  ["catppuccin-mocha", "#1e1e2e"],
+  ["night-owl", "#011627"],
+  ["dark-plus", "#1e1e1e"],
+]);
+
 export function themeBackground(theme: string): string {
-  switch (theme) {
-    case "github-light":
-      return "#ffffff";
-    case "dracula":
-      return "#282a36";
-    case "github-dark":
-      return "#24292e";
-    case "nord":
-      return "#2e3440";
-    case "poimandres":
-      return "#1b1e28";
-    case "min-light":
-      return "#ffffff";
-    case "min-dark":
-      return "#1f1f1f";
-    case "monokai":
-      return "#272822";
-    case "solarized-dark":
-      return "#002b36";
-    case "solarized-light":
-      return "#fdf6e3";
-    case "andromeeda":
-      return "#23262e";
-    case "aurora-x":
-      return "#07090f";
-    case "catppuccin-latte":
-      return "#eff1f5";
-    case "catppuccin-mocha":
-      return "#1e1e2e";
-    case "night-owl":
-      return "#011627";
-    case "dark-plus":
-    default:
-      return "#1e1e1e";
-  }
+  return THEME_BG.get(theme) ?? "#1e1e1e";
 }
 
 export const LIGHT_THEMES = new Set([
