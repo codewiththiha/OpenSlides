@@ -156,13 +156,15 @@ pub async fn update_project_settings(
         .await
         .map_err(|e| format!("Failed to update settings: {e}"))?;
 
-    // Keep slides.language column in sync for legacy/export convenience
-    sqlx::query("UPDATE slides SET language = ? WHERE project_id = ?")
-        .bind(&merged.language)
-        .bind(&project_id)
-        .execute(pool.inner())
-        .await
-        .map_err(|e| format!("Failed to sync language: {e}"))?;
+    // Keep slides.language column in sync for legacy/export convenience — only if changed
+    if merged.language != existing.language {
+        sqlx::query("UPDATE slides SET language = ? WHERE project_id = ?")
+            .bind(&merged.language)
+            .bind(&project_id)
+            .execute(pool.inner())
+            .await
+            .map_err(|e| format!("Failed to sync language: {e}"))?;
+    }
 
     fetch_project(pool.inner(), &project_id).await
 }

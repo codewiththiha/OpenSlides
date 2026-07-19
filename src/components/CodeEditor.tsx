@@ -157,6 +157,10 @@ export function CodeEditor({
   const lineHeight = 1.55;
 
   const lineCount = useMemo(() => Math.max(1, code.split("\n").length), [code]);
+  const lineNumbersText = useMemo(
+    () => Array.from({ length: lineCount }, (_, i) => i + 1).join("\n"),
+    [lineCount],
+  );
 
   const highlightedHtml = useShikiWorker({
     code,
@@ -571,9 +575,18 @@ export function CodeEditor({
               paddingRight: "0.5rem",
             }}
           >
-            {Array.from({ length: lineCount }, (_, i) => (
-              <div key={i + 1}>{i + 1}</div>
-            ))}
+            <pre
+              className="m-0 whitespace-pre text-right"
+              style={{
+                fontSize: editorFontSize,
+                lineHeight,
+                margin: 0,
+                padding: 0,
+                background: "transparent",
+              }}
+            >
+              {lineNumbersText}
+            </pre>
           </div>
         )}
 

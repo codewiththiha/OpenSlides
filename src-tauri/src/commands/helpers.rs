@@ -73,8 +73,14 @@ pub async fn fetch_slides(
         .into_iter()
         .map(|r| {
             let highlights_raw: String = r.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
-            let highlights: Vec<crate::models::Highlight> =
-                serde_json::from_str(&highlights_raw).unwrap_or_default();
+            // Fast path: avoid JSON parse for empty highlights (common case) — 200 slides = 200 parses saved
+            let highlights: Vec<crate::models::Highlight> = if highlights_raw.trim().is_empty()
+                || highlights_raw.trim() == "[]"
+            {
+                Vec::new()
+            } else {
+                serde_json::from_str(&highlights_raw).unwrap_or_default()
+            };
             Slide {
                 id: r.get("id"),
                 code: r.get("code"),

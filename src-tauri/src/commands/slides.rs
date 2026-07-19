@@ -256,25 +256,22 @@ pub async fn update_slide_code(
     slide_id: String,
     code: String,
 ) -> Result<(), String> {
-    let result = sqlx::query("UPDATE slides SET code = ? WHERE id = ?")
+    // Use RETURNING to get project_id in same round-trip — eliminates SELECT after UPDATE
+    // Previously: UPDATE → SELECT project_id → UPDATE projects updated_at = 3 trips per keystroke
+    // Now: UPDATE RETURNING project_id → UPDATE projects updated_at = 2 trips (33% fewer)
+    let row = sqlx::query("UPDATE slides SET code = ? WHERE id = ? RETURNING project_id")
         .bind(&code)
-        .bind(&slide_id)
-        .execute(pool.inner())
-        .await
-        .map_err(|e| format!("Failed to update slide code: {e}"))?;
-
-    if result.rows_affected() == 0 {
-        return Err(format!("Slide not found: {slide_id}"));
-    }
-
-    if let Ok(Some(row)) = sqlx::query("SELECT project_id FROM slides WHERE id = ?")
         .bind(&slide_id)
         .fetch_optional(pool.inner())
         .await
-    {
-        let pid: String = row.get("project_id");
-        let _ = touch_project(pool.inner(), &pid).await;
-    }
+        .map_err(|e| format!("Failed to update slide code: {e}"))?;
+
+    let Some(row) = row else {
+        return Err(format!("Slide not found: {slide_id}"));
+    };
+
+    let pid: String = row.get("project_id");
+    let _ = touch_project(pool.inner(), &pid).await;
 
     Ok(())
 }
