@@ -1,7 +1,7 @@
 //! Slide-level Tauri commands.
 
 use crate::commands::helpers::{
-    fetch_project, fetch_slides, load_settings, now_ms, save_settings, touch_project,
+    fetch_project, load_settings, now_ms, save_settings, touch_project,
 };
 use crate::db::DbPool;
 use crate::models::{

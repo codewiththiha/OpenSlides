@@ -73,7 +73,7 @@ struct Tables {
 }
 
 fn build_first_map(alts: &[Vec<u16>]) -> HashMap<u16, Vec<usize>> {
-    let mut map = HashMap::new();
+    let mut map: HashMap<u16, Vec<usize>> = HashMap::new();
     for (idx, alt) in alts.iter().enumerate() {
         if let Some(&first) = alt.first() {
             map.entry(first).or_default().push(idx);
