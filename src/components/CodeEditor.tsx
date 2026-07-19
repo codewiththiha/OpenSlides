@@ -7,7 +7,7 @@
  *   Now: single worker pipeline + cheap merustmar sync fallback (no regex), no plain flash.
  * - Laggy DebouncedSlider: now uses instant preview Zustand overrides for live SlidePreview.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -88,7 +88,10 @@ export function CodeEditor({
   const gutterRef = useRef<HTMLDivElement>(null);
 
   // ── Uncontrolled textarea, by design ─────────────
-  useEffect(() => {
+  // Fix Caret Restoration Flash: useLayoutEffect fires synchronously after DOM mutation
+  // but before browser paint, so caret never flashes to end before snapping back.
+  // Previously rAF caused a one-frame flash when switching slides fast.
+  useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
     const next =
@@ -98,6 +101,7 @@ export function CodeEditor({
       "";
     const isNewValue = el.value !== next;
     if (isNewValue) {
+      // Synchronous value update in same microtask as caret restore
       el.value = next;
     }
     const saved = useUiStore.getState().caretPositions[slideId];
@@ -105,19 +109,17 @@ export function CodeEditor({
       const len = next.length;
       const start = Math.min(Math.max(saved.start, 0), len);
       const end = Math.min(Math.max(saved.end, 0), len);
-      requestAnimationFrame(() => {
-        try {
-          el.selectionStart = start;
-          el.selectionEnd = end;
-        } catch {}
-      });
+      try {
+        // Synchronous caret restore before paint — no flash
+        el.selectionStart = start;
+        el.selectionEnd = end;
+      } catch {}
     } else {
       if (isNewValue) {
-        requestAnimationFrame(() => {
-          try {
-            el.selectionStart = el.selectionEnd = next.length;
-          } catch {}
-        });
+        try {
+          // Place at end only when value actually changed and no saved pos
+          el.selectionStart = el.selectionEnd = next.length;
+        } catch {}
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -243,20 +245,24 @@ export function CodeEditor({
           removed = 1;
         }
         const next = before + line;
-        handleChange(next);
-        requestAnimationFrame(() => {
-          const pos = Math.max(lineStart, start - removed);
+        // Synchronous value + caret update in same microtask (no rAF flash)
+        el.value = next;
+        const pos = Math.max(lineStart, start - removed);
+        try {
           el.selectionStart = el.selectionEnd = pos;
-        });
+        } catch {}
+        handleChange(next);
         return;
       }
 
       const next = value.slice(0, start) + TAB_SPACES + value.slice(end);
-      handleChange(next);
-      requestAnimationFrame(() => {
-        const pos = start + TAB_SPACES.length;
+      // Synchronous update guarantees caret positioning happens in exact same microtask as value update
+      el.value = next;
+      const pos = start + TAB_SPACES.length;
+      try {
         el.selectionStart = el.selectionEnd = pos;
-      });
+      } catch {}
+      handleChange(next);
     },
     [slideId, handleChange],
   );
