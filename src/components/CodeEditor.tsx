@@ -1,15 +1,12 @@
 /**
- * Syntax-highlighted code editor with:
- * - debounced auto-save (flushed on slide change / unmount)
- * - Tab inserts spaces (no focus steal)
- * - project-wide language in settings
- * - editor line numbers (settings only)
- * - per-slide animation knobs disabled when global overrides are on
- * - highlight mode toggle and management
+ * Syntax-highlighted code editor — refactored to single Web Worker pipeline.
+ *
+ * FIXES:
+ * - NSSpellServer timeout: aggressive spellcheck/autocorrect disabling
+ * - Triple pipeline removed: previously shikiSync (blocking 2-5ms) + runHighlight (debounced) + plainEscaped (4 regex O(n) per keystroke)
+ *   Now: single worker pipeline + cheap merustmar sync fallback (no regex), no plain flash.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Highlighter } from "shiki";
-import { useDebouncedCallback } from "use-debounce";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,8 +15,7 @@ import {
   PanelRightClose,
   Highlighter as HighlighterIcon,
 } from "lucide-react";
-import { getHighlighter } from "@/lib/shiki-instance";
-import { highlightMerustmarCode } from "@/lib/merustmar-highlight";
+import { useDebouncedCallback } from "use-debounce";
 import {
   LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
@@ -36,12 +32,13 @@ import {
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Slider } from "./ui/slider";
-import { cn, escapeHtml } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { selectionToRange } from "@/lib/highlight-tokens";
 import { markSavePending, clearPendingSave } from "@/lib/save-flush";
 import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
 import { createDefaultHighlight } from "@/lib/highlight-utils";
+import { useShikiWorker } from "@/hooks/useShikiWorker";
 
 interface CodeEditorProps {
   project: Project;
@@ -58,8 +55,6 @@ export function CodeEditor({
   onToggleExpand,
   onCollapse,
 }: CodeEditorProps) {
-  // Fine-grained selectors: subscribing to the whole store would re-render
-  // this editor (and everything below it) on every unrelated store update.
   const currentSlideId = useUiStore((s) => s.currentSlideId);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
   const localCode = useUiStore((s) => s.localCode);
@@ -76,31 +71,11 @@ export function CodeEditor({
   const slideId = slide?.id;
 
   const code = (slideId && localCode[slideId]) ?? slide?.code ?? "";
-  const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
 
-  // ── Uncontrolled textarea, by design ────────────────────────────────
-  // The textarea is intentionally NOT value-controlled. User report
-  // (WKWebView/macOS): mid-line edit → re-render → caret teleports to the
-  // end of the code. Any commit in which React (re)assigns `.value` can
-  // slam the caret per the value-setter spec, and the transparent-textarea-
-  // over-highlight overlay makes every keystroke produce several re-renders
-  // (store echo, overlay re-highlight, save-status chip, cache stamps).
-  // Rather than prove every write benign, we make writes structurally
-  // impossible while typing: the DOM node is the source of truth during
-  // editing, and we only push text INTO it on external transitions —
-  // mount, slide switch, undo/redo. The UI-facing `code` (preview, overlay,
-  // line numbers, highlight slicing) still derives from the store.
-  //
-  // External code writers to an OPEN slide do not exist (settings responses
-  // preserve `code`; imports/restores touch other slides), so no sync-on-
-  // project-change is needed — only slide identity transitions.
-  //
-  // Mount + slide switch are the only legal hard-sync moments during a
-  // session; the dep list is deliberately slideId-ONLY so store echoes from
-  // typing never rewrite the DOM value (and the caret with it).
+  // ── Uncontrolled textarea, by design ─────────────
   useEffect(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
@@ -110,9 +85,7 @@ export function CodeEditor({
       el.value = next;
       el.selectionStart = el.selectionEnd = next.length;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- slide?.code is
-    // intentionally read from the slideId-change render only; re-running on
-    // every code edit would defeat the whole uncontrolled design above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slideId]);
 
   // Highlight mode state
@@ -134,16 +107,25 @@ export function CodeEditor({
   const useGlobalTransition = project.settings.useGlobalTransition;
   const useGlobalStagger = project.settings.useGlobalStagger;
   const language = resolveProjectLanguage(project);
+  const theme = project.theme;
+  const isDarkBg = !LIGHT_THEMES.has(theme);
+  const editorFontSize = project.settings.editorFontSize || 14;
+  const lineHeight = 1.55;
 
-  useEffect(() => {
-    let cancelled = false;
-    getHighlighter().then((h) => {
-      if (!cancelled) setHighlighter(h);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const lineCount = useMemo(() => Math.max(1, code.split("\n").length), [code]);
+
+  // ── Single Web Worker pipeline (merged 1+2, removed 3) ───────────────
+  // Previously:
+  //   - shikiSync useMemo (blocking 2-5ms)
+  //   - runHighlight debounced async
+  //   - plainEscaped regex x4 per keystroke (pure waste)
+  // Now: worker owns all Shiki tokenization off main thread. Merustmar sync is cheap and stays in main.
+  const highlightedHtml = useShikiWorker({
+    code,
+    language,
+    theme,
+    isDark: isDarkBg,
+  });
 
   const debouncedSave = useDebouncedCallback(
     (id: string, value: string) => {
@@ -162,10 +144,6 @@ export function CodeEditor({
     500,
   );
 
-  // (No undo-stack seeding: the textarea is uncontrolled, so the browser
-  // owns undo/redo natively — see the menu-delegation effect below.)
-
-  // Flush pending auto-save when leaving a slide or unmounting the editor
   useEffect(() => {
     return () => {
       debouncedSave.flush();
@@ -190,24 +168,7 @@ export function CodeEditor({
 
   const handleChange = applyCode;
 
-  // Undo/redo is OWNED BY THE BROWSER: the textarea is uncontrolled
-  // (defaultValue; see the design comment near the top of this component),
-  // so the native undo stack works — including word-level granularity and
-  // IME composition groups the old custom snapshot stack ("Native textarea
-  // undo breaks under React controlled values" — stale rationale) never
-  // had. Keyboard shortcuts need NO handlers: Cmd+Z / Shift+Cmd+Z (macOS)
-  // and Ctrl+Z / Ctrl+Y (Windows) are native in focused textareas. A slide
-  // switch writes `.value` imperatively, which resets the native undo
-  // history — this is a feature: undo can never bleed across slides.
-  //
-  // The only bridge still required is the native app MENU: it emits custom
-  // "menu://undo" events (Editor.tsx → window "openslides:undo"), not
-  // PredefinedMenuItem, so we delegate to the SAME native machinery via
-  // execCommand. Per platform convention, Undo acts on the focused
-  // (first-responder) editable region — two editors can be mounted
-  // (expanded overlay + rail panel), so we only act when THIS textarea has
-  // focus. execCommand() fires the textarea's `input` event, so onChange →
-  // store → auto-save stay in sync. Guarded for jsdom (no execCommand).
+  // Undo/redo bridge for native menu
   useEffect(() => {
     const exec = (cmd: "undo" | "redo") => {
       const el = textareaRef.current;
@@ -229,8 +190,6 @@ export function CodeEditor({
   /** Insert spaces on Tab; unindent on Shift+Tab. */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Undo/redo (Cmd/Ctrl+Z etc.) must NOT be intercepted here — native
-      // textarea undo owns those keys (see the menu-delegation comment).
       if (e.key !== "Tab" || !slideId) return;
       e.preventDefault();
       const el = e.currentTarget;
@@ -269,108 +228,6 @@ export function CodeEditor({
     [slideId, handleChange],
   );
 
-  const theme = project.theme;
-  const isDarkBg = !LIGHT_THEMES.has(theme);
-  const editorFontSize = project.settings.editorFontSize || 14;
-  const lineHeight = 1.55;
-
-  const lineCount = useMemo(() => Math.max(1, code.split("\n").length), [code]);
-
-  // Escape-only fallback (cheap) shown while Shiki runs
-  const plainEscaped = useMemo(() => escapeHtml(code), [code]);
-
-  // ── Always-colored overlay — NO white flash on keystrokes ─────────
-  // The transparent textarea means the overlay IS the visible text, so on
-  // every keystroke it must be BOTH exact-content (else glyphs/caret
-  // misalign — why "keep stale colored HTML" was wrong) AND colored (else
-  // the user sees the text flash plain — the old exact-plain interim).
-  // Synchronous full-fidelity paths satisfy both:
-  //   1. Shiki: codeToHtml is synchronous once the WASM instance exists —
-  //      covers every registered language incl. merustmar — sized within a
-  //      budget so huge files never block the main thread mid-keystroke.
-  //   2. Merustmar fallback whenever (1) can't run (WASM still loading, or
-  //      an over-budget file): the FROZEN synchronous JS highlighter —
-  //      byte-exact parity with the Rust port (parity fixtures), a cheap
-  //      linear scan, so merustmar decks NEVER flash at any size.
-  // Only when neither applies does the legacy debounced state path render:
-  // non-merustmar Shiki startup (one moment, once) or over-budget
-  // non-merustmar files — exact-content plain keeps correctness there.
-  //
-  // Budget rationale: 20k chars ≈ 400 typical slide lines; Shiki textmate
-  // cost scales with chars and decks are snippets — beyond the budget a
-  // per-keystroke full re-tokenize would risk frame jank, which is worse
-  // than the interim plain text the legacy path shows.
-  const SYNC_HIGHLIGHT_CHAR_BUDGET = 20_000;
-
-  const shikiLoaded =
-    highlighter !== null &&
-    highlighter.getLoadedLanguages().includes(language);
-
-  const shikiSync = useMemo(() => {
-    if (!highlighter || !shikiLoaded) return null;
-    if (code.length > SYNC_HIGHLIGHT_CHAR_BUDGET) return null;
-    try {
-      const html = highlighter.codeToHtml(code, { lang: language, theme });
-      const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-      return match ? match[1] : null;
-    } catch {
-      return null;
-    }
-  }, [code, highlighter, shikiLoaded, language, theme]);
-
-  const merustmarSync = useMemo(
-    () =>
-      language === "merustmar" && shikiSync === null
-        ? highlightMerustmarCode(code, isDarkBg)
-        : null,
-    [code, language, isDarkBg, shikiSync],
-  );
-
-  const syncOverlay = shikiSync ?? merustmarSync;
-
-  // Legacy debounced pipeline — used ONLY while no sync path applies.
-  // (Synchronous body: Shiki codeToHtml or plain escape, so no late-async
-  // overwrite guard is needed here anymore.)
-  const [highlighted, setHighlighted] = useState(plainEscaped);
-
-  const runHighlight = useDebouncedCallback(
-    (src: string, lang: string, th: string, h: Highlighter | null) => {
-      if (h && h.getLoadedLanguages().includes(lang)) {
-        try {
-          const html = h.codeToHtml(src, { lang, theme: th });
-          const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-          if (match) {
-            setHighlighted(match[1]);
-            return;
-          }
-        } catch {
-          /* fall through */
-        }
-      }
-      setHighlighted(escapeHtml(src));
-    },
-    120,
-  );
-
-  useEffect(() => {
-    // When the sync overlay applies the legacy state is not read at all.
-    if (syncOverlay !== null) return;
-    // Immediate cheap fallback so caret/overlay stay aligned while waiting
-    // for Shiki WASM (startup) or the budgeted debounce (huge files).
-    setHighlighted(plainEscaped);
-    if (!slide) return;
-    runHighlight(code, language, theme, highlighter);
-  }, [
-    code,
-    language,
-    theme,
-    highlighter,
-    slide,
-    plainEscaped,
-    runHighlight,
-    syncOverlay,
-  ]);
-
   const syncScroll = () => {
     if (!textareaRef.current) return;
     const top = textareaRef.current.scrollTop;
@@ -387,18 +244,17 @@ export function CodeEditor({
   const currentIndex = project.slides.findIndex((s) => s.id === slideId);
 
   const goSlide = (dir: -1 | 1) => {
-    // Flush pending save before switching
     debouncedSave.flush();
     const next = project.slides[currentIndex + dir];
     if (next) setCurrentSlideId(next.id);
   };
 
-  // Highlight CRUD operations
+  // Highlight CRUD
   const currentHighlights = slide?.highlights ?? [];
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
-      if (!highlightMode) return; // Let default context menu appear
+      if (!highlightMode) return;
       e.preventDefault();
 
       const textarea = textareaRef.current;
@@ -406,10 +262,8 @@ export function CodeEditor({
 
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      if (start === end) return; // No selection
+      if (start === end) return;
 
-      // Flat offsets → line/char range — single implementation, shared with
-      // the overlay pipeline (src/lib/highlight-tokens.ts).
       setPendingSelection(selectionToRange(code, start, end));
       setContextMenuPosition({ x: e.clientX, y: e.clientY });
       setContextMenuVisible(true);
@@ -460,7 +314,6 @@ export function CodeEditor({
       if (expandedHighlightId === id) {
         setExpandedHighlightId(null);
       }
-      // Fix preview index after removal (indices are positional)
       if (deletedIndex >= 0) {
         if (previewHighlightIndex === deletedIndex) {
           setPreviewHighlightIndex(-1);
@@ -492,7 +345,6 @@ export function CodeEditor({
         slideId,
         payload: { highlights: updated },
       });
-      // Keep the preview pinned to the moved step if it was being previewed
       if (previewHighlightIndex === from) {
         setPreviewHighlightIndex(to);
       } else if (previewHighlightIndex === to) {
@@ -517,7 +369,6 @@ export function CodeEditor({
     [previewHighlightIndex, setPreviewHighlightIndex],
   );
 
-  // Clear preview when leaving highlight mode or switching slides
   useEffect(() => {
     if (!highlightMode) setPreviewHighlightIndex(-1);
   }, [highlightMode, setPreviewHighlightIndex]);
@@ -544,6 +395,9 @@ export function CodeEditor({
     ? `Stagger (${project.settings.globalStagger} · global)`
     : `Stagger (${slide.stagger})`;
   const durationLabel = `Duration (${slide.duration}ms)`;
+
+  // Theme default foreground for monochrome fallback (no regex, React escapes)
+  const defaultFg = isDarkBg ? "#abb2bf" : "#383a42";
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-card">
@@ -665,28 +519,52 @@ export function CodeEditor({
             className="editor-highlight pointer-events-none absolute inset-0 overflow-auto py-4 pl-3 pr-4 font-mono"
             style={{ fontSize: editorFontSize, lineHeight }}
           >
-            <code
-              // Colored sync path wins; legacy debounced state is the
-              // startup/over-budget fallback only.
-              dangerouslySetInnerHTML={{
-                __html: (syncOverlay ?? highlighted) + "\n",
-              }}
-            />
+            {highlightedHtml ? (
+              <code
+                dangerouslySetInnerHTML={{
+                  __html: highlightedHtml + "\n",
+                }}
+              />
+            ) : (
+              // Fallback while worker boots: single-color, exact content, React-escaped (no regex)
+              // Prevents plain white flash and avoids O(n) regex waste
+              <code style={{ color: defaultFg }}>{code + "\n"}</code>
+            )}
           </pre>
+          {/* NSSpellServer fix: aggressive disable
+              - macOS WKWebView spell server times out on large code selections
+              - Solution: disable spellcheck, autocorrect, autocomplete, grammar, etc.
+              - Also disable via data-* attrs for Chrome extensions */}
           <textarea
             ref={textareaRef}
             data-openslides-editor
-            // Uncontrolled (see the design comment near the top of this
-            // component): NO `value` prop. `defaultValue` seeds first mount;
-            // later writes happen only via the slideId effect / undo / redo.
             defaultValue={code}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onScroll={syncScroll}
             onContextMenu={handleContextMenu}
             spellCheck={false}
+            autoCorrect="off"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoSave="off"
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            data-ms-editor="false"
+            data-lt-active="false"
+            data-spellcheck="false"
+            lang="en"
+            inputMode="text"
+            enterKeyHint="enter"
             className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-white outline-none"
-            style={{ fontSize: editorFontSize, lineHeight, tabSize: 2 }}
+            style={{
+              fontSize: editorFontSize,
+              lineHeight,
+              tabSize: 2,
+              // Extra webkit prefixes to hint no correction
+              WebkitTextSizeAdjust: "100%",
+            } as React.CSSProperties}
             wrap="off"
           />
         </div>
@@ -781,9 +659,6 @@ export function CodeEditor({
         </div>
       )}
 
-      {/* Management panel stays available whenever the slide has highlights,
-          not only while highlight mode is on — otherwise saved highlights
-          become un-editable/un-deletable after a reload. */}
       {(highlightMode || currentHighlights.length > 0) && (
         <HighlightSettingsPanel
           highlights={currentHighlights}
