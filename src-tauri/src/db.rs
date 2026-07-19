@@ -60,6 +60,8 @@ pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, String> {
     // transient SQLITE_BUSY instead of erroring the mutation. These are
     // per-connection pragmas, so they live on the pool's connect options,
     // applied identically to all 5 pooled connections.
+    // Added memory-cache tuning: 20MB cache (default 2MB) + 256MB mmap keeps
+    // projects/slides indices in RAM, making reordering/dashboard instant even with thousands of slides.
     let options = SqliteConnectOptions::from_str(&db_url)
         .map_err(|e| format!("Invalid DB URL: {e}"))?
         .create_if_missing(true)
@@ -67,6 +69,8 @@ pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, String> {
         .journal_mode(SqliteJournalMode::Wal)
         .synchronous(SqliteSynchronous::Normal)
         .pragma("temp_store", "memory")
+        .pragma("cache_size", "-20000")
+        .pragma("mmap_size", "268435456")
         .pragma("busy_timeout", "5000");
 
     let pool = SqlitePoolOptions::new()
