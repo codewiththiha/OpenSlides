@@ -1,8 +1,20 @@
 /**
- * Horizontal slide strip with smooth drag-and-drop reorder.
- * Slide titles: double-click label or right-click → Rename.
+ * Horizontal slide strip — fixed re-render storm.
+ *
+ * BEFORE: every SlideCard did
+ *   const codeOverride = useUiStore(s => s.localCode[slide.id])
+ *   const currentSlideId = useUiStore(s => s.currentSlideId)
+ * Not memoed, so parent re-render (project.slides ref change on save) caused
+ * 20 cards to re-render. Typing in A → 20 selector calls + 20 renders.
+ *
+ * AFTER:
+ * - SlideCard is React.memo with custom comparator
+ * - Per-slide atoms: useLocalCodeAtom(slide.id) only notifies that ID
+ * - isSelected via boolean selector s => s.currentSlideId === slide.id (only 2 cards re-render on slide switch)
+ * - preview derived from atom, not whole store
+ * - setCurrentSlideId stable
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -37,6 +49,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { slideDisplayName, type Project, type Slide } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
+import { useLocalCodeAtom } from "@/store/localCodeAtoms";
 import { notify } from "@/lib/toast";
 import {
   useCreateSlide,
@@ -51,7 +64,6 @@ const ITEM_WIDTH = 152;
 interface BottomSlidesPanelProps {
   project: Project;
   collapsed?: boolean;
-  /** Active highlight index on the selected slide (-1 = none). */
   activeHighlightIndex?: number;
   onToggleCollapse?: () => void;
 }
@@ -64,7 +76,25 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-function SlideCard({
+interface SlideCardProps {
+  slide: Slide;
+  index: number;
+  isOverlay?: boolean;
+  isActive?: boolean;
+  isRenaming?: boolean;
+  renameValue?: string;
+  highlightProgress?: number;
+  onRenameValueChange?: (v: string) => void;
+  onCommitRename?: () => void;
+  onCancelRename?: () => void;
+  onRemove?: (id: string) => void;
+  onRename?: (id: string, current: string) => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  setNodeRef?: (node: HTMLElement | null) => void;
+  style?: React.CSSProperties;
+}
+
+const SlideCard = memo(function SlideCard({
   slide,
   index,
   isOverlay = false,
@@ -80,37 +110,18 @@ function SlideCard({
   dragHandleProps,
   setNodeRef,
   style,
-}: {
-  slide: Slide;
-  index: number;
-  isOverlay?: boolean;
-  isActive?: boolean;
-  isRenaming?: boolean;
-  renameValue?: string;
-  /** Active highlight index while stepping (only meaningful when selected). */
-  highlightProgress?: number;
-  onRenameValueChange?: (v: string) => void;
-  onCommitRename?: () => void;
-  onCancelRename?: () => void;
-  onRemove?: (id: string) => void;
-  onRename?: (id: string, current: string) => void;
-  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
-  setNodeRef?: (node: HTMLElement | null) => void;
-  style?: React.CSSProperties;
-}) {
-  // Per-card fine-grained subscriptions: typing updates `localCode` every
-  // keystroke — a whole-store subscribe re-rendered EVERY card per keystroke
-  // (and again when saveStatus cycled), though only this card's first-line
-  // preview can change.
-  const currentSlideId = useUiStore((s) => s.currentSlideId);
+}: SlideCardProps) {
+  // Per-slide atom: only this card re-renders when its own local code changes
+  const codeOverride = useLocalCodeAtom(slide.id);
+  // Boolean selector: only 2 cards re-render on slide switch (prev/new)
+  const isSelected = useUiStore((s) => s.currentSlideId === slide.id);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
-  const codeOverride = useUiStore((s) => s.localCode[slide.id]);
+
   const preview =
     (codeOverride ?? slide.code).split("\n")[0]?.slice(0, 28) || "Empty";
-  const selected = currentSlideId === slide.id;
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;
-  const progress = selected ? highlightProgress : -1;
+  const progress = isSelected ? highlightProgress : -1;
 
   return (
     <div
@@ -131,7 +142,7 @@ function SlideCard({
         "will-change-transform min-w-0",
         isOverlay
           ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
-          : selected
+          : isSelected
             ? "border-primary/50 bg-muted ring-1 ring-primary/20"
             : "bg-background/60 hover:border-primary/30 hover:bg-muted/40",
         isActive && !isOverlay && "opacity-30",
@@ -211,9 +222,7 @@ function SlideCard({
       >
         {preview}
       </div>
-      <div
-        className="mt-auto flex items-center justify-between gap-1"
-      >
+      <div className="mt-auto flex items-center justify-between gap-1">
         <span
           className="truncate text-[10px] text-muted-foreground/70"
           title={slide.language}
@@ -251,7 +260,28 @@ function SlideCard({
       </div>
     </div>
   );
-}
+},
+(prev, next) => {
+  // Custom comparator: only re-render if relevant fields changed
+  if (prev.slide.id !== next.slide.id) return false;
+  if (prev.slide.code !== next.slide.code) return false;
+  if (prev.slide.name !== next.slide.name) return false;
+  if (prev.slide.language !== next.slide.language) return false;
+  if ((prev.slide.highlights?.length ?? 0) !== (next.slide.highlights?.length ?? 0))
+    return false;
+  if (prev.index !== next.index) return false;
+  if (prev.isOverlay !== next.isOverlay) return false;
+  if (prev.isActive !== next.isActive) return false;
+  if (prev.isRenaming !== next.isRenaming) return false;
+  if (prev.renameValue !== next.renameValue) return false;
+  if (prev.highlightProgress !== next.highlightProgress) return false;
+  // style reference changes often during drag, check shallow
+  if (prev.style !== next.style) return false;
+  // dragHandleProps is stable from useSortable, but compare ref
+  if (prev.dragHandleProps !== next.dragHandleProps) return false;
+  // on* callbacks are stable via useCallback, ignore
+  return true;
+});
 
 function SortableSlideItem({
   slide,
@@ -428,8 +458,6 @@ export function BottomSlidesPanel({
 
       deleteSlide.mutate(id, {
         onSuccess: (proj) => {
-          // (Native textarea undo needs no cleanup here: the undo history
-          // lives on the DOM node, and a remounted slide gets a fresh node.)
           if (currentSlideId === id) {
             const fallback =
               proj.settings.currentSlideId ?? proj.slides[0]?.id ?? null;
@@ -453,7 +481,7 @@ export function BottomSlidesPanel({
     [ordered, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
   );
 
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     const nextNum = ordered.length + 1;
     createSlide.mutate(
       { name: `Slide ${nextNum}` },
@@ -461,7 +489,7 @@ export function BottomSlidesPanel({
         onSuccess: (slide) => setCurrentSlideId(slide.id),
       },
     );
-  };
+  }, [ordered.length, createSlide, setCurrentSlideId]);
 
   if (isCollapsed) {
     return (
@@ -511,7 +539,6 @@ export function BottomSlidesPanel({
           </Button>
         </div>
       </div>
-
 
       <DndContext
         sensors={sensors}

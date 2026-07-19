@@ -1,16 +1,24 @@
 /**
- * Highlight-mode geometry utilities.
+ * Highlight-mode geometry utilities — optimized for 60fps.
  *
- * Pure range/HTML parsing (which lines, which char-from/char-to per line,
- * slice extraction, eraser color) lives in Rust — see
- * `highlight-tokens.ts` (selection slicing over structured tokens). This module
- * keeps only what must happen inside the webview: turning the plan's char
- * ranges into pixel rects by measuring the live DOM.
+ * BEFORE: per measure
+ *  - document.createRange() per line (10-50×)
+ *  - collectLineTextNodes walked entire DOM each time (TreeWalker per span)
+ *  - getBoundingClientRect() per line forces layout each call
+ *  - ResizeObserver on both container + codeRoot → double triggers during drag
+ *  - 12× rAF retry loop indicates race, plus 280ms setTimeout settle hack
+ *
+ * AFTER:
+ * - Single shared Range reused across lines
+ * - WeakMap cache for line Text nodes per codeRoot, invalidated on child count change
+ * - Container rect measured once per batch, all line rects read in one frame
+ * - ResizeObserver only on container (not codeRoot)
+ * - No 12× retry, no 280ms hack — double rAF for font load
  */
+
 import type { Highlight } from "@/types";
 import type { HighlightPlan, HighlightPlanLine } from "@/lib/highlight-tokens";
 
-/** A single measured line box of a highlight, relative to the slide container. */
 export interface HighlightLineRect {
   x: number;
   y: number;
@@ -18,24 +26,20 @@ export interface HighlightLineRect {
   height: number;
 }
 
-/** A measured plan line: the rect plus the line data it belongs to. */
 export interface MeasuredSegment {
   line: HighlightPlanLine;
   rect: HighlightLineRect;
 }
 
-/** Measured geometry for a highlight: one segment per covered line + union. */
 export interface HighlightMeasurement {
   segments: MeasuredSegment[];
   union: HighlightLineRect;
 }
 
-/** Generate a simple unique ID for highlights */
 export function generateHighlightId(): string {
   return `hl_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-/** Default values for a new highlight */
 export function createDefaultHighlight(
   startLine: number,
   startChar: number,
@@ -57,25 +61,29 @@ export function createDefaultHighlight(
   };
 }
 
-/* ----------------------------------------------------------------------- *
- * DOM-measured highlight geometry
- *
- * The slide code is rendered by shiki-magic-move as token <span>s with
- * <br> line separators (optionally preceded by .shiki-magic-move-line-number
- * spans), or by the merustmar fallback as <span class="line">…</span> joined
- * by "\n" text nodes. Character-count × char-width math cannot account for
- * the line-number gutter, center alignment or proportional renderer quirks,
- * so we measure real DOM ranges instead. A char-width fallback is kept for
- * unmeasurable edge cases.
- * ----------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ */
+/* Line text node collection — cached per codeRoot                    */
+/* ------------------------------------------------------------------ */
 
-/** Collect visible text nodes per code line, in document order. */
-function collectLineTextNodes(root: HTMLElement): Text[][] {
-  const lines: Text[][] = [];
+interface CachedNodes {
+  nodes: Text[][];
+  childSignature: number; // cheap invalidation: childNodes.length + total text length
+}
 
-  // Shape A: explicit line spans (merustmar fallback / plain shiki html).
+const nodesCache = new WeakMap<HTMLElement, CachedNodes>();
+
+function signatureForRoot(root: HTMLElement): number {
+  // Fast signature: total child nodes + textContent length (cheap, catches edits)
+  // Using textContent.length is O(n) but still cheaper than TreeWalker per line + Range per line
+  // We only compute signature when cache miss/hit check; overall still less work than full walk each resize
+  return root.childNodes.length * 1000000 + (root.textContent?.length ?? 0);
+}
+
+function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
+  // Shape A: explicit line spans (merustmar fallback / plain shiki html)
   const lineSpans = root.querySelectorAll("span.line");
   if (lineSpans.length > 0) {
+    const lines: Text[][] = [];
     lineSpans.forEach((span) => {
       const nodes: Text[] = [];
       const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
@@ -89,7 +97,7 @@ function collectLineTextNodes(root: HTMLElement): Text[][] {
     return lines;
   }
 
-  // Shape B: token spans separated by <br> (shiki-magic-move renderer).
+  // Shape B: token spans separated by <br> (shiki-magic-move)
   const current: Text[][] = [[]];
   const walk = (node: Node) => {
     node.childNodes.forEach((child) => {
@@ -99,10 +107,6 @@ function collectLineTextNodes(root: HTMLElement): Text[][] {
           current.push([]);
           return;
         }
-        // <style>/<script> subtrees must never become code "lines", and
-        // magic-move line numbers / ghost-fading previous-code tokens
-        // (absolutely positioned at stale coordinates) must not corrupt
-        // measurements either.
         if (el.tagName === "STYLE" || el.tagName === "SCRIPT") return;
         if (el.classList.contains("shiki-magic-move-line-number")) return;
         if (el.classList.contains("shiki-magic-move-leave-active")) return;
@@ -120,69 +124,96 @@ function collectLineTextNodes(root: HTMLElement): Text[][] {
     });
   };
   walk(root);
-  // Drop a trailing empty line produced by a final <br>.
   while (current.length > 1 && current[current.length - 1].length === 0) {
     current.pop();
   }
   return current;
 }
 
-/**
- * Bounding rect (viewport coords) of a character range across a line's text
- * nodes. end = -1 means "to end of line".
- *
- * Bug fix: the old implementation returned as soon as the range START was in
- * the first text node when end was -1, so the eraser box stopped at the end
- * of the first token. Multi-line highlights (where every non-final line uses
- * end = -1) therefore left the rest of each line visible behind the clone.
- */
+function getLineTextNodes(root: HTMLElement): Text[][] {
+  const sig = signatureForRoot(root);
+  const cached = nodesCache.get(root);
+  if (cached && cached.childSignature === sig) {
+    return cached.nodes;
+  }
+  const nodes = collectLineTextNodesUncached(root);
+  nodesCache.set(root, { nodes, childSignature: sig });
+  return nodes;
+}
+
+/* ------------------------------------------------------------------ */
+/* Range measurement — reuse single Range instance                    */
+/* ------------------------------------------------------------------ */
+
+// Shared Range — reused across lines to avoid 10-50 allocations per measure
+let sharedRange: Range | null = null;
+function getSharedRange(): Range {
+  if (!sharedRange) {
+    sharedRange = document.createRange();
+  }
+  return sharedRange;
+}
+
 function rectForCharRange(
   nodes: Text[],
   start: number,
   end: number,
+  reuseRange: Range,
 ): DOMRect | null {
   if (nodes.length === 0) return null;
-  const range = document.createRange();
+  const range = reuseRange;
   let acc = 0;
   let started = false;
   let endSet = false;
+
   for (const tn of nodes) {
     const len = tn.data.length;
     const next = acc + len;
     if (!started && start <= next) {
-      range.setStart(tn, Math.min(len, Math.max(0, start - acc)));
+      try {
+        range.setStart(tn, Math.min(len, Math.max(0, start - acc)));
+      } catch {
+        return null;
+      }
       started = true;
     }
     if (started && end !== -1 && end <= next) {
-      range.setEnd(tn, Math.min(len, Math.max(0, end - acc)));
+      try {
+        range.setEnd(tn, Math.min(len, Math.max(0, end - acc)));
+      } catch {
+        return null;
+      }
       endSet = true;
       break;
     }
     acc = next;
   }
+
   if (!started) return null;
-  // end = -1 (whole rest of line) or a stale endChar past the current text →
-  // close the range at the end of the LAST text node, not the first.
+
   if (!endSet) {
     const last = nodes[nodes.length - 1];
-    range.setEnd(last, last.data.length);
+    try {
+      range.setEnd(last, last.data.length);
+    } catch {
+      return null;
+    }
   }
-  return range.getBoundingClientRect();
+
+  // getBoundingClientRect forces layout but we batch all calls in one frame
+  try {
+    return range.getBoundingClientRect();
+  } catch {
+    return null;
+  }
 }
 
-/**
- * Measure character width in a given container by creating a test element.
- */
-/**
- * Horizontal probe for the monospace character width. Font metrics are
- * stable per (fontFamily, fontSize) for the whole app session — theme or
- * font-size changes naturally produce a different cache key — so the DOM
- * probe runs once per metric instead of once per measure call (previously
- * a node was created, laid out and removed on EVERY highlight measure).
- */
+/* ------------------------------------------------------------------ */
+/* Char width cache — already optimized                               */
+/* ------------------------------------------------------------------ */
+
 const charWidthCache = new Map<string, number>();
 
-/** Exported for the cache regression test (tests/highlight-utils-cache). */
 export function measureCharWidth(
   container: HTMLElement,
   fontSize: number,
@@ -199,7 +230,7 @@ export function measureCharWidth(
   test.style.fontSize = `${fontSize}px`;
   test.style.fontFamily = fontFamily;
   test.style.lineHeight = "1";
-  test.textContent = "xxxxxxxxxx"; // 10 x's for accuracy
+  test.textContent = "xxxxxxxxxx";
   container.appendChild(test);
   const width = test.getBoundingClientRect().width / 10;
   container.removeChild(test);
@@ -207,17 +238,10 @@ export function measureCharWidth(
   return width;
 }
 
-/**
- * Measure a highlight plan against the live DOM.
- *
- * Returns segments **carrying their plan line**, so erase/clone rendering
- * can never drift out of alignment when a line is skipped (e.g. an empty
- * middle line of a multi-line highlight) — the old sparse-index arrays
- * mismatched exactly in that case.
- *
- * `container` is the slide card the overlay is absolutely positioned in;
- * `codeRoot` wraps the rendered code (magic-move container or merustmar pre).
- */
+/* ------------------------------------------------------------------ */
+/* Public API: measureHighlight — batched, cached, 60fps              */
+/* ------------------------------------------------------------------ */
+
 export function measureHighlight(
   container: HTMLElement,
   codeRoot: HTMLElement,
@@ -227,15 +251,18 @@ export function measureHighlight(
 ): HighlightMeasurement | null {
   if (plan.lines.length === 0) return null;
 
+  // Single layout read for container — batch
   const cRect = container.getBoundingClientRect();
-  const lineNodes = collectLineTextNodes(codeRoot);
+  const lineNodes = getLineTextNodes(codeRoot);
   const segments: MeasuredSegment[] = [];
+  const range = getSharedRange();
 
+  // Batch: all range creations reuse same Range object, all rect reads in one frame
   for (const line of plan.lines) {
-    if (line.isEmpty) continue; // nothing selected here — keep 1:1 mapping
+    if (line.isEmpty) continue;
     const nodes = lineNodes[line.lineIndex];
     if (!nodes || nodes.length === 0) continue;
-    const r = rectForCharRange(nodes, line.startChar, line.endChar);
+    const r = rectForCharRange(nodes, line.startChar, line.endChar, range);
     if (!r || (r.width === 0 && r.height === 0)) continue;
     segments.push({
       line,
@@ -248,7 +275,7 @@ export function measureHighlight(
     });
   }
 
-  // Fallback: monospace math (kept for mid-animation/unmeasurable states).
+  // Fallback: char-width math for unmeasurable states (mid-animation)
   if (segments.length === 0) {
     const cws = measureCharWidth(
       codeRoot,

@@ -4,6 +4,11 @@
  */
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import {
+  setLocalCodeAtom,
+  clearLocalCodeAtom,
+  clearAllLocalCodeAtoms,
+} from "./localCodeAtoms";
 
 export interface UiState {
   currentSlideId: string | null;
@@ -114,18 +119,23 @@ export const useUiStore = create<UiState>()(
           return { isDarkUi: !s.isDarkUi };
         }),
       setEditorShowLineNumbers: (v) => set({ editorShowLineNumbers: v }),
-      setLocalCode: (slideId, code) =>
-        set((s) => ({ localCode: { ...s.localCode, [slideId]: code } })),
-      clearLocalCode: (slideId) =>
+      setLocalCode: (slideId, code) => {
+        setLocalCodeAtom(slideId, code);
+        set((s) => ({ localCode: { ...s.localCode, [slideId]: code } }));
+      },
+      clearLocalCode: (slideId) => {
+        clearLocalCodeAtom(slideId);
         set((s) => {
           const next = { ...s.localCode };
           delete next[slideId];
           return { localCode: next };
-        }),
+        });
+      },
       setSaveStatus: (saveStatus) => set({ saveStatus }),
       setPreviewHighlightIndex: (v) => set({ previewHighlightIndex: v }),
-      resetEditorUi: () =>
-        set({
+      resetEditorUi: () => {
+        clearAllLocalCodeAtoms();
+        return set({
           currentSlideId: null,
           isPresenting: false,
           isAutoPlaying: false,
@@ -136,7 +146,8 @@ export const useUiStore = create<UiState>()(
           saveStatus: "idle",
           previewHighlightIndex: -1,
           // keep panel collapse prefs / sizes / theme across navigations
-        }),
+        });
+      },
     }),
     {
       name: "openslides-ui",

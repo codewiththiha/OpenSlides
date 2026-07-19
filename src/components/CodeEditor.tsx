@@ -24,6 +24,7 @@ import {
   type Highlight,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
+import { useLocalCodeAtom, getLocalCodeAtom } from "@/store/localCodeAtoms";
 import {
   useUpdateSettings,
   useUpdateSlideCode,
@@ -57,7 +58,6 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const currentSlideId = useUiStore((s) => s.currentSlideId);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
-  const localCode = useUiStore((s) => s.localCode);
   const setLocalCode = useUiStore((s) => s.setLocalCode);
   const setSaveStatus = useUiStore((s) => s.setSaveStatus);
   const editorShowLineNumbers = useUiStore((s) => s.editorShowLineNumbers);
@@ -70,7 +70,8 @@ export function CodeEditor({
     project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
   const slideId = slide?.id;
 
-  const code = (slideId && localCode[slideId]) ?? slide?.code ?? "";
+  const localCodeAtom = useLocalCodeAtom(slideId);
+  const code = localCodeAtom ?? slide?.code ?? "";
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -80,7 +81,10 @@ export function CodeEditor({
     const el = textareaRef.current;
     if (!el || !slideId) return;
     const next =
-      useUiStore.getState().localCode[slideId] ?? slide?.code ?? "";
+      getLocalCodeAtom(slideId) ??
+      useUiStore.getState().localCode[slideId] ??
+      slide?.code ??
+      "";
     if (el.value !== next) {
       el.value = next;
       el.selectionStart = el.selectionEnd = next.length;

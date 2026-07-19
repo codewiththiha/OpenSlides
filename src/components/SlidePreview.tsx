@@ -1,9 +1,6 @@
 /**
  * Live slide preview using shared Shiki singleton + magic-move.
- * codeAlign (project-wide): left | center — centers the code *block*, not text-align.
- *
- * Highlight mode: renders HighlightLayer on top when a highlight is active.
- * The highlight index is controlled by the parent (Editor) during presentation.
+ * Fixed: now uses per-slide atom for code to avoid re-render storm.
  */
 import { useEffect, useRef, useState } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
@@ -24,14 +21,13 @@ import {
 } from "@/types";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
+import { useLocalCodeAtom } from "@/store/localCodeAtoms";
 import { HighlightLayer } from "./HighlightLayer";
 
 interface SlidePreviewProps {
   project: Project;
   isPresenting?: boolean;
-  /** Index of the active highlight (-1 or undefined = no highlight). */
   activeHighlightIndex?: number;
-  /** Fired when the highlight outro fully completed (safe to change slide). */
   onHighlightExitComplete?: () => void;
 }
 
@@ -41,15 +37,12 @@ export function SlidePreview({
   activeHighlightIndex = -1,
   onHighlightExitComplete,
 }: SlidePreviewProps) {
-  // Fine-grained selectors: subscribing to the whole `localCode` record
-  // re-rendered the preview on EVERY keystroke — even for edits belonging
-  // to a different slide. Select primitives only.
   const currentSlideId = useUiStore((s) => s.currentSlideId);
   const slide =
     project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
-  const code = useUiStore((s) =>
-    slide ? (s.localCode[slide.id] ?? slide.code) : "",
-  );
+  // Per-slide atom: only re-renders when THIS slide's override changes
+  const codeOverride = useLocalCodeAtom(slide?.id);
+  const code = codeOverride ?? slide?.code ?? "";
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const codeContainerRef = useRef<HTMLDivElement>(null);
@@ -64,8 +57,6 @@ export function SlidePreview({
     };
   }, []);
 
-  /* `code` feeds hooks below, so it must be selected before the early
-     `!slide` return (code is "" then — that branch never renders anyway). */
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
   const isDarkBg = !LIGHT_THEMES.has(theme);
@@ -73,14 +64,6 @@ export function SlidePreview({
     highlighter && highlighter.getLoadedLanguages().includes(language);
   const needsMerustmar = language === "merustmar" && !canUseShiki;
 
-  // Merustmar token lines — tokenized in Rust (off the main thread; the old
-  // sync-in-render approach recomputed the whole slide per render step), then
-  // rendered here at the same token granularity Shiki would use. The result
-  // is tracked with the code/theme it belongs to via a request token, so
-  // out-of-order resolves can never flash mismatched text; while Rust is
-  // answering, the previous frame simply stays visible (≤1 RPC of lag). The
-  // frozen JS seeds frame one (correct on mount) and stays as the failure
-  // fallback, per repo policy.
   const [mmTokens, setMmTokens] = useState<{
     code: string;
     dark: boolean;
@@ -122,8 +105,6 @@ export function SlidePreview({
 
   const stagePad = isPresenting ? "p-16 md:p-24" : "p-8 md:p-12";
 
-  // Determine the active highlight for this slide.
-  // null = clean state; the layer plays the outro on the way down.
   const highlights = slide.highlights ?? [];
   const activeHighlight =
     activeHighlightIndex >= 0 && activeHighlightIndex < highlights.length
@@ -135,8 +116,6 @@ export function SlidePreview({
     : settings.fontSize;
 
   if (needsMerustmar) {
-    // Previous frame stays up while the Rust tokenization for the latest
-    // code is in flight; plain only before the very first answer.
     const html = renderTokenLines(mmTokens?.lines ?? plainTokenLines(code));
     return (
       <div
