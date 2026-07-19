@@ -189,12 +189,6 @@ export function CodeEditor({
     };
   }, [slideId, debouncedSave]);
 
-  useEffect(() => {
-    return () => {
-      debouncedSave.flush();
-    };
-  }, [debouncedSave]);
-
   const applyCode = useCallback(
     (value: string) => {
       if (!slideId) return;
