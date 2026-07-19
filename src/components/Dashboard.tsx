@@ -1,8 +1,9 @@
 /**
- * Project dashboard — lists SQLite-backed projects via TanStack Query.
- * Supports create, rename, import, export, delete.
+ * Project dashboard — virtualized with @tanstack/react-virtual for O(1) render cost.
+ * Previously all cards rendered regardless of viewport → slow with 50+ projects.
+ * Now only visible rows render.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -18,6 +19,7 @@ import {
   X,
   Command as CommandIcon,
 } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "./ui/button";
 import {
   Card,
@@ -65,6 +67,21 @@ export function Dashboard() {
   const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen);
   const toggleShortcutsOpen = useUiStore((s) => s.toggleShortcutsOpen);
 
+  const parentRef = useRef<HTMLDivElement>(null);
+  const [columnCount, setColumnCount] = useState(3);
+
+  useEffect(() => {
+    const update = () => {
+      if (typeof window === "undefined") return;
+      if (window.innerWidth < 768) setColumnCount(1);
+      else if (window.innerWidth < 1024) setColumnCount(2);
+      else setColumnCount(3);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   useEffect(() => {
     document.title = "OpenSlides — Projects";
     getCurrentWindow()
@@ -72,12 +89,10 @@ export function Dashboard() {
       .catch(() => undefined);
   }, []);
 
-  // Apply persisted UI theme on mount (hydration skips store actions)
   useEffect(() => {
     applyUiTheme(isDarkUi);
   }, [isDarkUi]);
 
-  // Global `?` shortcuts help on dashboard
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) {
@@ -100,18 +115,14 @@ export function Dashboard() {
       setCreating(false);
       setNewName("Untitled Deck");
       navigate(`/editor/${project.id}`);
-    } catch {
-      /* toast handled in mutation */
-    }
+    } catch {}
   };
 
   const handleImport = async () => {
     try {
       const project = await importMutation.mutateAsync();
       navigate(`/editor/${project.id}`);
-    } catch {
-      /* cancelled / toast */
-    }
+    } catch {}
   };
 
   const startRename = (id: string, current: string) => {
@@ -125,9 +136,7 @@ export function Dashboard() {
     try {
       await renameMutation.mutateAsync({ projectId: renamingId, name });
       setRenamingId(null);
-    } catch {
-      /* toast */
-    }
+    } catch {}
   };
 
   const menuHandlers = useMemo(
@@ -153,6 +162,16 @@ export function Dashboard() {
   useAppMenu(menuHandlers);
 
   const mod = modKeyLabel();
+
+  const rowCount = Math.ceil(projects.length / columnCount);
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 220,
+    overscan: 5,
+  });
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -199,13 +218,13 @@ export function Dashboard() {
         }
       />
 
-      <div className="flex-1 overflow-auto">
+      <div ref={parentRef} className="flex-1 overflow-auto">
         <div className="mx-auto max-w-7xl px-6 py-8 pb-12">
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Your Decks</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Offline-first code presentations · stored in SQLite
+                Offline-first code presentations · stored in SQLite · virtualized
               </p>
             </div>
           </div>
@@ -279,129 +298,155 @@ export function Dashboard() {
           )}
 
           {!isLoading && projects.length > 0 && (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
-                  onClick={() => {
-                    if (renamingId === project.id) return;
-                    navigate(`/editor/${project.id}`);
-                  }}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                          <FileCode className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          {renamingId === project.id ? (
-                            <div
-                              className="flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Input
-                                autoFocus
-                                value={renameValue}
-                                onChange={(e) => setRenameValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") void commitRename();
-                                  if (e.key === "Escape") setRenamingId(null);
-                                }}
-                                className="h-8 text-sm"
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={() => void commitRename()}
-                                disabled={renameMutation.isPending}
-                              >
-                                <Check className="h-4 w-4 text-emerald-500" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                                onClick={() => setRenamingId(null)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualRows.map((virtualRow) => {
+                const startIdx = virtualRow.index * columnCount;
+                const rowProjects = projects.slice(startIdx, startIdx + columnCount);
+                return (
+                  <div
+                    key={virtualRow.key}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {rowProjects.map((project) => (
+                        <Card
+                          key={project.id}
+                          className="group cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+                          onClick={() => {
+                            if (renamingId === project.id) return;
+                            navigate(`/editor/${project.id}`);
+                          }}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                  <FileCode className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  {renamingId === project.id ? (
+                                    <div
+                                      className="flex items-center gap-1"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Input
+                                        autoFocus
+                                        value={renameValue}
+                                        onChange={(e) => setRenameValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") void commitRename();
+                                          if (e.key === "Escape") setRenamingId(null);
+                                        }}
+                                        className="h-8 text-sm"
+                                      />
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0"
+                                        onClick={() => void commitRename()}
+                                        disabled={renameMutation.isPending}
+                                      >
+                                        <Check className="h-4 w-4 text-emerald-500" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0"
+                                        onClick={() => setRenamingId(null)}
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <CardTitle className="truncate text-base font-semibold">
+                                        {project.name}
+                                      </CardTitle>
+                                      <CardDescription className="text-xs">
+                                        {project.slideCount} slide
+                                        {project.slideCount !== 1 ? "s" : ""}
+                                      </CardDescription>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              {renamingId !== project.id && (
+                                <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Rename"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startRename(project.id, project.name);
+                                    }}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Export JSON"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      exportMutation.mutate(project.id);
+                                    }}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (
+                                        confirm(
+                                          `Delete “${project.name}”? This cannot be undone.`,
+                                        )
+                                      ) {
+                                        deleteMutation.mutate(project.id);
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                          ) : (
-                            <>
-                              <CardTitle className="truncate text-base font-semibold">
-                                {project.name}
-                              </CardTitle>
-                              <CardDescription className="text-xs">
-                                {project.slideCount} slide
-                                {project.slideCount !== 1 ? "s" : ""}
-                              </CardDescription>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {renamingId !== project.id && (
-                        <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Rename"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startRename(project.id, project.name);
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Export JSON"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              exportMutation.mutate(project.id);
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (
-                                confirm(
-                                  `Delete “${project.name}”? This cannot be undone.`,
-                                )
-                              ) {
-                                deleteMutation.mutate(project.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                          </CardHeader>
+                          <CardContent className="pb-3">
+                            <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground/70">
+                              {project.theme}
+                            </span>
+                          </CardContent>
+                          <CardFooter className="flex items-center justify-between pt-0">
+                            <span className="text-xs text-muted-foreground">
+                              Updated {formatRelative(project.updatedAt)}
+                            </span>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                          </CardFooter>
+                        </Card>
+                      ))}
                     </div>
-                  </CardHeader>
-                  <CardContent className="pb-3">
-                    <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-foreground/70">
-                      {project.theme}
-                    </span>
-                  </CardContent>
-                  <CardFooter className="flex items-center justify-between pt-0">
-                    <span className="text-xs text-muted-foreground">
-                      Updated {formatRelative(project.updatedAt)}
-                    </span>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                  </CardFooter>
-                </Card>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

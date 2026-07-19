@@ -18,7 +18,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
-import { Slider } from "./ui/slider";
+import { DebouncedSlider } from "./ui/debounced-slider";
 import { Switch } from "./ui/switch";
 import { cn } from "@/lib/utils";
 import { useHighlightSnippets } from "@/hooks/queries/highlights";
@@ -174,12 +174,12 @@ export function HighlightSettingsPanel({
                       <Label className="text-[9px] text-muted-foreground">
                         Dim ({hl.dimAmount}%)
                       </Label>
-                      <Slider
+                      <DebouncedSlider
                         min={0}
                         max={100}
                         step={5}
                         value={[hl.dimAmount]}
-                        onValueChange={([v]) =>
+                        onValueCommit={([v]) =>
                           onUpdate(hl.id, { dimAmount: v })
                         }
                       />
@@ -204,12 +204,12 @@ export function HighlightSettingsPanel({
                         <Label className="text-[9px] text-muted-foreground">
                           Size Up Amount ({hl.sizeUpAmount ?? 125}%)
                         </Label>
-                        <Slider
+                        <DebouncedSlider
                           min={105}
                           max={250}
                           step={5}
                           value={[hl.sizeUpAmount ?? 125]}
-                          onValueChange={([v]) =>
+                          onValueCommit={([v]) =>
                             onUpdate(hl.id, { sizeUpAmount: v })
                           }
                         />
@@ -236,12 +236,12 @@ export function HighlightSettingsPanel({
                           <Label className="text-[9px] text-muted-foreground">
                             Dim Transition ({hl.dimTransition}ms)
                           </Label>
-                          <Slider
+                          <DebouncedSlider
                             min={100}
                             max={2000}
                             step={50}
                             value={[hl.dimTransition]}
-                            onValueChange={([v]) =>
+                            onValueCommit={([v]) =>
                               onUpdate(hl.id, { dimTransition: v })
                             }
                           />
@@ -251,12 +251,12 @@ export function HighlightSettingsPanel({
                             <Label className="text-[9px] text-muted-foreground">
                               Size Up Transition ({hl.sizeUpTransition}ms)
                             </Label>
-                            <Slider
+                            <DebouncedSlider
                               min={100}
                               max={2000}
                               step={50}
                               value={[hl.sizeUpTransition]}
-                              onValueChange={([v]) =>
+                              onValueCommit={([v]) =>
                                 onUpdate(hl.id, { sizeUpTransition: v })
                               }
                             />

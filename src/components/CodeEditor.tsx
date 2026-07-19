@@ -32,7 +32,7 @@ import {
 } from "@/hooks/queries";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
-import { Slider } from "./ui/slider";
+import { DebouncedSlider } from "./ui/debounced-slider";
 import { cn } from "@/lib/utils";
 import { selectionToRange } from "@/lib/highlight-tokens";
 import { markSavePending, clearPendingSave } from "@/lib/code-save";
@@ -65,6 +65,7 @@ export function CodeEditor({
   const setPreviewHighlightIndex = useUiStore(
     (s) => s.setPreviewHighlightIndex,
   );
+  const setCaretPosition = useUiStore((s) => s.setCaretPosition);
 
   const slide =
     project.slides.find((s) => s.id === currentSlideId) ?? project.slides[0];
@@ -77,6 +78,7 @@ export function CodeEditor({
   const gutterRef = useRef<HTMLDivElement>(null);
 
   // ── Uncontrolled textarea, by design ─────────────
+  // Now restores caret per slide from Zustand (massive UX win for multi-slide editing)
   useEffect(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
@@ -85,12 +87,45 @@ export function CodeEditor({
       useUiStore.getState().localCode[slideId] ??
       slide?.code ??
       "";
-    if (el.value !== next) {
+    const isNewValue = el.value !== next;
+    if (isNewValue) {
       el.value = next;
-      el.selectionStart = el.selectionEnd = next.length;
+    }
+    // Restore caret if we have a stored position for this slide
+    const saved = useUiStore.getState().caretPositions[slideId];
+    if (saved) {
+      const len = next.length;
+      const start = Math.min(Math.max(saved.start, 0), len);
+      const end = Math.min(Math.max(saved.end, 0), len);
+      // Only restore if value changed OR we have a saved pos that differs from current
+      // This prevents always jumping to end on slide switch
+      requestAnimationFrame(() => {
+        try {
+          el.selectionStart = start;
+          el.selectionEnd = end;
+        } catch {}
+      });
+    } else {
+      // No saved caret: for new slide content, put at end if value changed, else keep current
+      if (isNewValue) {
+        requestAnimationFrame(() => {
+          try {
+            el.selectionStart = el.selectionEnd = next.length;
+          } catch {}
+        });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slideId]);
+
+  // Save caret position on select / keyup / mouseup
+  const saveCaret = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || !slideId) return;
+    try {
+      setCaretPosition(slideId, el.selectionStart, el.selectionEnd);
+    } catch {}
+  }, [slideId, setCaretPosition]);
 
   // Highlight mode state
   const [highlightMode, setHighlightMode] = useState(false);
@@ -248,6 +283,13 @@ export function CodeEditor({
   const currentIndex = project.slides.findIndex((s) => s.id === slideId);
 
   const goSlide = (dir: -1 | 1) => {
+    // Save caret of current slide before leaving (UX win)
+    try {
+      const el = textareaRef.current;
+      if (el && slideId) {
+        setCaretPosition(slideId, el.selectionStart, el.selectionEnd);
+      }
+    } catch {}
     debouncedSave.flush();
     const next = project.slides[currentIndex + dir];
     if (next) setCurrentSlideId(next.id);
@@ -545,6 +587,10 @@ export function CodeEditor({
             defaultValue={code}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onKeyUp={saveCaret}
+            onSelect={saveCaret}
+            onMouseUp={saveCaret}
+            onBlur={saveCaret}
             onScroll={syncScroll}
             onContextMenu={handleContextMenu}
             spellCheck={false}
@@ -589,7 +635,7 @@ export function CodeEditor({
           >
             {transitionLabel}
           </Label>
-          <Slider
+          <DebouncedSlider
             min={100}
             max={2000}
             step={50}
@@ -599,7 +645,7 @@ export function CodeEditor({
                 ? project.settings.globalTransitionDuration
                 : slide.transitionDuration,
             ]}
-            onValueChange={([v]) => {
+            onValueCommit={([v]) => {
               if (useGlobalTransition) return;
               settingsMutation.mutate({
                 slideId: slide.id,
@@ -615,13 +661,13 @@ export function CodeEditor({
           >
             {staggerLabel}
           </Label>
-          <Slider
+          <DebouncedSlider
             min={0}
             max={50}
             step={1}
             disabled={useGlobalStagger}
             value={[useGlobalStagger ? project.settings.globalStagger : slide.stagger]}
-            onValueChange={([v]) => {
+            onValueCommit={([v]) => {
               if (useGlobalStagger) return;
               settingsMutation.mutate({
                 slideId: slide.id,
@@ -637,12 +683,12 @@ export function CodeEditor({
           >
             {durationLabel}
           </Label>
-          <Slider
+          <DebouncedSlider
             min={500}
             max={10000}
             step={100}
             value={[slide.duration]}
-            onValueChange={([v]) =>
+            onValueCommit={([v]) =>
               settingsMutation.mutate({
                 slideId: slide.id,
                 payload: { duration: v },

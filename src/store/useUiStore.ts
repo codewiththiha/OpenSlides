@@ -31,6 +31,8 @@ export interface UiState {
   saveStatus: "idle" | "saving" | "saved" | "error";
   /** Highlight index being previewed from the editor (-1 = none). */
   previewHighlightIndex: number;
+  /** Caret position per slide — massive UX win for multi-slide editing */
+  caretPositions: Record<string, { start: number; end: number }>;
 
   setCurrentSlideId: (id: string | null) => void;
   setIsPresenting: (v: boolean) => void;
@@ -53,6 +55,7 @@ export interface UiState {
   clearLocalCode: (slideId: string) => void;
   setSaveStatus: (s: UiState["saveStatus"]) => void;
   setPreviewHighlightIndex: (v: number) => void;
+  setCaretPosition: (slideId: string, start: number, end: number) => void;
   resetEditorUi: () => void;
 }
 
@@ -88,6 +91,7 @@ export const useUiStore = create<UiState>()(
       localCode: {},
       saveStatus: "idle",
       previewHighlightIndex: -1,
+      caretPositions: {},
 
       setCurrentSlideId: (id) => set({ currentSlideId: id }),
       setIsPresenting: (v) => set({ isPresenting: v }),
@@ -133,6 +137,10 @@ export const useUiStore = create<UiState>()(
       },
       setSaveStatus: (saveStatus) => set({ saveStatus }),
       setPreviewHighlightIndex: (v) => set({ previewHighlightIndex: v }),
+      setCaretPosition: (slideId, start, end) =>
+        set((s) => ({
+          caretPositions: { ...s.caretPositions, [slideId]: { start, end } },
+        })),
       resetEditorUi: () => {
         clearAllLocalCodeAtoms();
         return set({
@@ -145,6 +153,7 @@ export const useUiStore = create<UiState>()(
           localCode: {},
           saveStatus: "idle",
           previewHighlightIndex: -1,
+          caretPositions: {},
           // keep panel collapse prefs / sizes / theme across navigations
         });
       },

@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
-import { Slider } from "./ui/slider";
+import { DebouncedSlider } from "./ui/debounced-slider";
 import { THEME_OPTIONS, type Project } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
@@ -140,12 +140,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               <Label className="text-xs text-muted-foreground">
                 Preview font size ({s.fontSize}px)
               </Label>
-              <Slider
+              <DebouncedSlider
                 min={12}
                 max={32}
                 step={2}
                 value={[s.fontSize]}
-                onValueChange={([v]) => patch({ fontSize: v })}
+                onValueCommit={([v]) => patch({ fontSize: v })}
               />
             </div>
 
@@ -153,12 +153,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               <Label className="text-xs text-muted-foreground">
                 Line height ({s.lineHeight.toFixed(2)})
               </Label>
-              <Slider
+              <DebouncedSlider
                 min={1.1}
                 max={2.2}
                 step={0.05}
                 value={[s.lineHeight]}
-                onValueChange={([v]) => patch({ lineHeight: v })}
+                onValueCommit={([v]) => patch({ lineHeight: v })}
               />
             </div>
 
@@ -166,12 +166,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               <Label className="text-xs text-muted-foreground">
                 Editor font size ({s.editorFontSize}px)
               </Label>
-              <Slider
+              <DebouncedSlider
                 min={11}
                 max={22}
                 step={1}
                 value={[s.editorFontSize]}
-                onValueChange={([v]) => patch({ editorFontSize: v })}
+                onValueCommit={([v]) => patch({ editorFontSize: v })}
               />
             </div>
           </section>
@@ -197,12 +197,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
                 <Label className="text-xs text-muted-foreground">
                   Transition ({s.globalTransitionDuration}ms)
                 </Label>
-                <Slider
+                <DebouncedSlider
                   min={100}
                   max={2000}
                   step={50}
                   value={[s.globalTransitionDuration]}
-                  onValueChange={([v]) => patch({ globalTransitionDuration: v })}
+                  onValueCommit={([v]) => patch({ globalTransitionDuration: v })}
                 />
               </div>
             )}
@@ -219,12 +219,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
                 <Label className="text-xs text-muted-foreground">
                   Stagger ({s.globalStagger})
                 </Label>
-                <Slider
+                <DebouncedSlider
                   min={0}
                   max={50}
                   step={1}
                   value={[s.globalStagger]}
-                  onValueChange={([v]) => patch({ globalStagger: v })}
+                  onValueCommit={([v]) => patch({ globalStagger: v })}
                 />
               </div>
             )}
