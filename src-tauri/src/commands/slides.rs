@@ -77,9 +77,17 @@ pub async fn delete_slide(
     project_id: String,
     slide_id: String,
 ) -> Result<Project, String> {
+    // Atomic transaction: COUNT → DELETE → re-index → settings update → commit
+    // Previously 6-8 round trips without atomicity, now single transaction + final fetch
+    let mut tx = pool
+        .inner()
+        .begin()
+        .await
+        .map_err(|e| format!("TX begin failed: {e}"))?;
+
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM slides WHERE project_id = ?")
         .bind(&project_id)
-        .fetch_one(pool.inner())
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| format!("Failed to count slides: {e}"))?;
 
@@ -87,28 +95,43 @@ pub async fn delete_slide(
         return Err("Cannot delete the last slide".into());
     }
 
-    // Snapshot deleted slide for potential future undo (returned via project reload)
     sqlx::query("DELETE FROM slides WHERE id = ? AND project_id = ?")
         .bind(&slide_id)
         .bind(&project_id)
-        .execute(pool.inner())
+        .execute(&mut *tx)
         .await
         .map_err(|e| format!("Failed to delete slide: {e}"))?;
 
-    let remaining = {
-        let settings = load_settings(pool.inner(), &project_id).await?;
-        fetch_slides(pool.inner(), &project_id, &settings.language).await?
-    };
+    // Fetch remaining slides (inside tx) for re-index and for current_slide fallback
+    let remaining_rows = sqlx::query(
+        r#"
+        SELECT id, code, duration, transition_duration, stagger, order_index, name, highlights
+        FROM slides
+        WHERE project_id = ?
+        ORDER BY order_index ASC
+        "#,
+    )
+    .bind(&project_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(|e| format!("Failed to fetch slides: {e}"))?;
 
-    // Batch re-index remaining slides using JSON + json_each — infinitely scalable
-    // Previously CASE with N WHEN clauses could hit SQLITE_MAX_EXPR_DEPTH for 300+ slides.
-    // Now: single UPDATE FROM with JSON array of {id, new_order}, no parser bloat.
-    if !remaining.is_empty() {
+    let mut remaining_ids: Vec<String> = Vec::new();
+    let mut remaining_for_fallback: Vec<(String, i64)> = Vec::new(); // (id, order)
+    for row in &remaining_rows {
+        let id: String = row.get("id");
+        let order: i64 = row.get("order_index");
+        remaining_ids.push(id.clone());
+        remaining_for_fallback.push((id, order));
+    }
+
+    // Batch re-index using JSON + json_each — infinitely scalable
+    if !remaining_ids.is_empty() {
         let json = serde_json::to_string(
-            &remaining
+            &remaining_ids
                 .iter()
                 .enumerate()
-                .map(|(i, s)| serde_json::json!({ "id": s.id, "new_order": i as i64 }))
+                .map(|(i, id)| serde_json::json!({ "id": id, "new_order": i as i64 }))
                 .collect::<Vec<_>>(),
         )
         .map_err(|e| e.to_string())?;
@@ -126,18 +149,45 @@ pub async fn delete_slide(
         )
         .bind(&json)
         .bind(&project_id)
-        .execute(pool.inner())
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
     }
 
-    let mut settings = load_settings(pool.inner(), &project_id).await?;
+    // Load settings (inside tx)
+    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
+        .bind(&project_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| format!("Failed to load project settings: {e}"))?
+        .ok_or_else(|| format!("Project not found: {project_id}"))?;
+    let settings_raw: String = settings_row.get("settings");
+    let mut settings = crate::models::parse_settings(&settings_raw);
+
     if settings.current_slide_id.as_deref() == Some(slide_id.as_str()) {
-        settings.current_slide_id = remaining.first().map(|s| s.id.clone());
-        save_settings(pool.inner(), &project_id, &settings, true).await?;
+        // Fallback to first remaining slide
+        let fallback = remaining_ids.first().cloned();
+        settings.current_slide_id = fallback;
+        let json = crate::models::settings_to_json(&settings).map_err(|e| e.to_string())?;
+        sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
+            .bind(json)
+            .bind(now_ms())
+            .bind(&project_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
     } else {
-        touch_project(pool.inner(), &project_id).await?;
+        sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
+            .bind(now_ms())
+            .bind(&project_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| format!("Failed to update project timestamp: {e}"))?;
     }
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("TX commit failed: {e}"))?;
 
     fetch_project(pool.inner(), &project_id).await
 }
