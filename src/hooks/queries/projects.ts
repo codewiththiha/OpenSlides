@@ -11,6 +11,8 @@ export function useProjects() {
   return useQuery({
     queryKey: projectKeys.all,
     queryFn: api.getProjects,
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -19,6 +21,8 @@ export function useProject(projectId: string | undefined) {
     queryKey: projectKeys.detail(projectId ?? ""),
     queryFn: () => api.getProject(projectId!),
     enabled: Boolean(projectId),
+    staleTime: Infinity,
+    gcTime: 1000 * 60 * 30,
   });
 }
 

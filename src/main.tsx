@@ -12,9 +12,14 @@ import "./index.css";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5_000,
+      // Local SQLite is the single source of truth and Tauri is the only writer,
+      // so we have absolute cache consistency. No need for background refetches.
+      staleTime: Infinity,
+      gcTime: 1000 * 60 * 30, // 30 minutes in memory
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
     },
   },
 });
