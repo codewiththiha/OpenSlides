@@ -27,7 +27,6 @@ import {
   type HighlightMeasurement,
 } from "@/lib/highlight-utils";
 import { useHighlightPlan } from "@/hooks/useHighlightPlan";
-import { api } from "@/lib/tauri-api";
 
 interface HighlightLayerProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -104,84 +103,15 @@ export function HighlightLayer({
         return;
       }
 
-      // Primary: pure-math measurement — 2 getBoundingClientRect + math, <0.1ms, 60fps
+      // Pure-math measurement — 2 getBoundingClientRect + char_width*pos math, <0.1ms, 60fps
       // Previously: Range per line (10-50 allocs) + TreeWalker + forced layout = 5-15ms
-      // Rust offload alternative: api.measureHighlightFromPlan does same math in Rust <0.1ms off main thread
-      // We do JS pure-math synchronously for immediate paint, then fire Rust async to verify/warm cache
-
-      // JS pure-math first (sync, <0.1ms)
+      // Trust JS math (already <0.1ms), no Rust shadow-call needed
       let m = measureHighlightPureMath(container, codeRoot, plan, fontSize, lineHeight);
       if (!m) {
         // Fallback to DOM Range path if charWidth unavailable
         m = measureHighlight(container, codeRoot, plan, fontSize, lineHeight);
       }
       if (!disposed && m) setMeasurement(m);
-
-      // Rust offload: same math in Rust, async, <0.1ms in Rust, off main thread
-      // Only attempt if we have plan lines (avoid flooding IPC during drag — ResizeObserver already coalesced to rAF)
-      try {
-        const maxLineLen = code.split("\n").reduce((mx, l) => Math.max(mx, l.length), 0);
-        const cRect = container.getBoundingClientRect();
-        // charWidth is cached inside measureHighlightPureMath, but we can approximate via fontSize * 0.6 for Rust call
-        // Better: use same charWidth measurement via pure math — we already have it from previous call,
-        // so reuse by measuring char width via cached function
-        // For simplicity, compute via fontSize * 0.6 if cache miss, but we have measureCharWidth available via closure?
-        // We'll call Rust with estimated charWidth = fontSize * 0.6 if not measured, else use measured
-        // To get accurate charWidth, we import measureCharWidth and call it
-        void (async () => {
-          if (disposed) return;
-          try {
-            const { measureCharWidth } = await import("@/lib/highlight-utils");
-            const cw = measureCharWidth(
-              codeRoot,
-              fontSize,
-              getComputedStyle(codeRoot).fontFamily ||
-                "ui-monospace, SFMono-Regular, Menlo, monospace",
-            );
-            if (!cw || !Number.isFinite(cw)) return;
-            const rustReq = {
-              planLines: plan.lines.map((l) => ({
-                lineIndex: l.lineIndex,
-                startChar: l.startChar,
-                endChar: l.endChar,
-                isEmpty: l.isEmpty,
-              })),
-              fontSize,
-              lineHeight,
-              charWidth: cw,
-              containerWidth: cRect.width,
-              lineNumbersWidth: 0,
-              paddingX: 0,
-              paddingY: 0,
-              codeAlign: "left",
-              maxLineLength: maxLineLen,
-            };
-            const rustRes = await api.measureHighlightFromPlan(rustReq);
-            if (disposed) return;
-            // Convert Rust response to HighlightMeasurement shape
-            const fromRust: HighlightMeasurement = {
-              segments: rustRes.segments.map((s) => {
-                const line = plan.lines.find((pl) => pl.lineIndex === s.lineIndex);
-                if (!line) return null as any;
-                return {
-                  line,
-                  rect: s.rect,
-                };
-              }).filter(Boolean) as any,
-              union: rustRes.union,
-            };
-            // Only override if Rust returned valid segments (sanity check)
-            if (fromRust.segments.length > 0) {
-              // Uncomment to actually use Rust measurement (currently JS pure-math is already <0.1ms and synchronous)
-              // setMeasurement(fromRust);
-            }
-          } catch {
-            // Silently ignore Rust failures — JS pure-math is already fast
-          }
-        })();
-      } catch {
-        // ignore
-      }
     };
 
     // Immediate measure + double rAF for late font/layout (replaces 280ms timeout)
