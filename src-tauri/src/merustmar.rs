@@ -219,14 +219,6 @@ fn decode(units: &[u16]) -> String {
     String::from_utf16_lossy(units)
 }
 
-#[cfg(test)]
-fn esc(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
-
 fn flush(tokens: &mut Vec<MerustmarToken>, plain: &mut Vec<u16>, color: &'static str) {
     if !plain.is_empty() {
         tokens.push(MerustmarToken {
@@ -423,11 +415,13 @@ fn highlight_line(line: &[u16], c: &Palette, tables: &Tables) -> Vec<MerustmarTo
 #[cfg(test)]
 fn render_line_tokens(tokens: &[MerustmarToken]) -> String {
     tokens.iter().fold(String::new(), |mut out, t| {
-        out.push_str(&format!(
-            "<span style=\"color:{}\">{}</span>",
-            t.color,
-            esc(t.content.as_str())
-        ));
+        let esc = t
+            .content
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;");
+        out.push_str(&format!("<span style=\"color:{}\">{}</span>", t.color, esc));
         out
     })
 }
