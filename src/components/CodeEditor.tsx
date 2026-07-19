@@ -94,11 +94,7 @@ export function CodeEditor({
   useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
-    const next =
-      getLocalCodeAtom(slideId) ??
-      useUiStore.getState().localCode[slideId] ??
-      slide?.code ??
-      "";
+    const next = getLocalCodeAtom(slideId) ?? slide?.code ?? "";
     const isNewValue = el.value !== next;
     if (isNewValue) {
       // Synchronous value update in same microtask as caret restore

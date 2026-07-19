@@ -3,6 +3,7 @@ import { notify } from "../../lib/toast";
 import { api, type SlideSettingsPatch } from "../../lib/tauri-api";
 import { enqueueCodeSave } from "../../lib/code-save";
 import { useUiStore } from "../../store/useUiStore";
+import { getLocalCodeAtom } from "../../store/localCodeAtoms";
 import type { Project, Slide } from "../../types";
 import { projectKeys } from "./keys";
 
@@ -40,8 +41,9 @@ export function useUpdateSlideCode() {
         };
       });
 
-      const { localCode, clearLocalCode } = useUiStore.getState();
-      if (localCode[slideId] === undefined || localCode[slideId] === code) {
+      const { clearLocalCode } = useUiStore.getState();
+      const current = getLocalCodeAtom(slideId);
+      if (current === undefined || current === code) {
         clearLocalCode(slideId);
       }
     },

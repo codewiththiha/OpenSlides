@@ -42,7 +42,6 @@ export interface UiState {
   isShortcutsOpen: boolean;
   isDarkUi: boolean;
   editorShowLineNumbers: boolean;
-  localCode: Record<string, string>;
   saveStatus: "idle" | "saving" | "saved" | "error";
   /** Highlight index being previewed from the editor (-1 = none). */
   previewHighlightIndex: number;
@@ -71,6 +70,7 @@ export interface UiState {
   setIsDarkUi: (v: boolean) => void;
   toggleTheme: () => void;
   setEditorShowLineNumbers: (v: boolean) => void;
+  // localCode per-slide atom only — no Zustand mirror (O(n) spread removed)
   setLocalCode: (slideId: string, code: string) => void;
   clearLocalCode: (slideId: string) => void;
   setSaveStatus: (s: UiState["saveStatus"]) => void;
@@ -132,7 +132,6 @@ export const useUiStore = create<UiState>()(
       isShortcutsOpen: false,
       isDarkUi: true,
       editorShowLineNumbers: true,
-      localCode: {},
       saveStatus: "idle",
       previewHighlightIndex: -1,
       caretPositions: {},
@@ -170,17 +169,12 @@ export const useUiStore = create<UiState>()(
           return { isDarkUi: !s.isDarkUi };
         }),
       setEditorShowLineNumbers: (v) => set({ editorShowLineNumbers: v }),
+      // No Zustand mirror — only per-slide atom, zero re-render storm, no O(n) spread
       setLocalCode: (slideId, code) => {
         setLocalCodeAtom(slideId, code);
-        set((s) => ({ localCode: { ...s.localCode, [slideId]: code } }));
       },
       clearLocalCode: (slideId) => {
         clearLocalCodeAtom(slideId);
-        set((s) => {
-          const next = { ...s.localCode };
-          delete next[slideId];
-          return { localCode: next };
-        });
       },
       setSaveStatus: (saveStatus) => set({ saveStatus }),
       setPreviewHighlightIndex: (v) => set({ previewHighlightIndex: v }),
@@ -310,7 +304,6 @@ export const useUiStore = create<UiState>()(
           isZenMode: false,
           isSettingsOpen: false,
           isShortcutsOpen: false,
-          localCode: {},
           saveStatus: "idle",
           previewHighlightIndex: -1,
           caretPositions: {},
