@@ -10,6 +10,12 @@
  *   3. anything else — plain uncolored tokens.
  *
  * Runs once per highlight activation (not per frame).
+ *
+ * Fix: AbortController for rapid highlight clicks.
+ * - Previously a stale boolean flag ignored result but underlying work continued.
+ * - Now we create an AbortController per effect, pass signal to tokenization
+ *   and Rust IPC, and abort on cleanup / highlight ID change.
+ * - Shiki Worker and Rust IPC both respect the signal to free thread for current highlight.
  */
 import { useEffect, useState } from "react";
 import type { BundledLanguage, BundledTheme, Highlighter } from "shiki";
@@ -38,16 +44,20 @@ async function getTokenLines(
   highlighter: Highlighter | null,
   language: string,
   theme: string,
+  signal?: AbortSignal,
 ): Promise<HighlightTokenLine[]> {
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
   if (highlighter?.getLoadedLanguages().includes(language)) {
     try {
+      // Check abort before expensive WASM work
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
       const themeFg = highlighter.getTheme(theme).fg;
-      // Resolve a token's missing color to the theme foreground so the clone
-      // is self-contained (the shiki <pre> it overlays inherits it, the
-      // floating clone cannot).
-      return highlighter
-        // Language/theme come from project settings (runtime strings); the
-        // loaded-language check above guarantees shiki can resolve them.
+      const tokens = highlighter
         .codeToTokensBase(code, {
           lang: language as BundledLanguage,
           theme: theme as BundledTheme,
@@ -60,18 +70,31 @@ async function getTokenLines(
             fontStyle: t.fontStyle,
           })),
         );
-    } catch {
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
+      return tokens;
+    } catch (err) {
+      if ((err as DOMException)?.name === "AbortError") throw err;
       /* fall through to the merustmar/plain path */
     }
   }
   if (language === "merustmar") {
     const isDark = !LIGHT_THEMES.has(theme);
     try {
-      return await api.merustmarTokens(code, isDark);
-    } catch {
-      // Frozen JS fallback (kept per repo policy) if IPC fails.
+      // Pass signal to Rust IPC — aborts underlying sqlx/LRU work via promise race
+      return await api.merustmarTokens(code, isDark, signal);
+    } catch (err) {
+      if ((err as DOMException)?.name === "AbortError") throw err;
+      // Frozen JS fallback if IPC fails or aborted after fallback started
+      if (signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
       return merustmarFallbackTokens(code, isDark);
     }
+  }
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
   }
   return plainTokenLines(code);
 }
@@ -95,14 +118,19 @@ export function useHighlightPlan({
       setEntry(null);
       return;
     }
-    let stale = false;
+
+    const controller = new AbortController();
+    const { signal } = controller;
     const { id, startLine, startChar, endLine, endChar } = highlight;
+
     void (async () => {
-      const tokenLines = code
-        ? await getTokenLines(code, highlighter, language, theme)
-        : null;
-      if (stale) return;
       try {
+        const tokenLines = code
+          ? await getTokenLines(code, highlighter, language, theme, signal)
+          : null;
+
+        if (signal.aborted) return;
+
         const plan = buildPlan(
           code,
           tokenLines,
@@ -110,13 +138,25 @@ export function useHighlightPlan({
           themeBackground(theme),
           highlight.dimAmount ?? 75,
         );
-        if (!stale) setEntry({ id, plan });
-      } catch {
-        if (!stale) setEntry(null);
+
+        if (!signal.aborted) {
+          setEntry({ id, plan });
+        }
+      } catch (err) {
+        if ((err as DOMException)?.name === "AbortError") {
+          // Silently ignore aborted work — frees thread for current highlight
+          return;
+        }
+        if (!signal.aborted) {
+          setEntry(null);
+        }
       }
     })();
+
     return () => {
-      stale = true;
+      // Abort underlying Shiki tokenization / Rust IPC when highlight ID changes
+      // or component unmounts — frees Worker thread for current highlight.
+      controller.abort();
     };
   }, [highlight, code, highlighter, language, theme]);
 

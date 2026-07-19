@@ -85,18 +85,25 @@ export function SlidePreview({
   const mmReqRef = useRef(0);
   useEffect(() => {
     if (!needsMerustmar) return;
+    const controller = new AbortController();
     const req = ++mmReqRef.current;
     const dark = isDarkBg;
     api
-      .merustmarTokens(code, dark)
+      .merustmarTokens(code, dark, controller.signal)
       .then((lines) => {
+        if (controller.signal.aborted) return;
         if (mmReqRef.current === req) setMmTokens({ code, dark, lines });
       })
-      .catch(() => {
+      .catch((err) => {
+        if ((err as DOMException)?.name === "AbortError") return;
+        if (controller.signal.aborted) return;
         if (mmReqRef.current === req) {
           setMmTokens({ code, dark, lines: merustmarFallbackTokens(code, dark) });
         }
       });
+    return () => {
+      controller.abort();
+    };
   }, [needsMerustmar, code, isDarkBg]);
 
   if (!slide) {

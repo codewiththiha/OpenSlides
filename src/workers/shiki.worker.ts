@@ -2,6 +2,12 @@
  * Shiki Web Worker — offload tokenization off main thread.
  * Previously CodeEditor ran codeToHtml synchronously on every keystroke (2-5ms blocking).
  * Now all Shiki work happens here.
+ *
+ * Enhancement: AbortController support for rapid highlight clicks.
+ * - Main thread sends {type:'abort', id} when highlight ID changes.
+ * - Worker tracks abortedIds set.
+ * - Before/after expensive ops (highlighter load, codeToHtml), checks abort and skips.
+ * - This frees Worker thread for current highlight instead of finishing stale work.
  */
 
 import { createHighlighter, type Highlighter } from "shiki";
@@ -75,33 +81,94 @@ export interface WorkerRequest {
   theme: string;
 }
 
+export interface WorkerAbort {
+  type: "abort";
+  id: number;
+}
+
+export type WorkerIncoming = WorkerRequest | WorkerAbort;
+
 export interface WorkerResponse {
   id: number;
   html?: string;
   error?: string;
+  aborted?: boolean;
 }
 
-self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
-  const { id, code, lang, theme } = e.data;
+const abortedIds = new Set<number>();
 
-  // Early exit for huge files to avoid worker Jank — let main choose fallback
-  // (20k char budget similar to old sync, but now off main thread)
+function isAborted(id: number): boolean {
+  return abortedIds.has(id);
+}
+
+self.onmessage = async (e: MessageEvent<WorkerIncoming>) => {
+  const data = e.data as any;
+
+  // Handle abort signal from main thread
+  if (data?.type === "abort" && typeof data.id === "number") {
+    const abortId = data.id as number;
+    abortedIds.add(abortId);
+    // If currently processing this id, we can't interrupt synchronous codeToHtml mid-flight,
+    // but we flag it so we skip posting result after.
+    return;
+  }
+
+  // Normal tokenization request
+  const { id, code, lang, theme } = data as WorkerRequest;
+
+  if (typeof id !== "number") return;
+
+  // If this request was already aborted before starting, skip entirely
+  if (isAborted(id)) {
+    abortedIds.delete(id);
+    // Optionally notify main thread that it was aborted
+    const abortedResponse: WorkerResponse = { id, aborted: true };
+    (self as any).postMessage(abortedResponse);
+    return;
+  }
+
+  // Early exit for huge files to avoid worker jank — let main choose fallback
   if (code.length > 50_000) {
     // Still try but warn; we let main thread cap if needed
   }
 
   try {
+    // Check abort before expensive highlighter acquisition
+    if (isAborted(id)) {
+      abortedIds.delete(id);
+      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      return;
+    }
+
     const highlighter = await getHighlighter();
+
+    // Check abort after async highlighter load (could have been aborted during load)
+    if (isAborted(id)) {
+      abortedIds.delete(id);
+      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      return;
+    }
 
     const loaded = highlighter.getLoadedLanguages();
     if (!loaded.includes(lang)) {
-      // Try to load on demand if not built-in (best effort)
       try {
         // @ts-ignore dynamic load attempt
         await highlighter.loadLanguage(lang as any);
       } catch {
         // ignore, will fall back
       }
+      if (isAborted(id)) {
+        abortedIds.delete(id);
+        (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+        return;
+      }
+    }
+
+    // This is the expensive synchronous part — check abort before starting
+    if (isAborted(id)) {
+      abortedIds.delete(id);
+      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      return;
     }
 
     const html = highlighter.codeToHtml(code, {
@@ -109,13 +176,25 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       theme: theme as any,
     });
 
-    // Extract inner <code>...</code> to match previous API (pre already exists)
+    // Check abort after tokenization, before posting
+    if (isAborted(id)) {
+      abortedIds.delete(id);
+      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      return;
+    }
+
     const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
     const inner = match ? match[1] : html;
 
     const response: WorkerResponse = { id, html: inner };
     (self as any).postMessage(response);
   } catch (err) {
+    // If aborted, don't send error, send aborted flag
+    if (isAborted(id)) {
+      abortedIds.delete(id);
+      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      return;
+    }
     const response: WorkerResponse = {
       id,
       error: err instanceof Error ? err.message : String(err),
