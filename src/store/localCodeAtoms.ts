@@ -11,8 +11,7 @@
  * Only the card that owns that ID gets notified. Typing in Slide A → 1 re-render,
  * not 20. This is true per-slide atoms.
  *
- * Zustand's localCode is kept as a mirror for save-flush / persistence,
- * but UI components should use useLocalCodeAtom.
+ * UI components should use useLocalCodeAtom — no Zustand mirror, zero O(n) spread.
  */
 
 import { useSyncExternalStore, useCallback } from "react";
@@ -87,15 +86,4 @@ export function useLocalCodeAtom(slideId: string | undefined): string | undefine
 
   // For SSR/hydration, getServerSnapshot = getSnapshot
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-}
-
-/**
- * Hook returning selected bool: is currentSlideId === this slide id?
- * Only this card re-renders when selection changes, not all 20.
- */
-export function useIsSelectedAtom(slideId: string, currentSlideId: string | null): boolean {
-  // This is a derived hook, but we can keep it simple: just compare.
-  // For atom isolation we want a selector that returns boolean and only
-  // triggers for 2 cards (prev selected + new selected).
-  return currentSlideId === slideId;
 }

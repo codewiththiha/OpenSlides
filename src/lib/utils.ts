@@ -5,14 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Escape text for insertion into an HTML fragment (plain-code fallbacks). */
-export function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
 /** Absolute fallback for formatRelative (kept private — nothing imports it). */
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-US", {
