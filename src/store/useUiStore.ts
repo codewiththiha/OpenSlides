@@ -5,7 +5,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-interface UiState {
+export interface UiState {
   currentSlideId: string | null;
   isPresenting: boolean;
   /** Auto-advance slides using each slide's duration. */
