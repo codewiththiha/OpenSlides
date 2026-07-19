@@ -2,6 +2,7 @@
  * EditorLayout — resizable preview + code + slides rail.
  * Extracted from God Editor. Owns panel refs, collapsible logic, and
  * minimal Zustand panel slice (no saveStatus / localCode).
+ * Enhancement: HighlightStepIndicator now clickable via onSelectHighlight.
  */
 import { memo, useRef } from "react";
 import {
@@ -31,6 +32,7 @@ interface EditorLayoutProps {
   activeHighlightIndex: number;
   previewHighlightIndex: number;
   onHighlightExitComplete: () => void;
+  onSelectHighlight: (index: number) => boolean;
   editorExpanded: boolean;
   onToggleEditorExpanded: (v: boolean) => void;
 }
@@ -41,6 +43,7 @@ export const EditorLayout = memo(function EditorLayout({
   activeHighlightIndex,
   previewHighlightIndex,
   onHighlightExitComplete,
+  onSelectHighlight,
   editorExpanded,
   onToggleEditorExpanded,
 }: EditorLayoutProps) {
@@ -134,12 +137,16 @@ export const EditorLayout = memo(function EditorLayout({
                       activeHighlightIndex={effectiveHighlight}
                       onHighlightExitComplete={onHighlightExitComplete}
                     />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-2.5 z-40 flex justify-center">
-                      <HighlightStepIndicator
-                        compact
-                        total={activeSlide?.highlights?.length ?? 0}
-                        current={effectiveHighlight}
-                      />
+                    {/* Clickable indicator: pointer-events-auto wrapper */}
+                    <div className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none">
+                      <div className="pointer-events-auto">
+                        <HighlightStepIndicator
+                          compact
+                          total={activeSlide?.highlights?.length ?? 0}
+                          current={effectiveHighlight}
+                          onSelect={(idx) => onSelectHighlight(idx)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -248,6 +255,3 @@ export const EditorLayout = memo(function EditorLayout({
     </>
   );
 });
-
-// We keep editorExpanded local state outside Zustand to avoid persisting it,
-// but the trigger lives in layout for simplicity. Parent controls it via props.

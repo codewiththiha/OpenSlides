@@ -127,6 +127,7 @@ export function Editor() {
     highlightIndex: activeHighlightIndex,
     goNext: goNextSlide,
     goPrev: goPrevSlide,
+    goToHighlight: goToHighlightSlide,
     handleExitComplete: handleHighlightExitComplete,
   } = useHighlightNav({
     slides,
@@ -138,10 +139,11 @@ export function Editor() {
   // -- Fullscreen present (extracted) --
   const { enterPresent, exitPresent } = usePresentFullscreen();
 
-  // -- Keyboard (3 deps only, reads rest via getState) --
+  // -- Keyboard (now 4 deps, still stable — number keys 1-9 jump to highlight) --
   useEditorKeyboard({
     goNext: goNextSlide,
     goPrev: goPrevSlide,
+    goToHighlight: goToHighlightSlide,
     exitPresent,
   });
 
@@ -259,6 +261,7 @@ export function Editor() {
           onHighlightExitComplete={handleHighlightExitComplete}
           goNext={goNextSlide}
           goPrev={goPrevSlide}
+          goToHighlight={goToHighlightSlide}
           exitPresent={exitPresent}
         />
       )}
@@ -280,6 +283,7 @@ export function Editor() {
           activeHighlightIndex={activeHighlightIndex}
           previewHighlightIndex={previewHighlightIndex}
           onHighlightExitComplete={handleHighlightExitComplete}
+          onSelectHighlight={goToHighlightSlide}
           editorExpanded={editorExpanded}
           onToggleEditorExpanded={setEditorExpanded}
         />

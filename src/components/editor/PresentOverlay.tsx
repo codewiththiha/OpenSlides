@@ -1,6 +1,7 @@
 /**
  * PresentOverlay — fullscreen presentation stage.
  * Isolated from Editor god component. Only selects autoplay slice + props.
+ * Enhancement: HighlightStepIndicator now clickable to jump to steps.
  */
 import { memo } from "react";
 import { Pause, Play } from "lucide-react";
@@ -16,6 +17,7 @@ interface PresentOverlayProps {
   onHighlightExitComplete: () => void;
   goNext: () => boolean;
   goPrev: () => boolean;
+  goToHighlight: (index: number) => boolean;
   exitPresent: () => void;
 }
 
@@ -26,6 +28,7 @@ export const PresentOverlay = memo(function PresentOverlay({
   onHighlightExitComplete,
   goNext,
   goPrev,
+  goToHighlight,
   exitPresent,
 }: PresentOverlayProps) {
   const { isAutoPlaying, toggleAutoPlaying, setIsAutoPlaying } =
@@ -85,11 +88,18 @@ export const PresentOverlay = memo(function PresentOverlay({
             activeHighlightIndex={activeHighlightIndex}
             onHighlightExitComplete={onHighlightExitComplete}
           />
-          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-40 flex justify-center">
-            <HighlightStepIndicator
-              total={activeSlide?.highlights?.length ?? 0}
-              current={activeHighlightIndex}
-            />
+          {/* Clickable indicator — pointer-events-auto now */}
+          <div className="absolute inset-x-0 bottom-4 z-40 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+              <HighlightStepIndicator
+                total={activeSlide?.highlights?.length ?? 0}
+                current={activeHighlightIndex}
+                onSelect={(idx) => {
+                  setIsAutoPlaying(false);
+                  goToHighlight(idx);
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>

@@ -209,11 +209,42 @@ export function useHighlightNav({
     finishPending();
   }, [finishPending]);
 
+  /**
+   * Jump directly to a specific highlight step (-1 = clean slide).
+   * Cancels any pending slide advance and fail-safe timer.
+   * Used by clickable dots and number keys 1-9.
+   */
+  const goToHighlight = useCallback(
+    (target: number): boolean => {
+      if (pendingRef.current) {
+        window.clearTimeout(failSafeRef.current);
+        pendingRef.current = null;
+        setIsAdvancing(false);
+      }
+      const list = slidesRef.current;
+      const i = indexRef.current;
+      const slide = list[i];
+      if (!slide) return false;
+      const total = slide.highlights?.length ?? 0;
+      if (total === 0) {
+        setIdx(-1);
+        return false;
+      }
+      let clamped = target;
+      if (clamped < -1) clamped = -1;
+      if (clamped >= total) clamped = total - 1;
+      setIdx(clamped);
+      return true;
+    },
+    [setIdx],
+  );
+
   return {
     highlightIndex,
     isAdvancing,
     goNext,
     goPrev,
+    goToHighlight,
     handleExitComplete,
   };
 }

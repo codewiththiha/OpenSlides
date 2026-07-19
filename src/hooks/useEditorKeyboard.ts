@@ -10,6 +10,8 @@
  * (not via closure deps). Only `goNext`, `goPrev`, `exitPresent` are deps —
  * all three are stable (useHighlightNav uses refs, exitPresent is memoized).
  * The listener is registered once.
+ *
+ * Enhancement: number keys 1-9 jump directly to highlight steps via goToHighlight.
  */
 import { useCallback, useEffect } from "react";
 import { useUiStore } from "@/store/useUiStore";
@@ -18,12 +20,14 @@ import { isModKey, isTypingTarget } from "@/lib/keyboard";
 interface UseEditorKeyboardArgs {
   goNext: () => boolean;
   goPrev: () => boolean;
+  goToHighlight: (index: number) => boolean;
   exitPresent: () => void | Promise<void>;
 }
 
 export function useEditorKeyboard({
   goNext,
   goPrev,
+  goToHighlight,
   exitPresent,
 }: UseEditorKeyboardArgs) {
   const handleKeyDown = useCallback(
@@ -41,6 +45,31 @@ export function useEditorKeyboard({
         setIsAutoPlaying,
         toggleAutoPlaying,
       } = useUiStore.getState();
+
+      // Number keys 1-9 → jump to highlight step (both present and normal/zen)
+      // 0 → clean slide (-1)
+      if (
+        !isModKey(e) &&
+        !e.altKey &&
+        !isTypingTarget(e.target) &&
+        !isCommandOpen &&
+        !isShortcutsOpen &&
+        !isSettingsOpen
+      ) {
+        if (e.key >= "1" && e.key <= "9") {
+          const idx = parseInt(e.key, 10) - 1;
+          e.preventDefault();
+          setIsAutoPlaying(false);
+          goToHighlight(idx);
+          return;
+        }
+        if (e.key === "0") {
+          e.preventDefault();
+          setIsAutoPlaying(false);
+          goToHighlight(-1);
+          return;
+        }
+      }
 
       // Present mode: arrows / space / esc / p
       if (isPresenting) {
@@ -110,7 +139,7 @@ export function useEditorKeyboard({
         else goPrev();
       }
     },
-    [goNext, goPrev, exitPresent]
+    [goNext, goPrev, goToHighlight, exitPresent],
   );
 
   useEffect(() => {
