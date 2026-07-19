@@ -52,7 +52,7 @@ export function HighlightSettingsPanel({
   onPreview,
   onMove,
 }: HighlightSettingsPanelProps) {
-  const { data: snippets } = useHighlightSnippets(code, highlights);
+  const snippets = useHighlightSnippets(code, highlights);
   const previewHighlights = useUiStore((s) => s.previewHighlights);
   const setPreviewHighlightSetting = useUiStore((s) => s.setPreviewHighlightSetting);
 

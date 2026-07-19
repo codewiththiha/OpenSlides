@@ -289,13 +289,3 @@ export function sliceSnippets(
 export function plainTokenLines(code: string): HighlightTokenLine[] {
   return code.split("\n").map((l) => [{ content: l }]);
 }
-
-/**
- * Token lines for Merustmar — Rust IPC + Shiki worker handle 99.9% cases.
- * Previously used frozen JS fallback with complex HTML regex parser (merustmarHtmlToTokens),
- * now removed as dead weight. Falls back to plain tokens (monochrome) — exact content,
- * colored via worker when available.
- */
-export function merustmarFallbackTokens(code: string, _isDark?: boolean): HighlightTokenLine[] {
-  return plainTokenLines(code);
-}

@@ -10,7 +10,6 @@ import type { Highlighter } from "shiki";
 import { getHighlighter } from "@/lib/shiki-instance";
 import { api } from "@/lib/tauri-api";
 import {
-  merustmarFallbackTokens,
   plainTokenLines,
   renderTokenLines,
   type HighlightTokenLine,
@@ -79,7 +78,7 @@ export function SlidePreview({
     lines: HighlightTokenLine[];
   } | null>(() =>
     needsMerustmar
-      ? { code, dark: isDarkBg, lines: merustmarFallbackTokens(code, isDarkBg) }
+      ? { code, dark: isDarkBg, lines: plainTokenLines(code) }
       : null,
   );
   const mmReqRef = useRef(0);
@@ -98,7 +97,7 @@ export function SlidePreview({
         if ((err as DOMException)?.name === "AbortError") return;
         if (controller.signal.aborted) return;
         if (mmReqRef.current === req) {
-          setMmTokens({ code, dark, lines: merustmarFallbackTokens(code, dark) });
+          setMmTokens({ code, dark, lines: plainTokenLines(code) });
         }
       });
     return () => {
