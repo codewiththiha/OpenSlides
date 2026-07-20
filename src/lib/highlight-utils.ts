@@ -7,7 +7,7 @@
  * - LRU for char width (32 entries)
  */
 
-import type { Highlight } from "@/types";
+import { HIGHLIGHT_DEFAULTS, type Highlight } from "@/types";
 import type { HighlightPlan, HighlightPlanLine } from "@/lib/highlight-tokens";
 
 export interface HighlightLineRect {
@@ -43,12 +43,7 @@ export function createDefaultHighlight(
     startChar,
     endLine,
     endChar,
-    dimAmount: 75,
-    sizeUpEnabled: true,
-    sizeUpAmount: 125,
-    useCustomTransition: false,
-    dimTransition: 500,
-    sizeUpTransition: 600,
+    ...HIGHLIGHT_DEFAULTS,
   };
 }
 
