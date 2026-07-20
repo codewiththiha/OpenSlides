@@ -4,6 +4,7 @@ import { api, type SlideSettingsPatch } from "../../lib/tauri-api";
 import { enqueueCodeSave } from "../../lib/code-save";
 import { useUiStore } from "../../store/useUiStore";
 import { getLocalCodeAtom } from "../../store/localCodeAtoms";
+import { showUndoToast } from "../../lib/settings-undo";
 import type { Project, Slide } from "../../types";
 import { projectKeys } from "./keys";
 
@@ -51,17 +52,31 @@ export function useUpdateSlideCode() {
   });
 }
 
+function describeSlideChange(payload: SlideSettingsPatch, before: Slide): string | null {
+  if (payload.name !== undefined && payload.name !== (before.name ?? "")) return `Renamed to "${payload.name}"`;
+  if (payload.duration !== undefined && payload.duration !== before.duration) return `Duration ${(before.duration / 1000).toFixed(1)}s → ${(payload.duration / 1000).toFixed(1)}s`;
+  if (payload.transitionDuration !== undefined && payload.transitionDuration !== before.transitionDuration) return `Transition ${before.transitionDuration}ms → ${payload.transitionDuration}ms`;
+  if (payload.stagger !== undefined && payload.stagger !== before.stagger) return `Stagger ${before.stagger} → ${payload.stagger}`;
+  if (payload.highlights !== undefined) {
+    const beforeCount = before.highlights?.length ?? 0;
+    const afterCount = payload.highlights.length;
+    if (afterCount > beforeCount) return "Highlight added";
+    if (afterCount < beforeCount) return "Highlight removed";
+    return "Highlight steps updated";
+  }
+  return null;
+}
+
 export function useUpdateSlideSettings(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      slideId,
-      payload,
-    }: {
-      slideId: string;
-      payload: SlideSettingsPatch;
-    }) => api.updateSlideSettings(slideId, payload),
-    onSuccess: (slide: Slide) => {
+    mutationFn: ({ slideId, payload }: { slideId: string; payload: SlideSettingsPatch }) =>
+      api.updateSlideSettings(slideId, payload),
+    onMutate: ({ slideId }) => {
+      const project = qc.getQueryData<Project>(projectKeys.detail(projectId));
+      return { before: project?.slides.find((s) => s.id === slideId) };
+    },
+    onSuccess: (slide: Slide, { slideId, payload }, context) => {
       qc.setQueryData<Project>(projectKeys.detail(projectId), (old) => {
         if (!old) return old;
         return {
@@ -71,9 +86,41 @@ export function useUpdateSlideSettings(projectId: string) {
           ),
         };
       });
+
+      const before = context?.before;
+      if (!before) return;
+      const label = describeSlideChange(payload, before);
+      if (!label) return;
+      const revert: SlideSettingsPatch = {};
+      if ("duration" in payload) revert.duration = before.duration;
+      if ("transitionDuration" in payload) revert.transitionDuration = before.transitionDuration;
+      if ("stagger" in payload) revert.stagger = before.stagger;
+      if ("name" in payload) revert.name = before.name ?? "";
+      if ("highlights" in payload) revert.highlights = before.highlights ?? [];
+
+      showUndoToast(
+        `undo-slide-${slideId}-${Object.keys(payload).sort().join("+")}`,
+        label,
+        () => {
+          void api.updateSlideSettings(slideId, revert)
+            .then((updated) => {
+              qc.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
+                old
+                  ? {
+                      ...old,
+                      slides: old.slides.map((s) =>
+                        s.id === updated.id ? mergeSlidePreservingEditorCode(s, updated) : s,
+                      ),
+                    }
+                  : old,
+              );
+              notify.success("Reverted");
+            })
+            .catch((err: Error) => notify.error(`Revert failed: ${err.message}`));
+        },
+      );
     },
-    onError: (err: Error) =>
-      notify.error(`Slide settings failed: ${err.message}`),
+    onError: (err: Error) => notify.error(`Slide settings failed: ${err.message}`),
   });
 }
 

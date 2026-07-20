@@ -6,6 +6,8 @@ import {
 import { notify } from "../../lib/toast";
 import { api, isCancelledError, type SettingsPatch } from "../../lib/tauri-api";
 import { projectKeys } from "./keys";
+import { showUndoToast } from "../../lib/settings-undo";
+import type { ProjectSettings } from "../../types";
 
 export function useProjects() {
   return useQuery({
@@ -77,17 +79,54 @@ export function useRenameProject() {
   });
 }
 
+function describeProjectChange(patch: SettingsPatch, before: ProjectSettings): string | null {
+  if (patch.fontSize !== undefined && patch.fontSize !== before.fontSize) return `Preview font ${before.fontSize}px → ${patch.fontSize}px`;
+  if (patch.lineHeight !== undefined && patch.lineHeight !== before.lineHeight) return `Line height ${before.lineHeight.toFixed(2)} → ${patch.lineHeight.toFixed(2)}`;
+  if (patch.editorFontSize !== undefined && patch.editorFontSize !== before.editorFontSize) return `Editor font ${before.editorFontSize}px → ${patch.editorFontSize}px`;
+  if (patch.globalTransitionDuration !== undefined && patch.globalTransitionDuration !== before.globalTransitionDuration) return `Global transition ${before.globalTransitionDuration}ms → ${patch.globalTransitionDuration}ms`;
+  if (patch.globalStagger !== undefined && patch.globalStagger !== before.globalStagger) return `Global stagger ${before.globalStagger} → ${patch.globalStagger}`;
+  if (patch.codeAlign !== undefined && patch.codeAlign !== before.codeAlign) return `Code layout → ${patch.codeAlign}`;
+  if (patch.showLineNumbers !== undefined && patch.showLineNumbers !== before.showLineNumbers) return patch.showLineNumbers ? "Preview line numbers on" : "Preview line numbers off";
+  if (patch.language !== undefined && patch.language !== before.language) return `Language → ${patch.language}`;
+  if (patch.useGlobalTransition !== undefined && patch.useGlobalTransition !== before.useGlobalTransition) return patch.useGlobalTransition ? "Global transition enabled" : "Global transition disabled";
+  if (patch.useGlobalStagger !== undefined && patch.useGlobalStagger !== before.useGlobalStagger) return patch.useGlobalStagger ? "Global stagger enabled" : "Global stagger disabled";
+  return null;
+}
+
 export function useUpdateSettings(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (settings: SettingsPatch) =>
-      api.updateProjectSettings(projectId, settings),
-    onSuccess: (project) => {
+    mutationFn: (settings: SettingsPatch) => api.updateProjectSettings(projectId, settings),
+    onMutate: () => {
+      const project = qc.getQueryData<import("../../types").Project>(projectKeys.detail(projectId));
+      return { before: project?.settings };
+    },
+    onSuccess: (project, patch, context) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
       qc.invalidateQueries({ queryKey: projectKeys.all });
+      const before = context?.before;
+      if (!before) return;
+      const label = describeProjectChange(patch, before);
+      if (!label) return;
+      const revert: SettingsPatch = {};
+      for (const key of Object.keys(patch) as (keyof SettingsPatch)[]) {
+        (revert as Record<string, unknown>)[key] = before[key];
+      }
+      showUndoToast(
+        `undo-project-${projectId}-${Object.keys(patch).sort().join("+")}`,
+        label,
+        () => {
+          void api.updateProjectSettings(projectId, revert)
+            .then((updated) => {
+              qc.setQueryData(projectKeys.detail(projectId), updated);
+              qc.invalidateQueries({ queryKey: projectKeys.all });
+              notify.success("Reverted");
+            })
+            .catch((err: Error) => notify.error(`Revert failed: ${err.message}`));
+        },
+      );
     },
-    onError: (err: Error) =>
-      notify.error(`Settings save failed: ${err.message}`),
+    onError: (err: Error) => notify.error(`Settings save failed: ${err.message}`),
   });
 }
 
