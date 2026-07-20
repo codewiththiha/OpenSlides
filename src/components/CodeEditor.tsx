@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 import { useDebouncedCallback } from "use-debounce";
 import {
-  LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
   resolveProjectLanguage,
+  fallbackForeground,
   type Project,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
@@ -139,7 +139,7 @@ export function CodeEditor({
   const projectSettingsMutation = useUpdateSettings(project.id);
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
-  const isDarkBg = !LIGHT_THEMES.has(theme);
+
   const rawEditorFontSize = project.settings.editorFontSize || 14;
   const editorFontSize = previewProject.editorFontSize ?? rawEditorFontSize;
   const lineHeight = 1.55;
@@ -315,7 +315,7 @@ export function CodeEditor({
 
   const gutterWidth = Math.max(2, String(lineCount).length) * 0.65 + 1.25;
 
-  const defaultFg = isDarkBg ? "#abb2bf" : "#383a42";
+  const defaultFg = fallbackForeground(theme);
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-card">
