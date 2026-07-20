@@ -124,6 +124,16 @@ export interface ProjectSettings {
   codeAlign: CodeAlign;
 }
 
+/** Single source of truth for highlight defaults; mirrors Rust serde defaults. */
+export const HIGHLIGHT_DEFAULTS = {
+  dimAmount: 75,
+  sizeUpEnabled: true,
+  sizeUpAmount: 125,
+  useCustomTransition: false,
+  dimTransition: 500,
+  sizeUpTransition: 600,
+} as const;
+
 export interface Project {
   id: string;
   name: string;
