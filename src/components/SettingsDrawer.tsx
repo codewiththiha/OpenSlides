@@ -14,6 +14,7 @@ import { THEME_OPTIONS, type Project } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
+import { showUndoToast } from "@/lib/settings-undo";
 
 interface SettingsDrawerProps {
   project: Project;
@@ -169,7 +170,15 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               </div>
               <Switch
                 checked={editorShowLineNumbers}
-                onCheckedChange={setEditorShowLineNumbers}
+                onCheckedChange={(next) => {
+                  const before = editorShowLineNumbers;
+                  setEditorShowLineNumbers(next);
+                  showUndoToast(
+                    "undo-editor-showLineNumbers",
+                    next ? "Editor line numbers on" : "Editor line numbers off",
+                    () => setEditorShowLineNumbers(before),
+                  );
+                }}
               />
             </div>
 
