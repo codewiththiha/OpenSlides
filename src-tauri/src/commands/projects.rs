@@ -1,7 +1,10 @@
 //! Project-level Tauri commands.
 
-use crate::commands::helpers::{fetch_project, load_settings, now_ms, DEFAULT_CODE};
+use crate::commands::helpers::{
+    fetch_project, invalidate_project_thumbnails, load_settings, now_ms, DEFAULT_CODE,
+};
 use crate::db::DbPool;
+use crate::error::{CommandError, CommandResult};
 use crate::models::{
     merge_settings, settings_to_json, Project, ProjectSettings, ProjectSummary,
 };
@@ -11,7 +14,7 @@ use tauri::State;
 use uuid::Uuid;
 
 #[tauri::command]
-pub async fn get_projects(pool: State<'_, DbPool>) -> Result<Vec<ProjectSummary>, String> {
+pub async fn get_projects(pool: State<'_, DbPool>) -> CommandResult<Vec<ProjectSummary>> {
     let rows = sqlx::query(
         r#"
         SELECT p.id, p.name, p.theme, p.created_at, p.updated_at,
@@ -46,12 +49,14 @@ pub async fn get_projects(pool: State<'_, DbPool>) -> Result<Vec<ProjectSummary>
 }
 
 #[tauri::command]
-pub async fn get_project(pool: State<'_, DbPool>, project_id: String) -> Result<Project, String> {
-    fetch_project(pool.inner(), &project_id).await
+pub async fn get_project(pool: State<'_, DbPool>, project_id: String) -> CommandResult<Project> {
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
-pub async fn create_project(pool: State<'_, DbPool>, name: String) -> Result<Project, String> {
+pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandResult<Project> {
     let project_id = Uuid::new_v4().to_string();
     let slide_id = Uuid::new_v4().to_string();
     let ts = now_ms();
@@ -89,8 +94,8 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> Result<Pro
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
-        VALUES (?, ?, 0, ?, 'typescript', 750, 5, 3000, 'Slide 1')
+          (id, project_id, order_index, code, transition_duration, stagger, duration, name)
+        VALUES (?, ?, 0, ?, 750, 5, 3000, 'Slide 1')
         "#,
     )
     .bind(&slide_id)
@@ -104,14 +109,16 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> Result<Pro
         .await
         .map_err(|e| format!("TX commit failed: {e}"))?;
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
 pub async fn duplicate_project(
     pool: State<'_, DbPool>,
     project_id: String,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     let mut tx = pool
         .inner()
         .begin()
@@ -125,14 +132,14 @@ pub async fn duplicate_project(
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| format!("Failed to fetch project: {e}"))?
-    .ok_or_else(|| format!("Project not found: {project_id}"))?;
+    .ok_or_else(|| CommandError::NotFound(format!("Project not found: {project_id}")))?;
 
     let name: String = project.get("name");
     let theme: String = project.get("theme");
     let settings_raw: String = project.get("settings");
     let mut settings = crate::models::parse_settings(&settings_raw);
     let slides = sqlx::query(
-        "SELECT id, order_index, code, language, transition_duration, stagger, duration, name, highlights, thumbnail_html FROM slides WHERE project_id = ? ORDER BY order_index",
+        "SELECT id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html FROM slides WHERE project_id = ? ORDER BY order_index",
     )
     .bind(&project_id)
     .fetch_all(&mut *tx)
@@ -165,12 +172,11 @@ pub async fn duplicate_project(
 
     for row in slides {
         let old_id: String = row.get("id");
-        sqlx::query("INSERT INTO slides (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights, thumbnail_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO slides (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(id_map.get(&old_id).unwrap())
             .bind(&new_project_id)
             .bind(row.get::<i64, _>("order_index"))
             .bind(row.get::<String, _>("code"))
-            .bind(row.get::<String, _>("language"))
             .bind(row.get::<i64, _>("transition_duration"))
             .bind(row.get::<i64, _>("stagger"))
             .bind(row.get::<i64, _>("duration"))
@@ -185,7 +191,9 @@ pub async fn duplicate_project(
     tx.commit()
         .await
         .map_err(|e| format!("TX commit failed: {e}"))?;
-    fetch_project(pool.inner(), &new_project_id).await
+    fetch_project(pool.inner(), &new_project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
@@ -193,7 +201,7 @@ pub async fn rename_project(
     pool: State<'_, DbPool>,
     project_id: String,
     name: String,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     let project_name = if name.trim().is_empty() {
         "Untitled Deck".to_string()
     } else {
@@ -208,11 +216,13 @@ pub async fn rename_project(
         .await
         .map_err(|e| format!("Failed to rename project: {e}"))?;
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
-pub async fn delete_project(pool: State<'_, DbPool>, project_id: String) -> Result<(), String> {
+pub async fn delete_project(pool: State<'_, DbPool>, project_id: String) -> CommandResult<()> {
     let result = sqlx::query("DELETE FROM projects WHERE id = ?")
         .bind(&project_id)
         .execute(pool.inner())
@@ -220,7 +230,7 @@ pub async fn delete_project(pool: State<'_, DbPool>, project_id: String) -> Resu
         .map_err(|e| format!("Failed to delete project: {e}"))?;
 
     if result.rows_affected() == 0 {
-        return Err(format!("Project not found: {project_id}"));
+        return Err(CommandError::NotFound(format!("Project not found: {project_id}")));
     }
     Ok(())
 }
@@ -230,7 +240,7 @@ pub async fn update_project_settings(
     pool: State<'_, DbPool>,
     project_id: String,
     settings: JsonValue,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     let existing = load_settings(pool.inner(), &project_id).await?;
     let merged = merge_settings(&existing, &settings)?;
 
@@ -245,17 +255,15 @@ pub async fn update_project_settings(
         .await
         .map_err(|e| format!("Failed to update settings: {e}"))?;
 
-    // Keep slides.language column in sync for legacy/export convenience — only if changed
+    // Thumbnails encode language-specific highlighting — invalidate on change.
+    // (The slides.language mirror is gone; settings are the source of truth.)
     if merged.language != existing.language {
-        sqlx::query("UPDATE slides SET language = ?, thumbnail_html = '' WHERE project_id = ?")
-            .bind(&merged.language)
-            .bind(&project_id)
-            .execute(pool.inner())
-            .await
-            .map_err(|e| format!("Failed to sync language: {e}"))?;
+        invalidate_project_thumbnails(pool.inner(), &project_id).await?;
     }
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
@@ -263,7 +271,7 @@ pub async fn update_project_theme(
     pool: State<'_, DbPool>,
     project_id: String,
     theme: String,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     sqlx::query("UPDATE projects SET theme = ?, updated_at = ? WHERE id = ?")
         .bind(&theme)
         .bind(now_ms())
@@ -272,12 +280,9 @@ pub async fn update_project_theme(
         .await
         .map_err(|e| format!("Failed to update theme: {e}"))?;
 
-    sqlx::query("UPDATE slides SET thumbnail_html = '' WHERE project_id = ?")
-        .bind(&project_id)
-        .execute(pool.inner())
+    invalidate_project_thumbnails(pool.inner(), &project_id).await?;
+
+    fetch_project(pool.inner(), &project_id)
         .await
-        .map_err(|e| format!("Failed to invalidate thumbnails: {e}"))?;
-
-    fetch_project(pool.inner(), &project_id).await
+        .map_err(CommandError::Failed)
 }
-

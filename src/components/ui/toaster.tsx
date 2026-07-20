@@ -16,8 +16,6 @@ export function AppToaster() {
       toastOptions={{
         unstyled: true,
         classNames: {
-          toast:
-            "group toast-openslides toast-fixed relative flex items-center gap-3 rounded-xl border bg-card text-card-foreground",
           title: "text-[13px] font-medium leading-snug text-foreground",
           description:
             "text-xs leading-snug text-muted-foreground toast-desc-slot",
@@ -29,10 +27,6 @@ export function AppToaster() {
             "toast-cancel ml-2 shrink-0 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground",
           closeButton:
             "toast-close absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-          success: "toast-tone-success toast-glow",
-          error: "toast-tone-error toast-glow",
-          warning: "toast-tone-warning toast-glow",
-          info: "toast-tone-info toast-glow",
         },
       }}
     />

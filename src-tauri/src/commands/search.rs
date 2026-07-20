@@ -1,6 +1,7 @@
 //! Full-text search commands for the slide strip.
 
 use crate::db::DbPool;
+use crate::error::CommandResult;
 use sqlx::Row;
 use tauri::State;
 
@@ -10,7 +11,7 @@ pub async fn search_slides(
     pool: State<'_, DbPool>,
     project_id: String,
     query: String,
-) -> Result<Vec<String>, String> {
+) -> CommandResult<Vec<String>> {
     let query = query.trim();
     if query.is_empty() {
         return Ok(Vec::new());

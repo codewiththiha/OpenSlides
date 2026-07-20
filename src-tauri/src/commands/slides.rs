@@ -1,10 +1,11 @@
 //! Slide-level Tauri commands.
 
 use crate::commands::helpers::{
-    batch_reindex, fetch_project, insert_slide_row, load_settings, now_ms, save_settings,
-    touch_project, NewSlide,
+    batch_reindex, default_slide_name, fetch_project, insert_slide_row, load_settings,
+    parse_highlights, save_settings, serialize_highlights, touch_project, NewSlide,
 };
 use crate::db::DbPool;
+use crate::error::{CommandError, CommandResult};
 use crate::models::{
     CreateSlidePayload, Project, Slide, UpdateSlideSettingsPayload,
     DEFAULT_SLIDE_DURATION_MS, DEFAULT_SLIDE_STAGGER, DEFAULT_SLIDE_TRANSITION_MS,
@@ -17,20 +18,25 @@ use uuid::Uuid;
 pub async fn create_slide(
     pool: State<'_, DbPool>,
     payload: CreateSlidePayload,
-) -> Result<Slide, String> {
+) -> CommandResult<Slide> {
     let slide_id = Uuid::new_v4().to_string();
     let code = payload
         .code
         .unwrap_or_else(|| "// New Slide\n// Edit me!".to_string());
 
-    // Language comes from project settings
-    let mut settings = load_settings(pool.inner(), &payload.project_id).await?;
+    let mut tx = pool
+        .inner()
+        .begin()
+        .await
+        .map_err(|e| format!("TX begin failed: {e}"))?;
+
+    let mut settings = load_settings(&mut *tx, &payload.project_id).await?;
     let language = settings.language.clone();
 
     let max_order: (Option<i64>,) =
         sqlx::query_as("SELECT MAX(order_index) FROM slides WHERE project_id = ?")
             .bind(&payload.project_id)
-            .fetch_one(pool.inner())
+            .fetch_one(&mut *tx)
             .await
             .map_err(|e| format!("Failed to get max order: {e}"))?;
 
@@ -38,16 +44,15 @@ pub async fn create_slide(
     let slide_name = payload
         .name
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| format!("Slide {}", order_index + 1));
+        .unwrap_or_else(|| default_slide_name(order_index));
 
     insert_slide_row(
-        pool.inner(),
+        &mut *tx,
         &NewSlide {
             id: &slide_id,
             project_id: &payload.project_id,
             order_index,
             code: &code,
-            language: &language,
             transition_duration: DEFAULT_SLIDE_TRANSITION_MS,
             stagger: DEFAULT_SLIDE_STAGGER,
             duration: DEFAULT_SLIDE_DURATION_MS,
@@ -59,7 +64,11 @@ pub async fn create_slide(
     .await?;
 
     settings.current_slide_id = Some(slide_id.clone());
-    save_settings(pool.inner(), &payload.project_id, &settings, true).await?;
+    save_settings(&mut *tx, &payload.project_id, &settings, true).await?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("TX commit failed: {e}"))?;
 
     Ok(Slide {
         id: slide_id,
@@ -80,7 +89,7 @@ pub async fn duplicate_slide(
     pool: State<'_, DbPool>,
     project_id: String,
     slide_id: String,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     // Atomic duplicate: copy slide at original.order+1, shift others, set current to new
     // Rust side for atomicity and single round-trip DB, not frontend copy-paste
     let mut tx = pool
@@ -91,7 +100,7 @@ pub async fn duplicate_slide(
 
     let orig = sqlx::query(
         r#"
-        SELECT id, code, language, transition_duration, stagger, duration, order_index, name, highlights, thumbnail_html
+        SELECT id, code, transition_duration, stagger, duration, order_index, name, highlights, thumbnail_html
         FROM slides WHERE id = ? AND project_id = ?
         "#,
     )
@@ -100,10 +109,9 @@ pub async fn duplicate_slide(
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| format!("Failed to fetch original slide: {e}"))?
-    .ok_or_else(|| format!("Slide not found: {slide_id}"))?;
+    .ok_or_else(|| CommandError::NotFound(format!("Slide not found: {slide_id}")))?;
 
     let orig_code: String = orig.get("code");
-    let orig_lang: String = orig.get("language");
     let orig_trans: i64 = orig.get("transition_duration");
     let orig_stagger: i64 = orig.get("stagger");
     let orig_duration: i64 = orig.get("duration");
@@ -139,7 +147,6 @@ pub async fn duplicate_slide(
             project_id: &project_id,
             order_index: new_order,
             code: &orig_code,
-            language: &orig_lang,
             transition_duration: orig_trans,
             stagger: orig_stagger,
             duration: orig_duration,
@@ -150,31 +157,17 @@ pub async fn duplicate_slide(
     )
     .await?;
 
-    // Update project current_slide_id to new duplicated slide and touch updated_at
-    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to load settings: {e}"))?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
-    let settings_raw: String = settings_row.get("settings");
-    let mut settings = crate::models::parse_settings(&settings_raw);
+    let mut settings = load_settings(&mut *tx, &project_id).await?;
     settings.current_slide_id = Some(new_id.clone());
-    let settings_json = crate::models::settings_to_json(&settings).map_err(|e| e.to_string())?;
-
-    sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
-        .bind(settings_json)
-        .bind(now_ms())
-        .bind(&project_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+    save_settings(&mut *tx, &project_id, &settings, true).await?;
 
     tx.commit()
         .await
         .map_err(|e| format!("TX commit failed: {e}"))?;
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
@@ -182,7 +175,7 @@ pub async fn delete_slide(
     pool: State<'_, DbPool>,
     project_id: String,
     slide_id: String,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     // Atomic transaction: COUNT → DELETE → re-index → settings update → commit
     // Previously 6-8 round trips without atomicity, now single transaction + final fetch
     let mut tx = pool
@@ -198,7 +191,7 @@ pub async fn delete_slide(
         .map_err(|e| format!("Failed to count slides: {e}"))?;
 
     if count.0 <= 1 {
-        return Err("Cannot delete the last slide".into());
+        return Err(CommandError::Validation("Cannot delete the last slide".into()));
     }
 
     sqlx::query("DELETE FROM slides WHERE id = ? AND project_id = ?")
@@ -217,42 +210,21 @@ pub async fn delete_slide(
     let remaining_ids: Vec<String> = remaining_rows.iter().map(|row| row.get("id")).collect();
     batch_reindex(&mut *tx, &project_id, &remaining_ids).await?;
 
-    // Load settings (inside tx)
-    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to load project settings: {e}"))?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
-    let settings_raw: String = settings_row.get("settings");
-    let mut settings = crate::models::parse_settings(&settings_raw);
-
+    let mut settings = load_settings(&mut *tx, &project_id).await?;
     if settings.current_slide_id.as_deref() == Some(slide_id.as_str()) {
-        // Fallback to first remaining slide
-        let fallback = remaining_ids.first().cloned();
-        settings.current_slide_id = fallback;
-        let json = crate::models::settings_to_json(&settings).map_err(|e| e.to_string())?;
-        sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
-            .bind(json)
-            .bind(now_ms())
-            .bind(&project_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        settings.current_slide_id = remaining_ids.first().cloned();
+        save_settings(&mut *tx, &project_id, &settings, true).await?;
     } else {
-        sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
-            .bind(now_ms())
-            .bind(&project_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| format!("Failed to update project timestamp: {e}"))?;
+        touch_project(&mut *tx, &project_id).await?;
     }
 
     tx.commit()
         .await
         .map_err(|e| format!("TX commit failed: {e}"))?;
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 /// Soft-delete alternative: restore a previously deleted slide snapshot.
@@ -262,55 +234,58 @@ pub async fn restore_slide(
     project_id: String,
     slide: Slide,
     insert_at: Option<i64>,
-) -> Result<Project, String> {
-    let order_index = insert_at.unwrap_or_else(|| {
-        // append if not specified — caller should pass the original index
-        0
-    });
+) -> CommandResult<Project> {
+    let order_index = insert_at.unwrap_or(0);
 
-    // Shift existing slides at/after insert point
+    let mut tx = pool
+        .inner()
+        .begin()
+        .await
+        .map_err(|e| format!("TX begin failed: {e}"))?;
+
     sqlx::query(
         "UPDATE slides SET order_index = order_index + 1 WHERE project_id = ? AND order_index >= ?",
     )
     .bind(&project_id)
     .bind(order_index)
-    .execute(pool.inner())
+    .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?;
 
-    let settings = load_settings(pool.inner(), &project_id).await?;
-
     let restore_name = if slide.name.trim().is_empty() {
-        format!("Slide {}", order_index + 1)
+        default_slide_name(order_index)
     } else {
         slide.name.clone()
     };
 
-    let highlights_json = serde_json::to_string(&slide.highlights).map_err(|e| e.to_string())?;
+    let highlights_json = serialize_highlights(&slide.highlights)?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
+    insert_slide_row(
+        &mut *tx,
+        &NewSlide {
+            id: &slide.id,
+            project_id: &project_id,
+            order_index,
+            code: &slide.code,
+            transition_duration: slide.transition_duration,
+            stagger: slide.stagger,
+            duration: slide.duration,
+            name: &restore_name,
+            highlights_json: &highlights_json,
+            thumbnail_html: "",
+        },
     )
-    .bind(&slide.id)
-    .bind(&project_id)
-    .bind(order_index)
-    .bind(&slide.code)
-    .bind(&settings.language)
-    .bind(slide.transition_duration)
-    .bind(slide.stagger)
-    .bind(slide.duration)
-    .bind(&restore_name)
-    .bind(&highlights_json)
-    .execute(pool.inner())
-    .await
-    .map_err(|e| format!("Failed to restore slide: {e}"))?;
+    .await?;
 
-    touch_project(pool.inner(), &project_id).await?;
-    fetch_project(pool.inner(), &project_id).await
+    touch_project(&mut *tx, &project_id).await?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("TX commit failed: {e}"))?;
+
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
@@ -318,7 +293,7 @@ pub async fn update_slide_code(
     pool: State<'_, DbPool>,
     slide_id: String,
     code: String,
-) -> Result<(), String> {
+) -> CommandResult<()> {
     // Use RETURNING to get project_id in same round-trip — eliminates SELECT after UPDATE
     // Previously: UPDATE → SELECT project_id → UPDATE projects updated_at = 3 trips per keystroke
     // Now: UPDATE RETURNING project_id → UPDATE projects updated_at = 2 trips (33% fewer)
@@ -330,7 +305,7 @@ pub async fn update_slide_code(
         .map_err(|e| format!("Failed to update slide code: {e}"))?;
 
     let Some(row) = row else {
-        return Err(format!("Slide not found: {slide_id}"));
+        return Err(CommandError::NotFound(format!("Slide not found: {slide_id}")));
     };
 
     let pid: String = row.get("project_id");
@@ -339,25 +314,22 @@ pub async fn update_slide_code(
     Ok(())
 }
 
+/// Only write if the code still matches the rendered request — prevents a
+/// stale worker response from overwriting a newer thumbnail.
 #[tauri::command]
 pub async fn cache_thumbnail(
     pool: State<'_, DbPool>,
     slide_id: String,
     code: String,
     html: String,
-) -> Result<(), String> {
-    // Only write if the code still matches the rendered request. This prevents
-    // an older worker response from overwriting a newer thumbnail.
-    sqlx::query(
-        "UPDATE slides SET thumbnail_html = ? WHERE id = ? AND (code = ? OR substr(code, 1, 400) = ?)",
-    )
-    .bind(html)
-    .bind(slide_id)
-    .bind(&code)
-    .bind(&code)
-    .execute(pool.inner())
-    .await
-    .map_err(|e| format!("Failed to cache thumbnail: {e}"))?;
+) -> CommandResult<()> {
+    sqlx::query("UPDATE slides SET thumbnail_html = ? WHERE id = ? AND code = ?")
+        .bind(html)
+        .bind(slide_id)
+        .bind(&code)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| format!("Failed to cache thumbnail: {e}"))?;
     Ok(())
 }
 
@@ -366,10 +338,10 @@ pub async fn update_slide_settings(
     pool: State<'_, DbPool>,
     slide_id: String,
     payload: UpdateSlideSettingsPayload,
-) -> Result<Slide, String> {
+) -> CommandResult<Slide> {
     let row = sqlx::query(
         r#"
-        SELECT id, project_id, code, language, duration, transition_duration, stagger, order_index, name, highlights
+        SELECT id, project_id, code, duration, transition_duration, stagger, order_index, name, highlights
         FROM slides WHERE id = ?
         "#,
     )
@@ -377,7 +349,7 @@ pub async fn update_slide_settings(
     .fetch_optional(pool.inner())
     .await
     .map_err(|e| e.to_string())?
-    .ok_or_else(|| format!("Slide not found: {slide_id}"))?;
+    .ok_or_else(|| CommandError::NotFound(format!("Slide not found: {slide_id}")))?;
 
     let duration = payload.duration.unwrap_or_else(|| row.get("duration"));
     let transition_duration = payload
@@ -394,10 +366,9 @@ pub async fn update_slide_settings(
 
     // Parse existing highlights or use payload
     let highlights_raw: String = row.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
-    let existing_highlights: Vec<crate::models::Highlight> =
-        serde_json::from_str(&highlights_raw).unwrap_or_default();
+    let existing_highlights = parse_highlights(&highlights_raw);
     let highlights = payload.highlights.unwrap_or(existing_highlights);
-    let highlights_json = serde_json::to_string(&highlights).map_err(|e| e.to_string())?;
+    let highlights_json = serialize_highlights(&highlights)?;
 
     sqlx::query(
         r#"
@@ -440,9 +411,11 @@ pub async fn reorder_slides(
     pool: State<'_, DbPool>,
     project_id: String,
     slide_ids: Vec<String>,
-) -> Result<Project, String> {
+) -> CommandResult<Project> {
     if slide_ids.is_empty() {
-        return fetch_project(pool.inner(), &project_id).await;
+        return fetch_project(pool.inner(), &project_id)
+            .await
+            .map_err(CommandError::Failed);
     }
 
     let mut tx = pool
@@ -457,7 +430,9 @@ pub async fn reorder_slides(
         .await
         .map_err(|e| format!("TX commit failed: {e}"))?;
 
-    fetch_project(pool.inner(), &project_id).await
+    fetch_project(pool.inner(), &project_id)
+        .await
+        .map_err(CommandError::Failed)
 }
 
 #[tauri::command]
@@ -465,7 +440,7 @@ pub async fn set_current_slide(
     pool: State<'_, DbPool>,
     project_id: String,
     slide_id: String,
-) -> Result<(), String> {
+) -> CommandResult<()> {
     let mut settings = load_settings(pool.inner(), &project_id).await?;
     settings.current_slide_id = Some(slide_id);
     // No updated_at bump — purely a navigation record.

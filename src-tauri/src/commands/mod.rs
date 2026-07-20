@@ -3,7 +3,7 @@
 //! Split by domain for maintainability. Re-export every command so
 //! `lib.rs` can register a single flat handler list.
 
-mod helpers;
+pub mod helpers;
 mod io;
 mod projects;
 mod quit;

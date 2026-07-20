@@ -5,6 +5,7 @@
 import { useEffect, useRef } from "react";
 import { Highlighter as HighlightIcon, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Z_INDEX } from "./ui/overlay";
 
 interface HighlightContextMenuProps {
   /** Whether the menu is visible */
@@ -56,10 +57,11 @@ export function HighlightContextMenu({
       {visible && (
         <motion.div
           ref={menuRef}
-          className="fixed z-[100] min-w-[180px] rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
+          className="fixed min-w-[180px] rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
           style={{
             left: position.x,
             top: position.y,
+            zIndex: Z_INDEX.contextMenu,
           }}
           initial={{ opacity: 0, scale: 0.95, y: -4 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -8,13 +8,14 @@
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
-import { Switch } from "./ui/switch";
-import { DebouncedSlider } from "./ui/debounced-slider";
 import { THEME_OPTIONS, type Project, type ThemeName } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
 import { showUndoToast } from "@/lib/settings-undo";
+import { Z_INDEX } from "./ui/overlay";
+import { SliderField } from "./ui/slider-field";
+import { ToggleField } from "./ui/toggle-field";
 
 interface SettingsDrawerProps {
   project: Project;
@@ -76,16 +77,18 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/40 transition-opacity",
+          "fixed inset-0 bg-black/40 transition-opacity",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
+        style={{ zIndex: Z_INDEX.drawerBackdrop }}
         onClick={onClose}
       />
       <aside
         className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
+          "fixed right-0 top-0 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ zIndex: Z_INDEX.drawer }}
       >
         <div className="flex h-12 items-center justify-between border-b px-4">
           <h2 className="text-sm font-semibold">Project Settings</h2>
@@ -151,93 +154,66 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Line numbers
             </h3>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Slide preview</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Shown during preview / presentation
-                </p>
-              </div>
-              <Switch
-                checked={s.showLineNumbers}
-                onCheckedChange={(v) => patch({ showLineNumbers: v })}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Code editor</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Gutter in the editor only
-                </p>
-              </div>
-              <Switch
-                checked={editorShowLineNumbers}
-                onCheckedChange={(next) => {
-                  const before = editorShowLineNumbers;
-                  setEditorShowLineNumbers(next);
-                  showUndoToast(
-                    "undo-editor-showLineNumbers",
-                    next ? "Editor line numbers on" : "Editor line numbers off",
-                    () => setEditorShowLineNumbers(before),
-                  );
-                }}
+            <ToggleField
+              label="Slide preview"
+              description="Shown during preview / presentation"
+              checked={s.showLineNumbers}
+              onChange={(v) => patch({ showLineNumbers: v })}
+            />
+            <ToggleField
+              label="Code editor"
+              description="Gutter in the editor only"
+              checked={editorShowLineNumbers}
+              onChange={(next) => {
+                const before = editorShowLineNumbers;
+                setEditorShowLineNumbers(next);
+                showUndoToast(
+                  "undo-editor-showLineNumbers",
+                  next ? "Editor line numbers on" : "Editor line numbers off",
+                  () => setEditorShowLineNumbers(before),
+                );
+              }}
+            />
+            <ToggleField
+              label="Slide hover previews"
+              description="Show enlarged thumbnails when hovering slide cards"
+              checked={showSlideHoverPreview}
+              onChange={setShowSlideHoverPreview}
+            />
+
+            <div className="pt-2">
+              <SliderField
+                label="Preview font size"
+                labelClassName="text-xs text-muted-foreground"
+                value={effFontSize}
+                min={12} max={32} step={2}
+                format={(v) => `${v}px`}
+                onPreview={(v) => setPreviewProjectSetting("fontSize", v)}
+                onCommit={(v) => patch({ fontSize: v })}
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label>Slide hover previews</Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Show enlarged thumbnails when hovering slide cards
-                </p>
-              </div>
-              <Switch
-                checked={showSlideHoverPreview}
-                onCheckedChange={setShowSlideHoverPreview}
+            <div>
+              <SliderField
+                label="Line height"
+                labelClassName="text-xs text-muted-foreground"
+                value={effLineHeight}
+                min={1.1} max={2.2} step={0.05}
+                format={(v) => v.toFixed(2)}
+                onPreview={(v) => setPreviewProjectSetting("lineHeight", v)}
+                onCommit={(v) => patch({ lineHeight: v })}
               />
             </div>
 
-            <div className="space-y-1.5 pt-2">
-              <Label className="text-xs text-muted-foreground">
-                Preview font size ({effFontSize}px)
-              </Label>
-              <DebouncedSlider
-                min={12}
-                max={32}
-                step={2}
-                value={[effFontSize]}
-                onValueChange={([v]) => setPreviewProjectSetting("fontSize", v)}
-                onValueCommit={([v]) => patch({ fontSize: v })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">
-                Line height ({effLineHeight.toFixed(2)})
-              </Label>
-              <DebouncedSlider
-                min={1.1}
-                max={2.2}
-                step={0.05}
-                value={[effLineHeight]}
-                onValueChange={([v]) => setPreviewProjectSetting("lineHeight", v)}
-                onValueCommit={([v]) => patch({ lineHeight: v })}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">
-                Editor font size ({effEditorFontSize}px)
-              </Label>
-              <DebouncedSlider
-                min={11}
-                max={22}
-                step={1}
-                value={[effEditorFontSize]}
-                onValueChange={([v]) =>
-                  setPreviewProjectSetting("editorFontSize", v)
-                }
-                onValueCommit={([v]) => patch({ editorFontSize: v })}
+            <div>
+              <SliderField
+                label="Editor font size"
+                labelClassName="text-xs text-muted-foreground"
+                value={effEditorFontSize}
+                min={11} max={22} step={1}
+                format={(v) => `${v}px`}
+                onPreview={(v) => setPreviewProjectSetting("editorFontSize", v)}
+                onCommit={(v) => patch({ editorFontSize: v })}
               />
             </div>
           </section>
@@ -251,52 +227,31 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               are locked to these values.
             </p>
 
-            <div className="flex items-center justify-between">
-              <Label>Use global transition</Label>
-              <Switch
-                checked={s.useGlobalTransition}
-                onCheckedChange={(v) => patch({ useGlobalTransition: v })}
-              />
-            </div>
+            <ToggleField label="Use global transition" checked={s.useGlobalTransition} onChange={(v) => patch({ useGlobalTransition: v })} />
             {s.useGlobalTransition && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">
-                  Transition ({effGlobalTransition}ms)
-                </Label>
-                <DebouncedSlider
-                  min={100}
-                  max={2000}
-                  step={50}
-                  value={[effGlobalTransition]}
-                  onValueChange={([v]) =>
-                    setPreviewProjectSetting("globalTransitionDuration", v)
-                  }
-                  onValueCommit={([v]) => patch({ globalTransitionDuration: v })}
+              <div>
+                <SliderField
+                  label="Transition"
+                  labelClassName="text-xs text-muted-foreground"
+                  value={effGlobalTransition}
+                  min={100} max={2000} step={50}
+                  format={(v) => `${v}ms`}
+                  onPreview={(v) => setPreviewProjectSetting("globalTransitionDuration", v)}
+                  onCommit={(v) => patch({ globalTransitionDuration: v })}
                 />
               </div>
             )}
 
-            <div className="flex items-center justify-between">
-              <Label>Use global stagger</Label>
-              <Switch
-                checked={s.useGlobalStagger}
-                onCheckedChange={(v) => patch({ useGlobalStagger: v })}
-              />
-            </div>
+            <ToggleField label="Use global stagger" checked={s.useGlobalStagger} onChange={(v) => patch({ useGlobalStagger: v })} />
             {s.useGlobalStagger && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">
-                  Stagger ({effGlobalStagger})
-                </Label>
-                <DebouncedSlider
-                  min={0}
-                  max={50}
-                  step={1}
-                  value={[effGlobalStagger]}
-                  onValueChange={([v]) =>
-                    setPreviewProjectSetting("globalStagger", v)
-                  }
-                  onValueCommit={([v]) => patch({ globalStagger: v })}
+              <div>
+                <SliderField
+                  label="Stagger"
+                  labelClassName="text-xs text-muted-foreground"
+                  value={effGlobalStagger}
+                  min={0} max={50} step={1}
+                  onPreview={(v) => setPreviewProjectSetting("globalStagger", v)}
+                  onCommit={(v) => patch({ globalStagger: v })}
                 />
               </div>
             )}
