@@ -45,10 +45,12 @@ import { Button } from "./ui/button";
 import { resolveProjectLanguage, slideDisplayName, type Project, type Slide } from "@/types";
 import { modKeyLabel } from "@/lib/platform";
 import { useSlideStripSearch } from "@/hooks/useSlideStripSearch";
+import { useInlineRename } from "@/hooks/useInlineRename";
 import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { useUiStore } from "@/store/useUiStore";
 import { notify } from "@/lib/toast";
+
 interface BottomSlidesPanelProps {
   project: Project;
   collapsed?: boolean;
@@ -139,8 +141,29 @@ export function BottomSlidesPanel({
     useSlideStripSearch({ projectId: project.id, ordered });
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+
+  const rename = useInlineRename(
+    useCallback(
+      async (id: string, name: string) => {
+        const finalName = name || "Untitled slide";
+        await new Promise<void>((resolve) => {
+          updateSettings.mutate(
+            { slideId: id, payload: { name: finalName } },
+            {
+              onSuccess: () => {
+                setOrdered((items) =>
+                  items.map((s) => (s.id === id ? { ...s, name: finalName } : s)),
+                );
+                resolve();
+              },
+              onError: () => resolve(),
+            },
+          );
+        });
+      },
+      [updateSettings],
+    ),
+  );
 
   const activeSlide = useMemo(
     () => ordered.find((s) => s.id === activeId) ?? null,
@@ -193,31 +216,9 @@ export function BottomSlidesPanel({
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
 
-  const startRename = useCallback((id: string, current: string) => {
-    setRenamingId(id);
-    setRenameValue(current);
-  }, []);
-
-  const commitRename = useCallback(() => {
-    if (!renamingId) return;
-    const name = renameValue.trim() || "Untitled slide";
-    const id = renamingId;
-    updateSettings.mutate(
-      { slideId: id, payload: { name } },
-      {
-        onSuccess: () => {
-          setOrdered((items) =>
-            items.map((s) => (s.id === id ? { ...s, name } : s)),
-          );
-        },
-        onSettled: () => setRenamingId(null),
-      },
-    );
-  }, [renamingId, renameValue, updateSettings]);
-
   const handleRemove = useCallback(
     (id: string) => {
-      if (ordered.length <= 1 || renamingId) return;
+      if (ordered.length <= 1 || rename.renamingId) return;
       const index = ordered.findIndex((s) => s.id === id);
       const snapshot = ordered[index];
       if (!snapshot) return;
@@ -245,7 +246,7 @@ export function BottomSlidesPanel({
         },
       });
     },
-    [ordered, renamingId, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
+    [ordered, rename.renamingId, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
   );
 
   const handleDuplicate = useCallback(
@@ -369,15 +370,15 @@ export function BottomSlidesPanel({
                   slide={slide}
                   index={originalIndex >= 0 ? originalIndex : index}
                   onRemove={handleRemove}
-                  onRename={startRename}
                   onDuplicate={handleDuplicate}
                   isDraggingId={activeId}
-                  isRenaming={renamingId === slide.id}
-                  renameValue={renameValue}
+                  isRenaming={rename.renamingId === slide.id}
+                  renameValue={rename.renamingId === slide.id ? rename.value : ""}
                   highlightProgress={activeHighlightIndex}
-                  onRenameValueChange={setRenameValue}
-                  onCommitRename={commitRename}
-                  onCancelRename={() => setRenamingId(null)}
+                  onRenameValueChange={rename.setValue}
+                  onCommitRename={() => void rename.commit()}
+                  onCancelRename={rename.cancel}
+                  onRename={rename.start}
                   registerCardRef={registerCardRef}
                   navigationIds={ids}
                   cardRefs={cardRefs}

@@ -39,7 +39,7 @@ import { useAppMenu } from "@/hooks/useAppMenu";
 import { useHighlightNav } from "@/hooks/useHighlightNav";
 import { useEditorKeyboard } from "@/hooks/useEditorKeyboard";
 import { usePresentFullscreen } from "@/hooks/usePresentFullscreen";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useWindowTitle } from "@/hooks/useWindowTitle";
 import { dismissAllUndoToasts } from "@/lib/settings-undo";
 
 export function Editor() {
@@ -80,13 +80,8 @@ export function Editor() {
   const [editorExpanded, setEditorExpanded] = useState(false);
 
   // -- Side effects: title, initial slide, debounced currentSlide persistence --
-  useEffect(() => {
-    const title = project ? `OpenSlides — ${project.name}` : "OpenSlides";
-    document.title = title;
-    getCurrentWindow()
-      .setTitle(title)
-      .catch(() => undefined);
-  }, [project]);
+  const title = project ? `OpenSlides — ${project.name}` : "OpenSlides";
+  useWindowTitle(title);
 
   useEffect(() => {
     if (!project) return;
