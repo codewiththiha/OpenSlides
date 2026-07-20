@@ -89,5 +89,5 @@ export function usePresentFullscreen() {
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, [isPresenting, setIsPresenting]);
 
-  return { isPresenting, enterPresent, exitPresent, tryEnterFullscreen };
+  return { enterPresent, exitPresent };
 }
