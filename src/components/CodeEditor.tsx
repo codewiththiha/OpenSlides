@@ -30,6 +30,7 @@ import {
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
 import { useLocalCodeAtom, getLocalCodeAtom } from "@/store/localCodeAtoms";
+import { getCaretPosition, setCaretPosition } from "@/store/caretPositions";
 import {
   useUpdateSettings,
   useUpdateSlideCode,
@@ -77,8 +78,6 @@ export function CodeEditor({
   const setPreviewHighlightIndex = useUiStore(
     (s) => s.setPreviewHighlightIndex,
   );
-  const setCaretPosition = useUiStore((s) => s.setCaretPosition);
-
   // preview overrides
   const previewProject = useUiStore((s) => s.previewProject);
   const previewSlides = useUiStore((s) => s.previewSlides);
@@ -124,7 +123,7 @@ export function CodeEditor({
       // Synchronous value update in same microtask as caret restore
       el.value = next;
     }
-    const saved = useUiStore.getState().caretPositions[slideId];
+    const saved = getCaretPosition(slideId);
     if (saved) {
       const len = next.length;
       const start = Math.min(Math.max(saved.start, 0), len);
