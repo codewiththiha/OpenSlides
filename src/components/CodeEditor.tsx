@@ -43,6 +43,7 @@ import { useHighlightCrud } from "@/hooks/useHighlightCrud";
 import { useSlideMaps } from "@/hooks/useSlideMaps";
 import { FindReplaceBar } from "./editor/FindReplaceBar";
 import { SlideTimingSliders } from "./editor/SlideTimingSliders";
+import { Kbd } from "./ui/kbd";
 import { useFindReplace } from "@/hooks/useFindReplace";
 
 interface CodeEditorProps {
@@ -511,7 +512,7 @@ export function CodeEditor({
           <p className="text-[10px] leading-relaxed text-muted-foreground">
             Highlight mode is on — select code and a toolbar appears (or right-click) to choose{" "}
             <span className="font-medium text-foreground/80">Add Highlight</span>.
-            Steps play in order with <kbd className="rounded border border-border bg-background px-1 font-mono text-[9px]">→</kbd>{" "}
+            Steps play in order with <Kbd className="bg-background px-1 text-[9px]">→</Kbd>{" "}
             or a click before the next slide.
           </p>
         </div>

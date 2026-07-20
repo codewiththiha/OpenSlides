@@ -18,6 +18,8 @@ import { useNavigate } from "react-router-dom";
 import { useUiStore } from "@/store/useUiStore";
 import { THEME_OPTIONS, type ThemeName } from "@/types";
 import { cn } from "@/lib/utils";
+import { Kbd } from "./ui/kbd";
+import { Overlay, OVERLAY_Z } from "./ui/overlay";
 import { modKeyLabel } from "@/lib/platform";
 import { isModKey } from "@/lib/keyboard";
 
@@ -52,9 +54,6 @@ export function CommandPalette({
         e.preventDefault();
         setIsCommandOpen(!isCommandOpen);
       }
-      if (e.key === "Escape" && isCommandOpen) {
-        setIsCommandOpen(false);
-      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -72,10 +71,9 @@ export function CommandPalette({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center bg-black/50 pt-[15vh] backdrop-blur-sm">
-      <div className="absolute inset-0" onClick={() => setIsCommandOpen(false)} />
+    <Overlay onClose={() => setIsCommandOpen(false)} z={OVERLAY_Z.command} placement="top" closeOnEsc className="w-full max-w-lg">
       <Command
-        className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border bg-card shadow-2xl"
+        className="w-full overflow-hidden rounded-xl border bg-card shadow-2xl"
         label="Command Menu"
       >
         <Command.Input
@@ -151,11 +149,11 @@ export function CommandPalette({
           )}
         </Command.List>
         <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
-          <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">Esc</kbd> to close ·{" "}
-          <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">{mod}K</kbd> toggle
+          <Kbd>Esc</Kbd> to close ·{" "}
+          <Kbd>{mod}K</Kbd> toggle
         </div>
       </Command>
-    </div>
+    </Overlay>
   );
 }
 

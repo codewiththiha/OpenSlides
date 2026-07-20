@@ -11,6 +11,7 @@ import { HighlightStepIndicator } from "../HighlightStepIndicator";
 import { usePresentationControls } from "@/store/ui-selectors";
 import type { Project, Slide } from "@/types";
 import { cn } from "@/lib/utils";
+import { Kbd } from "../ui/kbd";
 
 function useRemainingSec(duration: number, resetKey: string) {
   const [remaining, setRemaining] = useState(() => Math.ceil(duration / 1000));
@@ -91,9 +92,7 @@ export const PresentOverlay = memo(function PresentOverlay({
           onClick={() => void exitPresent()}
         >
           Press{" "}
-          <kbd className="rounded bg-white/20 px-2 py-0.5 font-mono text-xs">
-            ESC
-          </kbd>{" "}
+          <Kbd tone="onDark" className="px-2 text-xs">ESC</Kbd>{" "}
           to exit
         </button>
       </div>

@@ -30,10 +30,10 @@ export function Dashboard() {
   const createRef = useRef(createMutation); const duplicateRef = useRef(duplicateMutation); const deleteRef = useRef(deleteMutation); const exportRef = useRef(exportMutation); const importRef = useRef(importMutation); const renameRef = useRef(renameMutation); const projectsRef = useRef(projects);
   createRef.current = createMutation; duplicateRef.current = duplicateMutation; deleteRef.current = deleteMutation; exportRef.current = exportMutation; importRef.current = importMutation; renameRef.current = renameMutation; projectsRef.current = projects;
   const [creating, setCreating] = useState(false); const [newName, setNewName] = useState("Untitled Deck");
-  const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen); const isDarkUi = useUiStore((s) => s.isDarkUi); const toggleTheme = useUiStore((s) => s.toggleTheme); const isShortcutsOpen = useUiStore((s) => s.isShortcutsOpen); const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen); const toggleShortcutsOpen = useUiStore((s) => s.toggleShortcutsOpen);
+  const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen); const isDarkUi = useUiStore((s) => s.isDarkUi); const toggleTheme = useUiStore((s) => s.toggleTheme); const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen); const toggleShortcutsOpen = useUiStore((s) => s.toggleShortcutsOpen);
   useWindowTitle("OpenSlides — Projects");
   useEffect(() => { applyUiTheme(isDarkUi); }, [isDarkUi]);
-  useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) { e.preventDefault(); toggleShortcutsOpen(); } if (e.key === "Escape" && isShortcutsOpen) setIsShortcutsOpen(false); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [isShortcutsOpen, setIsShortcutsOpen, toggleShortcutsOpen]);
+  useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) { e.preventDefault(); toggleShortcutsOpen(); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [toggleShortcutsOpen]);
   const handleOpen = useCallback((id: string) => navigate(`/editor/${id}`), [navigate]);
   const handleDuplicate = useCallback((id: string) => duplicateRef.current.mutate(id), []);
   const handleExport = useCallback((id: string) => exportRef.current.mutate(id), []);
