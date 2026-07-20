@@ -662,6 +662,35 @@ export function CodeEditor({
     ],
   );
 
+  const handleReorderHighlight = useCallback(
+    (ids: string[], rollback: () => void) => {
+      if (!slideId) return;
+      const previewId = previewHighlightIndex >= 0
+        ? currentHighlights[previewHighlightIndex]?.id
+        : undefined;
+      const byId = new Map(currentHighlights.map((hl) => [hl.id, hl]));
+      const updated = ids.map((id) => byId.get(id)).filter((hl): hl is Highlight => !!hl);
+      if (updated.length !== currentHighlights.length) {
+        rollback();
+        return;
+      }
+      settingsMutation.mutate(
+        { slideId, payload: { highlights: updated } },
+        { onError: rollback },
+      );
+      if (previewId) {
+        setPreviewHighlightIndex(updated.findIndex((hl) => hl.id === previewId));
+      }
+    },
+    [
+      slideId,
+      currentHighlights,
+      previewHighlightIndex,
+      settingsMutation,
+      setPreviewHighlightIndex,
+    ],
+  );
+
   const handlePreviewHighlight = useCallback(
     (index: number) => {
       setPreviewHighlightIndex(
@@ -1121,6 +1150,7 @@ export function CodeEditor({
           onDelete={handleDeleteHighlight}
           onPreview={handlePreviewHighlight}
           onMove={handleMoveHighlight}
+          onReorder={handleReorderHighlight}
         />
       )}
     </div>
