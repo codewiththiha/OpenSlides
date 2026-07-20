@@ -5,6 +5,8 @@ import { Highlighter as HighlighterIcon } from "lucide-react";
 import { useUiStore } from "@/store/useUiStore";
 import { slideDisplayName, type Project } from "@/types";
 import { cn } from "@/lib/utils";
+import { Kbd } from "./ui/kbd";
+import { Overlay, OVERLAY_Z } from "./ui/overlay";
 
 export function GoToSlideDialog({ project }: { project: Project }) {
   const isOpen = useUiStore((s) => s.isGoToSlideOpen);
@@ -25,9 +27,8 @@ export function GoToSlideDialog({ project }: { project: Project }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center bg-black/50 pt-[18vh] backdrop-blur-sm">
-      <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
-      <Command label="Go to slide" className="relative z-10 w-full max-w-md overflow-hidden rounded-xl border bg-card shadow-2xl">
+    <Overlay onClose={() => setIsOpen(false)} z={OVERLAY_Z.command} placement="top" closeOnEsc className="w-full max-w-md">
+      <Command label="Go to slide" className="w-full overflow-hidden rounded-xl border bg-card shadow-2xl">
         <Command.Input
           autoFocus
           value={query}
@@ -66,9 +67,9 @@ export function GoToSlideDialog({ project }: { project: Project }) {
           </Command.Group>
         </Command.List>
         <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
-          <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">↵</kbd> jump · <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">Esc</kbd> close
+          <Kbd>↵</Kbd> jump · <Kbd>Esc</Kbd> close
         </div>
       </Command>
-    </div>
+    </Overlay>
   );
 }

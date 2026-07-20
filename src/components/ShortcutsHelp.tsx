@@ -5,7 +5,8 @@ import { X } from "lucide-react";
 import { useUiStore } from "@/store/useUiStore";
 import { modKeyLabel } from "@/lib/platform";
 import { Button } from "./ui/button";
-import { cn } from "@/lib/utils";
+import { Kbd } from "./ui/kbd";
+import { Overlay, OVERLAY_Z } from "./ui/overlay";
 
 const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
   {
@@ -64,14 +65,6 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
   },
 ];
 
-function Kbd({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="inline-flex min-w-[1.5rem] items-center justify-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground shadow-sm">
-      {children}
-    </kbd>
-  );
-}
-
 export function ShortcutsHelp() {
   const isShortcutsOpen = useUiStore((s) => s.isShortcutsOpen);
   const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen);
@@ -82,18 +75,8 @@ export function ShortcutsHelp() {
   const label = (k: string) => (k === "mod" ? mod : k);
 
   return (
-    <div className="fixed inset-0 z-[210] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div
-        className="absolute inset-0"
-        onClick={() => setIsShortcutsOpen(false)}
-      />
-      <div
-        className={cn(
-          "relative z-10 w-full max-w-lg overflow-hidden rounded-xl border bg-card shadow-2xl",
-        )}
-        role="dialog"
-        aria-labelledby="shortcuts-title"
-      >
+    <Overlay onClose={() => setIsShortcutsOpen(false)} z={OVERLAY_Z.shortcuts} closeOnEsc className="w-full max-w-lg">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-2xl" role="dialog" aria-labelledby="shortcuts-title">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h2 id="shortcuts-title" className="text-sm font-semibold">
             Keyboard shortcuts
@@ -142,6 +125,6 @@ export function ShortcutsHelp() {
           Press <Kbd>?</Kbd> or <Kbd>Esc</Kbd> to close
         </div>
       </div>
-    </div>
+    </Overlay>
   );
 }

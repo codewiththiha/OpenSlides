@@ -41,7 +41,6 @@ export function useEditorKeyboard({
         isGoToSlideOpen,
         isShortcutsOpen,
         setIsGoToSlideOpen,
-        setIsShortcutsOpen,
         toggleShortcutsOpen,
         toggleZenMode,
         setIsAutoPlaying,
@@ -126,21 +125,9 @@ export function useEditorKeyboard({
       }
 
       // Zen / dialogs: Esc handling
-      if (e.key === "Escape") {
-        if (isGoToSlideOpen) {
-          e.preventDefault();
-          setIsGoToSlideOpen(false);
-          return;
-        }
-        if (isShortcutsOpen) {
-          e.preventDefault();
-          setIsShortcutsOpen(false);
-          return;
-        }
-        if (isZenMode) {
-          e.preventDefault();
-          toggleZenMode();
-        }
+      if (e.key === "Escape" && isZenMode) {
+        e.preventDefault();
+        toggleZenMode();
       }
 
       // Mod+B → Zen
