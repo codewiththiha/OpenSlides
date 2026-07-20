@@ -15,6 +15,7 @@ import { ChevronLeft, Code2 } from "lucide-react";
 import { SlidePreview } from "../SlidePreview";
 import { CodeEditor } from "../CodeEditor";
 import { BottomSlidesPanel } from "../BottomSlidesPanel";
+import { RenderErrorBoundary } from "../RenderErrorBoundary";
 import { HighlightStepIndicator } from "../HighlightStepIndicator";
 import { usePanelSlice, useZenSlice } from "@/store/ui-selectors";
 import { useCollapsiblePanel } from "@/hooks/useCollapsiblePanel";
@@ -97,11 +98,13 @@ export const EditorLayout = memo(function EditorLayout({
     <>
       {editorExpanded && (
         <div className="fixed inset-0 z-[90] bg-background/98 p-4 backdrop-blur-xl">
-          <CodeEditor
-            project={project}
-            expanded
-            onToggleExpand={() => onToggleEditorExpanded(false)}
-          />
+          <RenderErrorBoundary key={`expanded-editor-${project.id}`}>
+            <CodeEditor
+              project={project}
+              expanded
+              onToggleExpand={() => onToggleEditorExpanded(false)}
+            />
+          </RenderErrorBoundary>
         </div>
       )}
 
@@ -130,11 +133,13 @@ export const EditorLayout = memo(function EditorLayout({
               >
                 <div className="flex h-full items-center justify-center bg-muted/20 p-4 pb-5">
                   <div className="relative aspect-video h-full max-h-full w-full max-w-full">
-                    <SlidePreview
-                      project={project}
-                      activeHighlightIndex={effectiveHighlight}
-                      onHighlightExitComplete={onHighlightExitComplete}
-                    />
+                    <RenderErrorBoundary key={`preview-${project.id}`}>
+                      <SlidePreview
+                        project={project}
+                        activeHighlightIndex={effectiveHighlight}
+                        onHighlightExitComplete={onHighlightExitComplete}
+                      />
+                    </RenderErrorBoundary>
                     {/* Clickable indicator: pointer-events-auto wrapper */}
                     <div className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none">
                       <div className="pointer-events-auto">
@@ -200,11 +205,13 @@ export const EditorLayout = memo(function EditorLayout({
                         </span>
                       </div>
                     ) : (
-                      <CodeEditor
-                        project={project}
-                        onToggleExpand={() => onToggleEditorExpanded(true)}
-                        onCollapse={collapseCodePanel}
-                      />
+                      <RenderErrorBoundary key={`editor-${project.id}`}>
+                        <CodeEditor
+                          project={project}
+                          onToggleExpand={() => onToggleEditorExpanded(true)}
+                          onCollapse={collapseCodePanel}
+                        />
+                      </RenderErrorBoundary>
                     )}
                   </Panel>
                 </>
