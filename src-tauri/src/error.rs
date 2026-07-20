@@ -24,6 +24,7 @@ pub enum CommandError {
 }
 
 impl CommandError {
+    #[allow(dead_code)]
     pub fn failed(msg: impl Into<String>) -> Self {
         Self::Failed(msg.into())
     }
