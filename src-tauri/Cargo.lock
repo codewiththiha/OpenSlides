@@ -2397,7 +2397,9 @@ dependencies = [
 name = "openslides"
 version = "1.0.0-beta.1"
 dependencies = [
+ "aho-corasick",
  "chrono",
+ "once_cell",
  "serde",
  "serde_json",
  "sqlx",
