@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEditorSlice } from "@/store/ui-selectors";
-import { useSlideMaps } from "@/hooks/useSlideMaps";
+import { useCurrentSlide } from "@/hooks/useCurrentSlide";
 import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TitleBar } from "./TitleBar";
@@ -121,11 +121,7 @@ export function Editor() {
   // -- Highlight navigation (stable callbacks via refs internally) --
   const slides = project?.slides ?? [];
 
-  // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans per render)
-  const { slideMap, indexMap } = useSlideMaps(slides);
-
-  const currentIndex = currentSlideId ? (indexMap.get(currentSlideId) ?? -1) : -1;
-  const activeSlide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? slides[0];
+  const { activeSlide, activeIndex: currentIndex } = useCurrentSlide(project);
 
   const {
     highlightIndex: activeHighlightIndex,

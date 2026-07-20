@@ -40,7 +40,7 @@ import { useShikiWorker } from "@/hooks/useShikiWorker";
 import { EditorSlideNav } from "./editor/EditorSlideNav";
 import { useEditorHistory } from "@/hooks/useEditorHistory";
 import { useHighlightCrud } from "@/hooks/useHighlightCrud";
-import { useSlideMaps } from "@/hooks/useSlideMaps";
+import { useCurrentSlide } from "@/hooks/useCurrentSlide";
 import { FindReplaceBar } from "./editor/FindReplaceBar";
 import { SlideTimingSliders } from "./editor/SlideTimingSliders";
 import { Kbd } from "./ui/kbd";
@@ -61,7 +61,6 @@ export function CodeEditor({
   onToggleExpand,
   onCollapse,
 }: CodeEditorProps) {
-  const currentSlideId = useUiStore((s) => s.currentSlideId);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
   const setLocalCode = useUiStore((s) => s.setLocalCode);
   const setSaveStatus = useUiStore((s) => s.setSaveStatus);
@@ -69,11 +68,7 @@ export function CodeEditor({
   // preview overrides
   const previewProject = useUiStore((s) => s.previewProject);
 
-  const { slideMap, indexMap } = useSlideMaps(project.slides);
-
-  const slide =
-    (currentSlideId ? slideMap.get(currentSlideId) : undefined) ??
-    project.slides[0];
+  const { activeSlide: slide, activeIndex: currentIndex } = useCurrentSlide(project);
   const slideId = slide?.id;
 
   const code = useSlideCode(slideId, slide?.code ?? "");
@@ -288,7 +283,7 @@ export function CodeEditor({
     }
   };
 
-  const currentIndex = slideId ? (indexMap.get(slideId) ?? -1) : -1;
+
 
   const goSlide = (dir: -1 | 1) => {
     try {

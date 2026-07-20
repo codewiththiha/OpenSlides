@@ -14,12 +14,11 @@ import {
   fallbackForeground,
   type Project,
 } from "@/types";
-import { useSlideMaps } from "@/hooks/useSlideMaps";
 import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/store/useUiStore";
 import { usePreviewHighlightsMap } from "@/hooks/usePreviewSettings";
 import { useSlideCode } from "@/hooks/useSlideCode";
+import { useCurrentSlide } from "@/hooks/useCurrentSlide";
 import { HighlightLayer } from "./HighlightLayer";
 
 interface SlidePreviewProps {
@@ -82,11 +81,7 @@ export function SlidePreview({
   activeHighlightIndex = -1,
   onHighlightExitComplete,
 }: SlidePreviewProps) {
-  const currentSlideId = useUiStore((s) => s.currentSlideId);
-
-  // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans)
-  const { slideMap } = useSlideMaps(project.slides);
-  const slide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? project.slides[0];
+  const { activeSlide: slide } = useCurrentSlide(project);
   const code = useSlideCode(slide?.id, slide?.code ?? "");
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const [readyKey, setReadyKey] = useState<string | null>(null);
@@ -95,7 +90,7 @@ export function SlidePreview({
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
   // --- instant preview overrides ---
-  const useEffective = useEffectiveSettings(project, slide?.id);
+  const useEffective = useEffectiveSettings(project, slide);
   const previewHighlightsMap = usePreviewHighlightsMap();
 
   const language = resolveProjectLanguage(project);
