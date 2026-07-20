@@ -3,7 +3,7 @@
  * Only subscribes to the toolbar slice (saveStatus, autoplay, theme, zen)
  * so typing/localCode changes don't re-render it.
  */
-import { memo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Home,
@@ -26,7 +26,7 @@ import { TitleBar } from "../TitleBar";
 import { useToolbarSlice } from "@/store/ui-selectors";
 import { useExportProject, useUpdateSlideSettings } from "@/hooks/queries";
 import { modKeyLabel } from "@/lib/platform";
-import { cn } from "@/lib/utils";
+import { cn, formatDurationShort } from "@/lib/utils";
 import { slideDisplayName } from "@/types";
 import type { Project, Slide } from "@/types";
 
@@ -63,6 +63,10 @@ export const EditorToolbar = memo(function EditorToolbar({
   const activeSlideName = activeSlide
     ? slideDisplayName(activeSlide, activeSlideIndex)
     : "";
+  const totalDurationMs = useMemo(
+    () => project.slides.reduce((total, slide) => total + slide.duration, 0),
+    [project.slides],
+  );
 
   const commitSlideName = () => {
     if (!activeSlide) {
@@ -117,9 +121,13 @@ export const EditorToolbar = memo(function EditorToolbar({
             <div className="truncate text-sm font-medium leading-tight">
               {project.name}
             </div>
-            <div className="truncate text-[10px] text-muted-foreground">
+            <div
+              className="truncate text-[10px] text-muted-foreground"
+              title={`Total autoplay time: ${formatDurationShort(totalDurationMs)}`}
+            >
               {project.slides.length} slide
-              {project.slides.length !== 1 ? "s" : ""} · {project.theme}
+              {project.slides.length !== 1 ? "s" : ""} · ~
+              {formatDurationShort(totalDurationMs)} · {project.theme}
             </div>
           </div>
         </>
