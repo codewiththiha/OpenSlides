@@ -70,6 +70,9 @@ export const api = {
   renameProject: (projectId: string, name: string) =>
     call<Project>("rename_project", { projectId, name }),
 
+  duplicateProject: (projectId: string) =>
+    call<Project>("duplicate_project", { projectId }),
+
   deleteProject: (projectId: string) => call<void>("delete_project", { projectId }),
 
   updateProjectSettings: (projectId: string, settings: SettingsPatch) =>

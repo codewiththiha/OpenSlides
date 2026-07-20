@@ -14,6 +14,7 @@ import {
   Loader2,
   Download,
   Upload,
+  Copy,
   Pencil,
   Check,
   X,
@@ -36,6 +37,7 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import {
   useProjects,
   useCreateProject,
+  useDuplicateProject,
   useDeleteProject,
   useExportProject,
   useImportProject,
@@ -52,6 +54,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { data: projects = [], isLoading, isError, error } = useProjects();
   const createMutation = useCreateProject();
+  const duplicateMutation = useDuplicateProject();
   const deleteMutation = useDeleteProject();
   const exportMutation = useExportProject();
   const importMutation = useImportProject();
@@ -399,6 +402,19 @@ export function Dashboard() {
                                     }}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    title="Duplicate project"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      duplicateMutation.mutate(project.id);
+                                    }}
+                                    disabled={duplicateMutation.isPending}
+                                  >
+                                    <Copy className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     variant="ghost"

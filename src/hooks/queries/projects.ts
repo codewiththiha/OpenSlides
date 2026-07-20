@@ -39,6 +39,18 @@ export function useCreateProject() {
   });
 }
 
+export function useDuplicateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.duplicateProject(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectKeys.all });
+      notify.success("Project duplicated");
+    },
+    onError: (err: Error) => notify.error(`Failed to duplicate: ${err.message}`),
+  });
+}
+
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
