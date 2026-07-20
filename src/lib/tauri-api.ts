@@ -113,45 +113,6 @@ export const api = {
 
   importProjectFromJson: () => call<Project>("import_project_from_json"),
 
-  /* ---- Highlight processing is fully client-side now (token slicing in
-   * src/lib/highlight-tokens.ts). Only Merustmar tokenization stays in Rust
-   * (CPU off the WebView thread); output is raw-content token lines. ---- */
-
-  merustmarTokens: (code: string, isDark: boolean, signal?: AbortSignal) => {
-    if (signal?.aborted) {
-      return Promise.reject(new DOMException("Aborted", "AbortError"));
-    }
-    const p = call<import("./highlight-tokens").HighlightTokenLine[]>(
-      "merustmar_tokens",
-      {
-        code,
-        isDark,
-      },
-    );
-    if (!signal) return p;
-    return new Promise<import("./highlight-tokens").HighlightTokenLine[]>(
-      (resolve, reject) => {
-        const onAbort = () => {
-          reject(new DOMException("Aborted", "AbortError"));
-        };
-        signal.addEventListener("abort", onAbort, { once: true });
-        p.then(
-          (v) => {
-            signal.removeEventListener("abort", onAbort);
-            if (signal.aborted) {
-              reject(new DOMException("Aborted", "AbortError"));
-            } else {
-              resolve(v);
-            }
-          },
-          (e) => {
-            signal.removeEventListener("abort", onAbort);
-            reject(e);
-          },
-        );
-      },
-    );
-  },
 };
 
 /* Highlight DTOs (SelectionRange, HighlightPlan, HighlightTokenLine …) now

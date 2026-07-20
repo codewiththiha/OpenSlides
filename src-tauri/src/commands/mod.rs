@@ -5,13 +5,11 @@
 
 mod helpers;
 mod io;
-mod merustmar;
 mod projects;
 mod quit;
 mod slides;
 
 pub use io::*;
-pub use merustmar::*;
 pub use projects::*;
 pub use quit::*;
 pub use slides::*;

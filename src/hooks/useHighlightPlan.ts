@@ -5,8 +5,7 @@
 import { useEffect, useState } from "react";
 import type { BundledLanguage, BundledTheme, Highlighter } from "shiki";
 import type { Highlight } from "@/types";
-import { LIGHT_THEMES, themeBackground } from "@/types";
-import { api } from "@/lib/tauri-api";
+import { themeBackground } from "@/types";
 import {
   buildPlan,
   plainTokenLines,
@@ -55,16 +54,6 @@ async function getTokenLines(
     }
   }
 
-  if (language === "merustmar") {
-    const isDark = !LIGHT_THEMES.has(theme);
-    try {
-      return await api.merustmarTokens(code, isDark, signal);
-    } catch (err) {
-      if ((err as DOMException)?.name === "AbortError") throw err;
-      if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-      return plainTokenLines(code);
-    }
-  }
 
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   return plainTokenLines(code);
