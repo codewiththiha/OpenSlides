@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useUiStore } from "@/store/useUiStore";
 import { useUpdateSlideSettings } from "@/hooks/queries";
 import { selectionToRange } from "@/lib/highlight-tokens";
-import { createDefaultHighlight } from "@/lib/highlight-utils";
+import { createDefaultHighlight } from "@/lib/highlight-factory"
 import type { Highlight } from "@/types";
 
 export function useHighlightCrud({
