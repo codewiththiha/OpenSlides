@@ -2,6 +2,7 @@ import { Label } from "../ui/label";
 import { DebouncedSlider } from "../ui/debounced-slider";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
+import { usePreviewSlidesMap } from "@/hooks/usePreviewSettings";
 import { useUpdateSettings, useUpdateSlideSettings } from "@/hooks/queries";
 import type { Project, Slide } from "@/types";
 
@@ -9,8 +10,7 @@ export function SlideTimingSliders({ project, slide }: { project: Project; slide
   const settingsMutation = useUpdateSlideSettings(project.id);
   const projectSettingsMutation = useUpdateSettings(project.id);
   const previewProject = useUiStore((s) => s.previewProject);
-  useUiStore((s) => s.previewSlidesRevision);
-  const previewSlides = useUiStore.getState().previewSlides;
+  const previewSlides = usePreviewSlidesMap();
   const setPreviewProjectSetting = useUiStore((s) => s.setPreviewProjectSetting);
   const setPreviewSlideSetting = useUiStore((s) => s.setPreviewSlideSetting);
   const clearPreviewProjectSetting = useUiStore((s) => s.clearPreviewProjectSetting);

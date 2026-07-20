@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { useUiStore } from "@/store/useUiStore";
 import type { Project } from "@/types";
 import { useSlideMaps } from "./useSlideMaps";
+import { usePreviewSlidesMap } from "./usePreviewSettings";
 
 export function useEffectiveSettings(project: Project, slideId?: string) {
   const previewProject = useUiStore((s) => s.previewProject);
-  const previewSlidesRevision = useUiStore((s) => s.previewSlidesRevision);
-  const previewSlides = useUiStore.getState().previewSlides;
+  const previewSlides = usePreviewSlidesMap();
   const { slideMap } = useSlideMaps(project.slides);
   const settings = project.settings;
   const slide = slideId ? slideMap.get(slideId) : project.slides[0];
@@ -27,5 +27,5 @@ export function useEffectiveSettings(project: Project, slideId?: string) {
       stagger: settings.useGlobalStagger ? globalStagger : (previewSlide?.stagger ?? slide?.stagger ?? globalStagger),
       duration: previewSlide?.duration ?? slide?.duration ?? 3000,
     };
-  }, [previewProject, previewSlidesRevision, previewSlides, settings, slide]);
+  }, [previewProject, previewSlides, settings, slide]);
 }
