@@ -1,15 +1,7 @@
 /** Shiki Web Worker — one prioritized tokenization pipeline. */
-import { createHighlighter, type Highlighter } from "shiki";
-import { merustmarLanguage } from "@/lib/merustmar-language";
+import { createShikiLoader } from "@/lib/shiki-loader";
 
-let highlighterPromise: Promise<Highlighter> | null = null;
-
-function getHighlighter(): Promise<Highlighter> {
-  if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({ themes: ["dark-plus"], langs: ["typescript"] });
-  }
-  return highlighterPromise;
-}
+const loader = createShikiLoader();
 
 export interface WorkerRequest {
   id: number;
@@ -137,34 +129,7 @@ async function processRequest(request: QueuedRequest): Promise<void> {
       return;
     }
 
-    const highlighter = await getHighlighter();
-    if (isAborted(id)) {
-      abortedIds.delete(id);
-      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
-      return;
-    }
-
-    if (!highlighter.getLoadedThemes().includes(theme)) {
-      try { await highlighter.loadTheme(theme as any); } catch { /* report below */ }
-      if (isAborted(id)) {
-        abortedIds.delete(id);
-        (self as any).postMessage({ id, aborted: true } as WorkerResponse);
-        return;
-      }
-    }
-
-    if (!highlighter.getLoadedLanguages().includes(lang)) {
-      try {
-        if (lang === "merustmar") await highlighter.loadLanguage(merustmarLanguage as any);
-        else await highlighter.loadLanguage(lang as any);
-      } catch { /* report below */ }
-      if (isAborted(id)) {
-        abortedIds.delete(id);
-        (self as any).postMessage({ id, aborted: true } as WorkerResponse);
-        return;
-      }
-    }
-
+    const highlighter = await loader.getHighlighter(theme, lang);
     if (isAborted(id)) {
       abortedIds.delete(id);
       (self as any).postMessage({ id, aborted: true } as WorkerResponse);
