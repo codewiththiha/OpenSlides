@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { GripVertical, Pencil, Copy, Trash2, Highlighter as HighlighterIcon } from "lucide-react";
+import { Pencil, Copy, Trash2, Highlighter as HighlighterIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { slideDisplayName, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
@@ -10,6 +10,7 @@ import { SearchSnippet } from "./SearchSnippet";
 import { Z_INDEX } from "../ui/overlay";
 import { CodeThumbnail } from "../ui/code-thumbnail";
 import { InlineRenameInput } from "../ui/inline-rename-input";
+import { DragHandle } from "../ui/drag-handle";
 
 export const ITEM_WIDTH = 152;
 
@@ -207,14 +208,11 @@ export const SlideCard = memo(function SlideCard({
       )}
       <div className="flex min-w-0 items-center justify-between gap-1">
         <div className="flex min-w-0 items-center gap-1">
-          <button
-            type="button"
-            className="shrink-0 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+          <DragHandle
             {...dragHandleProps}
             onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="h-3.5 w-3.5" />
-          </button>
+            aria-label="Drag to reorder slide"
+          />
           {isRenaming ? (
             <InlineRenameInput
               value={renameValue}
