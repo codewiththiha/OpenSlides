@@ -1,3 +1,5 @@
+import { LruMap } from "./lru-map";
+
 export interface Snapshot {
   code: string;
   caretStart: number;
@@ -16,9 +18,9 @@ interface History {
   redo: Entry[];
 }
 
-const histories = new Map<string, History>();
-const MAX_SNAPSHOTS = 100;
 const MAX_SLIDES = 20;
+const histories = new LruMap<string, History>(MAX_SLIDES);
+const MAX_SNAPSHOTS = 100;
 const COALESCE_MS = 800;
 let applyingHistory = false;
 
@@ -27,13 +29,6 @@ function getHistory(slideId: string): History {
   if (!history) {
     history = { undo: [], redo: [] };
     histories.set(slideId, history);
-  }
-  histories.delete(slideId);
-  histories.set(slideId, history);
-  while (histories.size > MAX_SLIDES) {
-    const oldest = histories.keys().next().value;
-    if (oldest === undefined) break;
-    histories.delete(oldest);
   }
   return history;
 }

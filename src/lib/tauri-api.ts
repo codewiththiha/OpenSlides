@@ -36,7 +36,7 @@ function normalizeCommandError(err: unknown): CommandError {
       return out;
     }
   }
-  // Plain string rejection (most Rust commands still map_err(String)).
+  // Plain string rejection fallback (legacy safety net — all commands now return structured { code, message } errors).
   if (typeof err === "string") return new Error(err);
   return new Error((err as Error)?.message ?? String(err));
 }

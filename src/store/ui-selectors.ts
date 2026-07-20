@@ -11,7 +11,7 @@ export function usePresentationControls() {
 }
 
 export function useZenSlice() {
-  return useUiStore(useShallow((s) => ({ isZenMode: s.isZenMode, toggleZenMode: s.toggleZenMode })));
+  return useUiStore(useShallow((s) => ({ isZenMode: s.isZenMode })));
 }
 
 export function usePanelSlice() {
@@ -19,5 +19,19 @@ export function usePanelSlice() {
 }
 
 export function useToolbarSlice() {
-  return useUiStore(useShallow((s) => ({ saveStatus: s.saveStatus, isAutoPlaying: s.isAutoPlaying, toggleAutoPlaying: s.toggleAutoPlaying, isDarkUi: s.isDarkUi, toggleTheme: s.toggleTheme, isZenMode: s.isZenMode, toggleZenMode: s.toggleZenMode, isSettingsOpen: s.isSettingsOpen, setIsSettingsOpen: s.setIsSettingsOpen, isCommandOpen: s.isCommandOpen, setIsCommandOpen: s.setIsCommandOpen })));
+  return useUiStore(
+    useShallow((s) => ({
+      saveStatus: s.saveStatus,
+      isAutoPlaying: s.isAutoPlaying,
+      toggleAutoPlaying: s.toggleAutoPlaying,
+      isDarkUi: s.isDarkUi,
+      toggleTheme: s.toggleTheme,
+      isZenMode: s.isZenMode,
+      toggleZenMode: s.toggleZenMode,
+      isSettingsOpen: s.isSettingsOpen,
+      setIsSettingsOpen: s.setIsSettingsOpen,
+      isCommandOpen: s.isCommandOpen,
+      setIsCommandOpen: s.setIsCommandOpen,
+    })),
+  );
 }

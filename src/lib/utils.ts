@@ -16,6 +16,13 @@ export function formatDurationShort(ms: number): string {
   return `${hours}h ${minutes % 60}m`;
 }
 
+export function formatClockSeconds(totalSeconds: number): string {
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 /** Absolute-date fallback used by formatRelative for entries older than 30 days. */
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-US", {

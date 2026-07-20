@@ -5,11 +5,22 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "../ui/input";
 import { formatRelative } from "@/lib/utils";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
-import { themeBackground, type ProjectSummary } from "@/types";
+import { type ProjectSummary } from "@/types";
+import { CodeThumbnail } from "../ui/code-thumbnail";
 
 function ProjectThumb({ project }: { project: ProjectSummary }) {
   const thumb = useSlideThumbnail({ slideId: project.firstSlideId || project.id, code: project.firstSlideCode, theme: project.theme, language: project.language, initialHtml: project.firstSlideThumbnail || undefined });
-  return <div ref={thumb.ref} className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60" style={{ backgroundColor: themeBackground(project.theme) }} aria-hidden="true">{thumb.html ? <code className="pointer-events-none block font-mono" style={{ fontSize: "3.5px", lineHeight: 1.3, whiteSpace: "pre" }} dangerouslySetInnerHTML={{ __html: thumb.html }} /> : <FileCode className="h-4 w-4 text-primary" />}</div>;
+  return (
+    <CodeThumbnail
+      containerRef={thumb.ref}
+      html={thumb.html}
+      theme={project.theme}
+      fontSize={3.5}
+      lineHeight={1.3}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60"
+      fallback={<FileCode className="h-4 w-4 text-primary" />}
+    />
+  );
 }
 
 export const ProjectCard = memo(function ProjectCard({ project, isRenaming, renameValue, onRenameValueChange, onCommitRename, onCancelRename, onStartRename, onOpen, onDuplicate, onExport, onDelete, duplicateBusy, commitBusy }: { project: ProjectSummary; isRenaming: boolean; renameValue: string; onRenameValueChange: (value: string) => void; onCommitRename: () => void; onCancelRename: () => void; onStartRename: (id: string, name: string) => void; onOpen: (id: string) => void; onDuplicate: (id: string) => void; onExport: (id: string) => void; onDelete: (id: string, name: string) => void; duplicateBusy: boolean; commitBusy: boolean }) {
