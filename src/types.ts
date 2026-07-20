@@ -81,7 +81,8 @@ export interface Highlight {
 export interface Slide {
   id: string;
   code: string;
-  /** Mirrored from project settings for UI convenience / export. */
+  /** DEPRECATED legacy mirror of project settings language — display the
+   * resolved project language instead (resolveProjectLanguage). */
   language: string;
   duration: number;
   transitionDuration: number;

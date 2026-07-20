@@ -300,9 +300,9 @@ export const SlideCard = memo(function SlideCard({
       <div className="mt-auto flex items-center justify-between gap-1">
         <span
           className="truncate text-[10px] text-muted-foreground/70"
-          title={slide.language}
+          title={language}
         >
-          {slide.language}
+          {language}
         </span>
         {hlCount > 0 && (
           <span className="relative grid shrink-0 place-items-center">
@@ -360,7 +360,6 @@ export const SlideCard = memo(function SlideCard({
   if (prev.slide.id !== next.slide.id) return false;
   if (prev.slide.code !== next.slide.code) return false;
   if (prev.slide.name !== next.slide.name) return false;
-  if (prev.slide.language !== next.slide.language) return false;
   if ((prev.slide.highlights?.length ?? 0) !== (next.slide.highlights?.length ?? 0))
     return false;
   if (prev.index !== next.index) return false;
