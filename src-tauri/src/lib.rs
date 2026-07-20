@@ -50,6 +50,7 @@ pub fn run() {
             get_projects,
             get_project,
             create_project,
+            duplicate_project,
             rename_project,
             delete_project,
             update_project_settings,

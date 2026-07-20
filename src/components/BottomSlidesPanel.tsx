@@ -68,6 +68,32 @@ import {
 
 const ITEM_WIDTH = 152;
 
+function SearchSnippet({ code, query }: { code: string; query: string }) {
+  const q = query.trim();
+  if (!q) return null;
+  const lower = code.toLowerCase();
+  const match = lower.indexOf(q.toLowerCase());
+  if (match < 0) return null;
+  const lines = code.split("\\n");
+  const lineIndex = code.slice(0, match).split("\\n").length - 1;
+  const visible = lines.slice(Math.max(0, lineIndex - 2), lineIndex + 3);
+  const firstVisible = Math.max(0, lineIndex - 2);
+  return (
+    <pre className="mt-1 max-h-8 overflow-hidden whitespace-pre-wrap break-words text-[9px] leading-tight text-muted-foreground" aria-label="Search match">
+      {firstVisible > 0 && "…\\n"}
+      {visible.map((line, index) => {
+        const absolute = firstVisible + index;
+        if (absolute !== lineIndex) return <span key={absolute}>{line}{index < visible.length - 1 ? "\\n" : ""}</span>;
+        const lineStart = absolute === 0 ? 0 : code.split("\\n").slice(0, absolute).join("\\n").length + 1;
+        const from = Math.max(0, match - lineStart);
+        const to = Math.min(line.length, from + q.length);
+        return <span key={absolute}>{line.slice(0, from)}<mark className="rounded bg-primary/30 text-foreground">{line.slice(from, to)}</mark>{line.slice(to)}{index < visible.length - 1 ? "\\n" : ""}</span>;
+      })}
+      {firstVisible + visible.length < lines.length && "\\n…"}
+    </pre>
+  );
+}
+
 interface BottomSlidesPanelProps {
   project: Project;
   collapsed?: boolean;
@@ -105,6 +131,7 @@ interface SlideCardProps {
   isTabStop?: boolean;
   theme: string;
   language: string;
+  searchQuery?: string;
   style?: React.CSSProperties;
 }
 
@@ -130,6 +157,7 @@ const SlideCard = memo(function SlideCard({
   isTabStop = false,
   theme,
   language,
+  searchQuery = "",
   style,
 }: SlideCardProps) {
   // Per-slide atom: only this card re-renders when its own local code changes
@@ -330,6 +358,7 @@ const SlideCard = memo(function SlideCard({
           </span>
         )}
       </div>
+      {searchQuery && <SearchSnippet code={`${title}\n${thumbnailCode}`} query={searchQuery} />}
       <div className="mt-auto flex items-center justify-between gap-1">
         <span
           className="truncate text-[10px] text-muted-foreground/70"
@@ -387,6 +416,7 @@ const SlideCard = memo(function SlideCard({
   if (prev.navigationIds !== next.navigationIds) return false;
   if (prev.theme !== next.theme) return false;
   if (prev.language !== next.language) return false;
+  if (prev.searchQuery !== next.searchQuery) return false;
   // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
   // dragHandleProps is stable from useSortable, but compare ref
@@ -414,6 +444,7 @@ function SortableSlideItem({
   isTabStop,
   theme,
   language,
+  searchQuery,
 }: {
   slide: Slide;
   index: number;
@@ -433,6 +464,7 @@ function SortableSlideItem({
   isTabStop: boolean;
   theme: string;
   language: string;
+  searchQuery: string;
 }) {
   const {
     attributes,
@@ -477,6 +509,7 @@ function SortableSlideItem({
       isTabStop={isTabStop}
       theme={theme}
       language={language}
+      searchQuery={searchQuery}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
@@ -792,6 +825,7 @@ export function BottomSlidesPanel({
                   isTabStop={slide.id === tabStopId}
                   theme={theme}
                   language={language}
+                  searchQuery={searchQuery}
                 />
               );
             })}

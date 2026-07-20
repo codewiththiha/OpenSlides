@@ -19,6 +19,7 @@ import {
   X,
   ChevronUp,
   ChevronDown,
+  WrapText,
 } from "lucide-react";
 import { useDebouncedCallback } from "use-debounce";
 import {
@@ -179,6 +180,7 @@ export function CodeEditor({
 
   // Find/replace state — TypeScript, not Rust: editor is textarea, needs instant feedback, no IPC, O(n) string search is fast for few KB slide
   const [isFindOpen, setIsFindOpen] = useState(false);
+  const [wrapLines, setWrapLines] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [replaceTerm, setReplaceTerm] = useState("");
   const [matchCase, setMatchCase] = useState(false);
@@ -829,6 +831,15 @@ export function CodeEditor({
           <Button
             variant="ghost"
             size="icon"
+            className={cn("h-7 w-7 shrink-0", wrapLines && "bg-primary/15 text-primary")}
+            onClick={() => setWrapLines((v) => !v)}
+            title={wrapLines ? "Disable word wrap" : "Enable word wrap"}
+          >
+            <WrapText className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-7 w-7 shrink-0"
             onClick={() => setIsFindOpen((v) => !v)}
             title="Find/Replace (Cmd+F)"
@@ -897,7 +908,7 @@ export function CodeEditor({
       )}
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        {editorShowLineNumbers && (
+        {editorShowLineNumbers && !wrapLines && (
           <div
             ref={gutterRef}
             aria-hidden
@@ -929,7 +940,7 @@ export function CodeEditor({
             ref={preRef}
             aria-hidden
             className="editor-highlight pointer-events-none absolute inset-0 overflow-auto py-4 pl-3 pr-4 font-mono"
-            style={{ fontSize: editorFontSize, lineHeight }}
+            style={{ fontSize: editorFontSize, lineHeight, whiteSpace: wrapLines ? "pre-wrap" : "pre", wordBreak: wrapLines ? "break-word" : "normal" }}
           >
             {highlightedHtml ? (
               <code
@@ -971,15 +982,17 @@ export function CodeEditor({
             inputMode="text"
             enterKeyHint="enter"
             className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-white outline-none"
+            wrap={wrapLines ? "soft" : "off"}
             style={
               {
                 fontSize: editorFontSize,
                 lineHeight,
                 tabSize: 2,
+                whiteSpace: wrapLines ? "pre-wrap" : "pre",
+                overflowWrap: wrapLines ? "break-word" : "normal",
                 WebkitTextSizeAdjust: "100%",
               } as React.CSSProperties
             }
-            wrap="off"
           />
         </div>
       </div>
