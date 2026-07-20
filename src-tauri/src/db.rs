@@ -118,7 +118,7 @@ async fn set_version(pool: &SqlitePool, v: i64) -> Result<(), String> {
 }
 
 /// Incremental, additive migrations. Bump TARGET when adding a step.
-const TARGET_VERSION: i64 = 3;
+const TARGET_VERSION: i64 = 4;
 
 async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
     let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
@@ -263,6 +263,40 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
                 .map_err(|e| format!("Failed to add slides.highlights: {e}"))?;
         }
         version = 3;
+        set_version(pool, version).await?;
+    }
+
+    // v4: FTS5 index for ranked, project-scoped slide search.
+    if version < 4 {
+        sqlx::raw_sql(
+            r#"
+            CREATE VIRTUAL TABLE IF NOT EXISTS slides_fts USING fts5(
+                name,
+                code,
+                content=slides,
+                content_rowid=rowid
+            );
+            CREATE TRIGGER IF NOT EXISTS slides_fts_ai AFTER INSERT ON slides BEGIN
+                INSERT INTO slides_fts(rowid, name, code)
+                VALUES (new.rowid, new.name, new.code);
+            END;
+            CREATE TRIGGER IF NOT EXISTS slides_fts_ad AFTER DELETE ON slides BEGIN
+                INSERT INTO slides_fts(slides_fts, rowid, name, code)
+                VALUES ('delete', old.rowid, old.name, old.code);
+            END;
+            CREATE TRIGGER IF NOT EXISTS slides_fts_au AFTER UPDATE OF name, code ON slides BEGIN
+                INSERT INTO slides_fts(slides_fts, rowid, name, code)
+                VALUES ('delete', old.rowid, old.name, old.code);
+                INSERT INTO slides_fts(rowid, name, code)
+                VALUES (new.rowid, new.name, new.code);
+            END;
+            INSERT INTO slides_fts(slides_fts) VALUES ('rebuild');
+            "#,
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Failed to create slide search index: {e}"))?;
+        version = 4;
         set_version(pool, version).await?;
     }
 

@@ -113,6 +113,9 @@ export const api = {
 
   importProjectFromJson: () => call<Project>("import_project_from_json"),
 
+  searchSlides: (projectId: string, query: string) =>
+    call<string[]>("search_slides", { projectId, query }),
+
 };
 
 /* Highlight DTOs (SelectionRange, HighlightPlan, HighlightTokenLine …) now

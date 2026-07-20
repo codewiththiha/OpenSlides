@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/tauri-api";
 import { resolveProjectLanguage, slideDisplayName, themeBackground, type Project, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
@@ -532,6 +533,19 @@ export function BottomSlidesPanel({
   const [debouncedSearchQuery] = useDebounce(rawSearchQuery, 180);
   // Keep clearing instant while filtering waits until typing pauses.
   const searchQuery = rawSearchQuery.trim() ? debouncedSearchQuery : "";
+  const [searchResultIds, setSearchResultIds] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setSearchResultIds(null);
+    if (!searchQuery.trim()) return;
+    api.searchSlides(project.id, searchQuery).then((ids) => {
+      if (!cancelled) setSearchResultIds(new Set(ids));
+    }).catch(() => {
+      // Browser preview or older databases can fall back to the local index.
+      if (!cancelled) setSearchResultIds(null);
+    });
+    return () => { cancelled = true; };
+  }, [project.id, searchQuery]);
   const searchIndex = useMemo(() =>
     ordered.map((slide) => ({
       slide,
@@ -542,8 +556,9 @@ export function BottomSlidesPanel({
   const filteredOrdered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return ordered;
+    if (searchResultIds) return ordered.filter((slide) => searchResultIds.has(slide.id));
     return searchIndex.filter(({ haystack }) => haystack.includes(q)).map(({ slide }) => slide);
-  }, [ordered, searchIndex, searchQuery]);
+  }, [ordered, searchIndex, searchQuery, searchResultIds]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
