@@ -3,6 +3,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
+/// Slide timing defaults shared by create/import paths.
+pub const DEFAULT_SLIDE_DURATION_MS: i64 = 3000;
+pub const DEFAULT_SLIDE_TRANSITION_MS: i64 = 750;
+pub const DEFAULT_SLIDE_STAGGER: i64 = 5;
+
 /// A highlight is a "sub-slide" effect that focuses on a specific text range
 /// within the slide's code, dimming everything else and optionally scaling up
 /// the selected text.
