@@ -2,7 +2,7 @@
 
 use crate::db::DbPool;
 use crate::models::{parse_settings, settings_to_json, Project, ProjectSettings, Slide};
-use sqlx::Row;
+use sqlx::{Executor, Row, Sqlite};
 use std::sync::mpsc;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
@@ -129,10 +129,13 @@ pub async fn fetch_project(pool: &DbPool, project_id: &str) -> Result<Project, S
 }
 
 /// Load + parse the settings JSON blob of a project.
-pub async fn load_settings(pool: &DbPool, project_id: &str) -> Result<ProjectSettings, String> {
+pub async fn load_settings<'c, E>(exec: E, project_id: &str) -> Result<ProjectSettings, String>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
     let row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
         .bind(project_id)
-        .fetch_optional(pool)
+        .fetch_optional(exec)
         .await
         .map_err(|e| format!("Failed to load project settings: {e}"))?
         .ok_or_else(|| format!("Project not found: {project_id}"))?;
@@ -142,39 +145,96 @@ pub async fn load_settings(pool: &DbPool, project_id: &str) -> Result<ProjectSet
 
 /// Persist settings JSON back to the project row.
 /// `touch: true` also refreshes `updated_at` (user-visible edits).
-pub async fn save_settings(
-    pool: &DbPool,
+pub async fn save_settings<'c, E>(
+    exec: E,
     project_id: &str,
     settings: &ProjectSettings,
     touch: bool,
-) -> Result<(), String> {
+) -> Result<(), String>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
     let json = settings_to_json(settings)?;
     if touch {
         sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
             .bind(json)
             .bind(now_ms())
             .bind(project_id)
-            .execute(pool)
+            .execute(exec)
             .await
             .map_err(|e| e.to_string())?;
     } else {
         sqlx::query("UPDATE projects SET settings = ? WHERE id = ?")
             .bind(json)
             .bind(project_id)
-            .execute(pool)
+            .execute(exec)
             .await
             .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
 
-pub async fn touch_project(pool: &DbPool, project_id: &str) -> Result<(), String> {
+pub async fn touch_project<'c, E>(exec: E, project_id: &str) -> Result<(), String>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
     sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
         .bind(now_ms())
         .bind(project_id)
-        .execute(pool)
+        .execute(exec)
         .await
         .map_err(|e| format!("Failed to update project timestamp: {e}"))?;
+    Ok(())
+}
+
+pub struct NewSlide<'a> {
+    pub id: &'a str,
+    pub project_id: &'a str,
+    pub order_index: i64,
+    pub code: &'a str,
+    pub language: &'a str,
+    pub transition_duration: i64,
+    pub stagger: i64,
+    pub duration: i64,
+    pub name: &'a str,
+    pub highlights_json: &'a str,
+    pub thumbnail_html: &'a str,
+}
+
+pub async fn insert_slide_row<'c, E>(exec: E, slide: &NewSlide<'_>) -> Result<(), String>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
+    sqlx::query(
+        r#"INSERT INTO slides
+           (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights, thumbnail_html)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+    )
+    .bind(slide.id)
+    .bind(slide.project_id)
+    .bind(slide.order_index)
+    .bind(slide.code)
+    .bind(slide.language)
+    .bind(slide.transition_duration)
+    .bind(slide.stagger)
+    .bind(slide.duration)
+    .bind(slide.name)
+    .bind(slide.highlights_json)
+    .bind(slide.thumbnail_html)
+    .execute(exec)
+    .await
+    .map_err(|e| format!("Failed to insert slide: {e}"))?;
+    Ok(())
+}
+
+pub async fn batch_reindex<'c, E>(exec: E, project_id: &str, ids: &[String]) -> Result<(), String>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
+    if ids.is_empty() { return Ok(()); }
+    let json = serde_json::to_string(&ids.iter().enumerate().map(|(i, id)| serde_json::json!({ "id": id, "new_order": i as i64 })).collect::<Vec<_>>()).map_err(|e| e.to_string())?;
+    sqlx::query(r#"UPDATE slides SET order_index = new_order FROM (SELECT json_extract(value, '$.id') AS slide_id, CAST(json_extract(value, '$.new_order') AS INTEGER) AS new_order FROM json_each(?)) AS requested WHERE slides.id = requested.slide_id AND slides.project_id = ?"#)
+        .bind(json).bind(project_id).execute(exec).await.map_err(|e| e.to_string())?;
     Ok(())
 }
 
