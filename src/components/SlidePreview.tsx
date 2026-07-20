@@ -46,6 +46,7 @@ export function SlidePreview({
   const code = codeOverride ?? slide?.code ?? "";
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const [readyKey, setReadyKey] = useState<string | null>(null);
+  const [shikiLoadFailed, setShikiLoadFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
@@ -61,12 +62,18 @@ export function SlidePreview({
   useEffect(() => {
     let cancelled = false;
     const key = `${theme}-${language}`;
+    setShikiLoadFailed(false);
     getHighlighter(theme, language).then((h) => {
       if (!cancelled) {
         setHighlighter(h);
         setReadyKey(key);
       }
-    }).catch(() => { if (!cancelled) setReadyKey(null); });
+    }).catch(() => {
+      if (!cancelled) {
+        setReadyKey(null);
+        setShikiLoadFailed(true);
+      }
+    });
     return () => { cancelled = true; };
   }, [theme, language]);
   const isDarkBg = !/light|latte/i.test(theme);
@@ -132,7 +139,10 @@ export function SlidePreview({
 
 
   if (!highlighter || !canUseShiki) {
-    if (highlighter && language === "merustmar") {
+    // A grammar load failure must not leave Merustmar stuck on a spinner.
+    // Shiki remains the primary path; plain text is only the last-resort
+    // display when the custom grammar cannot be loaded.
+    if (language === "merustmar" && (highlighter || shikiLoadFailed)) {
       return (
         <div ref={containerRef} className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl shadow-2xl" style={{ backgroundColor: bg }}>
           <div className={cn("relative z-10 flex h-full w-full", stagePad, centerBlock ? "items-center justify-center" : "items-center justify-start")}>

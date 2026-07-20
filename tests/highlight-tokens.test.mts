@@ -8,19 +8,14 @@
  *   2. HTML-entity cutting (`&gt;` sliced mid-sequence) — impossible by
  *      construction now: escape-after-slice is asserted directly,
  *   3. sparse/dense line-index desync — lines are code.split("\n") structural,
- *   4. Merustmar unanchored-tryMatch quirks — parity fixtures re-locked at
- *      the token layer (parse → render === frozen HTML, all 24 × 2 themes).
  *
  * Run via: npm run test:highlight
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import {
   buildPlan,
   decompose,
-  merustmarFallbackTokens,
-  merustmarHtmlToTokens,
   mixTowardBlack,
   plainTokenLines,
   renderTokenLines,
@@ -187,64 +182,4 @@ test("sliceSnippets: per-range plain text, clamped, \\n-joined", () => {
   assert.deepEqual(sliceSnippets(CODE, [rng(0, -9, 99, 99)]), [
     CODE, // entire document clamped
   ]);
-});
-
-/* ----------------------------------------------------------------------- *
- * Merustmar fallback conversion — re-locks the frozen-JS parity fixtures
- * (24 corpus samples × dark/light) at the token layer.
- * ----------------------------------------------------------------------- */
-
-interface Fixture {
-  name: string;
-  code: string;
-  dark: string;
-  light: string;
-}
-
-const fixtures: Fixture[] = JSON.parse(
-  readFileSync(
-    new URL("../src-tauri/tests/fixtures/merustmar/parity.json", import.meta.url),
-    "utf8",
-  ),
-);
-
-test("merustmarHtmlToTokens: parse → render round-trips the frozen HTML exactly", () => {
-  assert.ok(fixtures.length >= 20);
-  for (const f of fixtures) {
-    assert.equal(
-      renderTokenLines(merustmarHtmlToTokens(f.dark, "#abb2bf")),
-      f.dark,
-      `dark round-trip failed for ${f.name}`,
-    );
-    assert.equal(
-      renderTokenLines(merustmarHtmlToTokens(f.light, "#383a42")),
-      f.light,
-      `light round-trip failed for ${f.name}`,
-    );
-  }
-});
-
-test("merustmarFallbackTokens: frozen JS produces identical token lines at runtime", () => {
-  for (const f of fixtures) {
-    assert.equal(renderTokenLines(merustmarFallbackTokens(f.code, true)), f.dark, f.name);
-    assert.equal(renderTokenLines(merustmarFallbackTokens(f.code, false)), f.light, f.name);
-  }
-});
-
-test("merustmarFallbackTokens: shape mismatch degrades to plain (no garbage)", () => {
-  const tokens = merustmarHtmlToTokens("", "#abb2bf");
-  assert.deepEqual(tokens, [[{ content: "", color: "#abb2bf" }]]);
-  assert.throws(() =>
-    merustmarHtmlToTokens("<span class=\"line\">oops</span>", "#abb2bf"),
-  );
-});
-
-test("slice+render over merustmar tokens: fixture sample, entity-safe clone", () => {
-  const f = fixtures.find((x) => x.name === "comments")!;
-  const tokens = merustmarFallbackTokens(f.code, true);
-  // Select the trailing-comment marker's first two chars of line 4
-  // ("code // trailing"): "//" should become one comment-styled entity-safe span.
-  const plan = buildPlan(f.code, tokens, rng(3, 5, 3, 7), "#1e1e1e", 75);
-  assert.equal(plan.lines[0].plainText, "//");
-  assert.ok(plan.lines[0].html.includes("#5c6370"));
 });

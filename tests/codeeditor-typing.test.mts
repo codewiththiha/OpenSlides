@@ -239,7 +239,7 @@ test("CodeEditor: shiki path stays COLORED and exact on every keystroke (no whit
   await m.unmount();
 });
 
-test("CodeEditor: merustmar deck stays COLORED via the frozen sync highlighter", async () => {
+test("CodeEditor: merustmar deck stays COLORED via the Shiki pipeline", async () => {
   resetApiMocks();
   const m = await mountEditor(makeProject(makeLineCode(50), "merustmar"));
   const el = m.el;

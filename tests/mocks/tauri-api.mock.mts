@@ -57,12 +57,10 @@ export const api = {
 export type SlideSettingsPatch = Record<string, unknown>;
 
 // --- additions for the CodeEditor mount suite ---
-// Never hit in the rust-language tests below (shiki path is null-highlighted,
-// merustmar is the only consumer); present so module init / stray calls fail
-// loudly and visibly rather than as an undefined-function TypeError.
+// Present so module init / stray calls fail loudly and visibly rather than as
+// an undefined-function TypeError.
 const extraApi = {
   updateSettings: () => Promise.resolve(undefined),
-  merustmarTokens: () => Promise.reject(new Error("ipc-mock: merustmarTokens")),
 };
 Object.assign(api, extraApi);
 

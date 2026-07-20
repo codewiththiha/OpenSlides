@@ -2,9 +2,8 @@
  * Mock of src/lib/shiki-instance for the jsdom suites. Replaces the heavy
  * WASM highlighter with a synchronous fake that mirrors the contract the
  * editor relies on: colored markup whose text content EXACTLY equals the
- * source (entity-escaped). `merustmar` is deliberately NOT in the loaded
- * set so tests can exercise the frozen-JS fallback branch; the real
- * instance registers it (shiki-instance.ts loadLanguage).
+ * source (entity-escaped). The custom `merustmar` grammar is included in the
+ * loaded set, matching the real shiki-instance contract.
  */
 
 function esc(s: string): string {
@@ -23,6 +22,7 @@ const LOADED = [
   "json",
   "toml",
   "yaml",
+  "merustmar",
 ];
 
 const MARKER = "#7ee787"; // proves "colored" in assertions
