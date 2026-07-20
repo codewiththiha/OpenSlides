@@ -70,7 +70,7 @@ export interface HighlightPlan {
 }
 
 /** Per-line clamped selection span (output of `decompose`). */
-export interface LineRange {
+interface LineRange {
   lineIndex: number;
   start: number;
   end: number;
