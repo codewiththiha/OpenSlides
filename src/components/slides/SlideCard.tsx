@@ -33,6 +33,7 @@ interface SlideCardProps {
   theme: string;
   language: string;
   searchQuery?: string;
+  enableHoverPreview?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -59,6 +60,7 @@ export const SlideCard = memo(function SlideCard({
   theme,
   language,
   searchQuery = "",
+  enableHoverPreview = false,
   style,
 }: SlideCardProps) {
   // Per-slide atom: only this card re-renders when its own local code changes
@@ -90,7 +92,7 @@ export const SlideCard = memo(function SlideCard({
     language,
     maxLines: 10,
     maxChars: 1000,
-    enabled: showHoverPreview,
+    enabled: showHoverPreview && enableHoverPreview,
     priority: "high",
   });
   const title = slideDisplayName(slide, index);
@@ -150,7 +152,7 @@ export const SlideCard = memo(function SlideCard({
       tabIndex={isTabStop ? 0 : -1}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
+        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 overflow-hidden rounded-md border p-2 select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
         "will-change-transform min-w-0",
         isOverlay
           ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
@@ -161,7 +163,7 @@ export const SlideCard = memo(function SlideCard({
       )}
       style={{ width: ITEM_WIDTH, ...style }}
       onMouseEnter={() => {
-        if (isOverlay) return;
+          if (isOverlay || !enableHoverPreview) return;
         hoverTimerRef.current = window.setTimeout(() => {
           const rect = cardRootRef.current?.getBoundingClientRect();
           if (!rect) return;
@@ -397,7 +399,8 @@ export const SlideCard = memo(function SlideCard({
   if (prev.navigationIds !== next.navigationIds) return false;
   if (prev.theme !== next.theme) return false;
   if (prev.language !== next.language) return false;
-  if (prev.searchQuery !== next.searchQuery) return false;
+    if (prev.searchQuery !== next.searchQuery) return false;
+    if (prev.enableHoverPreview !== next.enableHoverPreview) return false;
   // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
   // dragHandleProps is stable from useSortable, but compare ref

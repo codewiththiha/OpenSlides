@@ -45,6 +45,7 @@ export interface UiState {
   setIsGoToSlideOpen: (v: boolean) => void;
   isDarkUi: boolean;
   editorShowLineNumbers: boolean;
+  showSlideHoverPreview: boolean;
   saveStatus: "idle" | "saving" | "saved" | "error";
   /** Highlight index being previewed from the editor (-1 = none). */
   previewHighlightIndex: number;
@@ -72,6 +73,7 @@ export interface UiState {
   setIsDarkUi: (v: boolean) => void;
   toggleTheme: () => void;
   setEditorShowLineNumbers: (v: boolean) => void;
+  setShowSlideHoverPreview: (v: boolean) => void;
   // localCode per-slide atom only — no Zustand mirror (O(n) spread removed)
   setLocalCode: (slideId: string, code: string) => void;
   clearLocalCode: (slideId: string) => void;
@@ -134,6 +136,7 @@ export const useUiStore = create<UiState>()(
       isShortcutsOpen: false,
       isDarkUi: true,
       editorShowLineNumbers: true,
+      showSlideHoverPreview: false,
       saveStatus: "idle",
       previewHighlightIndex: -1,
       previewProject: {},
@@ -173,6 +176,7 @@ export const useUiStore = create<UiState>()(
           return { isDarkUi: !s.isDarkUi };
         }),
       setEditorShowLineNumbers: (v) => set({ editorShowLineNumbers: v }),
+      setShowSlideHoverPreview: (v) => set({ showSlideHoverPreview: v }),
       // No Zustand mirror — only per-slide atom, zero re-render storm, no O(n) spread
       setLocalCode: (slideId, code) => {
         setLocalCodeAtom(slideId, code);
@@ -292,6 +296,7 @@ export const useUiStore = create<UiState>()(
         slidesPanelSize: s.slidesPanelSize,
         isDarkUi: s.isDarkUi,
         editorShowLineNumbers: s.editorShowLineNumbers,
+        showSlideHoverPreview: s.showSlideHoverPreview,
       }),
     },
   ),
