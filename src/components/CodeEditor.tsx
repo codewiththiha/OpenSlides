@@ -40,6 +40,7 @@ import { useShikiWorker } from "@/hooks/useShikiWorker";
 import { EditorSlideNav } from "./editor/EditorSlideNav";
 import { useEditorHistory } from "@/hooks/useEditorHistory";
 import { useHighlightCrud } from "@/hooks/useHighlightCrud";
+import { useSlideMaps } from "@/hooks/useSlideMaps";
 import { FindReplaceBar } from "./editor/FindReplaceBar";
 import { SlideTimingSliders } from "./editor/SlideTimingSliders";
 import { useFindReplace } from "@/hooks/useFindReplace";
@@ -67,18 +68,10 @@ export function CodeEditor({
   // preview overrides
   const previewProject = useUiStore((s) => s.previewProject);
 
-  const slideMap = useMemo(() => {
-    const sMap = new Map<string, (typeof project.slides)[number]>();
-    const iMap = new Map<string, number>();
-    project.slides.forEach((s, i) => {
-      sMap.set(s.id, s);
-      iMap.set(s.id, i);
-    });
-    return { sMap, iMap };
-  }, [project.slides]);
+  const { slideMap, indexMap } = useSlideMaps(project.slides);
 
   const slide =
-    (currentSlideId ? slideMap.sMap.get(currentSlideId) : undefined) ??
+    (currentSlideId ? slideMap.get(currentSlideId) : undefined) ??
     project.slides[0];
   const slideId = slide?.id;
 
@@ -297,7 +290,7 @@ export function CodeEditor({
     }
   };
 
-  const currentIndex = slideId ? (slideMap.iMap.get(slideId) ?? -1) : -1;
+  const currentIndex = slideId ? (indexMap.get(slideId) ?? -1) : -1;
 
   const goSlide = (dir: -1 | 1) => {
     try {
