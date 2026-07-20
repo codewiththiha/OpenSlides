@@ -436,31 +436,50 @@ const SlideCard = memo(function SlideCard({
           {slide.language}
         </span>
         {hlCount > 0 && (
-          <span
-            className="inline-flex shrink-0 items-center gap-[3px] rounded bg-primary/10 px-1.5 py-[3px]"
-            title={`${hlCount} highlight${hlCount > 1 ? "s" : ""} — steps through with → before the next slide${
-              progress >= 0 ? ` · showing ${progress + 1}/${hlCount}` : ""
-            }`}
-          >
-            <HighlighterIcon
+          <span className="relative grid shrink-0 place-items-center">
+            <span
               className={cn(
-                "h-2.5 w-2.5 transition-colors",
-                progress >= 0 ? "text-primary" : "text-primary/50",
+                "col-start-1 row-start-1 inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-[3px]",
+                "text-[8px] font-semibold leading-none text-primary/70",
+                "transition-opacity duration-150",
+                "group-hover:opacity-0",
+                (isSelected || progress >= 0) && "opacity-0",
               )}
-            />
-            {Array.from({ length: Math.min(hlCount, 10) }, (_, i) => (
-              <span
-                key={i}
+            >
+              <HighlighterIcon className="h-2.5 w-2.5" />
+              {hlCount}
+            </span>
+            <span
+              className={cn(
+                "col-start-1 row-start-1 inline-flex items-center gap-[3px] rounded bg-primary/10 px-1.5 py-[3px]",
+                "opacity-0 transition-opacity duration-150",
+                "group-hover:opacity-100",
+                (isSelected || progress >= 0) && "opacity-100",
+              )}
+              title={`${hlCount} highlight${hlCount > 1 ? "s" : ""} — steps through with → before the next slide${
+                progress >= 0 ? ` · showing ${progress + 1}/${hlCount}` : ""
+              }`}
+            >
+              <HighlighterIcon
                 className={cn(
-                  "h-1.5 w-1.5 rounded-full transition-all duration-200",
-                  i <= progress
-                    ? "scale-110 bg-primary"
-                    : progress >= 0
-                      ? "bg-muted-foreground/25"
-                      : "bg-primary/40",
+                  "h-2.5 w-2.5 transition-colors",
+                  progress >= 0 ? "text-primary" : "text-primary/50",
                 )}
               />
-            ))}
+              {Array.from({ length: Math.min(hlCount, 10) }, (_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1.5 w-1.5 rounded-full transition-all duration-200",
+                    i <= progress
+                      ? "scale-110 bg-primary"
+                      : progress >= 0
+                        ? "bg-muted-foreground/25"
+                        : "bg-primary/40",
+                  )}
+                />
+              ))}
+            </span>
           </span>
         )}
       </div>
