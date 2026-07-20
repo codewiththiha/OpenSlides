@@ -63,6 +63,9 @@ pub struct Slide {
     /// Highlight effects attached to this slide (sub-slide focus effects).
     #[serde(default)]
     pub highlights: Vec<Highlight>,
+    /// Cached, truncated Shiki HTML for the slide-strip thumbnail.
+    #[serde(default)]
+    pub thumbnail_html: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

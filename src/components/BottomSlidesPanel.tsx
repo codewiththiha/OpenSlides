@@ -145,6 +145,7 @@ const SlideCard = memo(function SlideCard({
     code: thumbnailCode,
     theme,
     language,
+    initialHtml: slide.thumbnailHtml,
   });
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;

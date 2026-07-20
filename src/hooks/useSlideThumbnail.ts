@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { requestHtml } from "@/lib/shiki-worker-client";
+import { api } from "@/lib/tauri-api";
 
 const MAX_CACHE_ENTRIES = 120;
 const MAX_LINES = 6;
@@ -37,9 +38,10 @@ interface Args {
   code: string;
   theme: string;
   language: string;
+  initialHtml?: string;
 }
 
-export function useSlideThumbnail({ slideId, code, theme, language }: Args) {
+export function useSlideThumbnail({ slideId, code, theme, language, initialHtml }: Args) {
   const truncatedCode = truncateCode(code);
   const key = `${slideId}\u0000${theme}\u0000${language}\u0000${truncatedCode}`;
   const elementRef = useRef<HTMLDivElement>(null);
@@ -47,8 +49,18 @@ export function useSlideThumbnail({ slideId, code, theme, language }: Args) {
 
   useEffect(() => {
     const cached = readCache(key);
-    setEntry(cached);
-    if (cached || !truncatedCode) return;
+    if (cached) {
+      setEntry(cached);
+      return;
+    }
+    if (initialHtml) {
+      const initial = { html: initialHtml };
+      writeCache(key, initial);
+      setEntry(initial);
+      return;
+    }
+    setEntry(null);
+    if (!truncatedCode) return;
 
     const controller = new AbortController();
     let timer: number | null = null;
@@ -65,6 +77,7 @@ export function useSlideThumbnail({ slideId, code, theme, language }: Args) {
             const next = { html: response.html };
             writeCache(key, next);
             setEntry(next);
+            void api.cacheThumbnail(slideId, code, response.html).catch(() => undefined);
             observer?.disconnect();
           })
           .catch((error) => {
@@ -93,7 +106,7 @@ export function useSlideThumbnail({ slideId, code, theme, language }: Args) {
       if (timer !== null) window.clearTimeout(timer);
       observer?.disconnect();
     };
-  }, [key, language, theme, truncatedCode]);
+  }, [key, language, theme, truncatedCode, initialHtml, slideId, code]);
 
   return { html: entry?.html ?? null, ref: elementRef };
 }

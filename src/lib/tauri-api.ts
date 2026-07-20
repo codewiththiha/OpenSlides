@@ -99,6 +99,9 @@ export const api = {
   updateSlideCode: (slideId: string, code: string) =>
     call<void>("update_slide_code", { slideId, code }),
 
+  cacheThumbnail: (slideId: string, code: string, html: string) =>
+    call<void>("cache_thumbnail", { slideId, code, html }),
+
   updateSlideSettings: (slideId: string, payload: SlideSettingsPatch) =>
     call<Slide>("update_slide_settings", { slideId, payload }),
 
