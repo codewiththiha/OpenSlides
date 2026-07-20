@@ -14,7 +14,7 @@
  * - preview derived from atom, not whole store
  * - setCurrentSlideId stable
  */
-import { useCallback, useEffect, useMemo, useState, memo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
 import { useDebounce } from "use-debounce";
 import {
   DndContext,
@@ -97,6 +97,10 @@ interface SlideCardProps {
   onDuplicate?: (id: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   setNodeRef?: (node: HTMLElement | null) => void;
+  registerCardRef?: (node: HTMLElement | null) => void;
+  navigationIds?: string[];
+  cardRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  isTabStop?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -116,6 +120,10 @@ const SlideCard = memo(function SlideCard({
   onDuplicate,
   dragHandleProps,
   setNodeRef,
+  registerCardRef,
+  navigationIds = [],
+  cardRefs,
+  isTabStop = false,
   style,
 }: SlideCardProps) {
   // Per-slide atom: only this card re-renders when its own local code changes
@@ -130,9 +138,67 @@ const SlideCard = memo(function SlideCard({
   const hlCount = slide.highlights?.length ?? 0;
   const progress = isSelected ? highlightProgress : -1;
 
+  const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || isOverlay || isRenaming) return;
+
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "Home" || e.key === "End") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!cardRefs || navigationIds.length === 0) return;
+      const currentIndex = navigationIds.indexOf(slide.id);
+      const nextIndex = e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? navigationIds.length - 1
+          : (currentIndex + (e.key === "ArrowRight" ? 1 : -1) + navigationIds.length) % navigationIds.length;
+      const next = cardRefs.current.get(navigationIds[nextIndex]);
+      next?.focus();
+      next?.scrollIntoView({ inline: "nearest", block: "nearest" });
+      return;
+    }
+
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      e.stopPropagation();
+      setCurrentSlideId(slide.id);
+      return;
+    }
+
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      e.stopPropagation();
+      onRemove?.(slide.id);
+      return;
+    }
+
+    if (e.key === "F2") {
+      e.preventDefault();
+      e.stopPropagation();
+      onRename?.(slide.id, title);
+    }
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef?.(node);
+        registerCardRef?.(node);
+      }}
+      data-slide-id={slide.id}
+      role="option"
+      aria-selected={isSelected}
+      tabIndex={isTabStop ? 0 : -1}
+      onKeyDown={handleCardKeyDown}
+      className={cn(
+        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
+        "will-change-transform min-w-0",
+        isOverlay
+          ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
+          : isSelected
+            ? "border-primary/50 bg-muted ring-1 ring-primary/20"
+            : "bg-background/60 hover:border-primary/30 hover:bg-muted/40",
+        isActive && !isOverlay && "opacity-30",
+      )}
       style={{ width: ITEM_WIDTH, ...style }}
       onClick={() => {
         if (isOverlay || isRenaming) return;
@@ -144,16 +210,6 @@ const SlideCard = memo(function SlideCard({
         e.stopPropagation();
         onRename(slide.id, title);
       }}
-      className={cn(
-        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
-        "will-change-transform min-w-0",
-        isOverlay
-          ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
-          : isSelected
-            ? "border-primary/50 bg-muted ring-1 ring-primary/20"
-            : "bg-background/60 hover:border-primary/30 hover:bg-muted/40",
-        isActive && !isOverlay && "opacity-30",
-      )}
     >
       <div className="flex min-w-0 items-center justify-between gap-1">
         <div className="flex min-w-0 items-center gap-1">
@@ -295,6 +351,8 @@ const SlideCard = memo(function SlideCard({
   if (prev.isRenaming !== next.isRenaming) return false;
   if (prev.renameValue !== next.renameValue) return false;
   if (prev.highlightProgress !== next.highlightProgress) return false;
+  if (prev.isTabStop !== next.isTabStop) return false;
+  if (prev.navigationIds !== next.navigationIds) return false;
   // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
   // dragHandleProps is stable from useSortable, but compare ref
@@ -316,6 +374,10 @@ function SortableSlideItem({
   onRenameValueChange,
   onCommitRename,
   onCancelRename,
+  registerCardRef,
+  navigationIds,
+  cardRefs,
+  isTabStop,
 }: {
   slide: Slide;
   index: number;
@@ -329,6 +391,10 @@ function SortableSlideItem({
   onRenameValueChange: (v: string) => void;
   onCommitRename: () => void;
   onCancelRename: () => void;
+  registerCardRef: (id: string, node: HTMLDivElement | null) => void;
+  navigationIds: string[];
+  cardRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  isTabStop: boolean;
 }) {
   const {
     attributes,
@@ -348,6 +414,10 @@ function SortableSlideItem({
     transition: isDragging ? undefined : transition,
     zIndex: isDragging ? 5 : 1,
   };
+  const combinedRef = (node: HTMLElement | null) => {
+    setNodeRef(node);
+    registerCardRef(slide.id, node as HTMLDivElement | null);
+  };
 
   return (
     <SlideCard
@@ -363,7 +433,10 @@ function SortableSlideItem({
       onRemove={onRemove}
       onRename={onRename}
       onDuplicate={onDuplicate}
-      setNodeRef={setNodeRef}
+      setNodeRef={combinedRef}
+      navigationIds={navigationIds}
+      cardRefs={cardRefs}
+      isTabStop={isTabStop}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
@@ -395,9 +468,25 @@ export function BottomSlidesPanel({
   const updateSettings = useUpdateSlideSettings(project.id);
 
   const [ordered, setOrdered] = useState<Slide[]>(project.slides);
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const pendingFocusId = useRef<string | null>(null);
   useEffect(() => {
     setOrdered(project.slides);
   }, [project.slides]);
+  useEffect(() => {
+    const id = pendingFocusId.current;
+    if (!id) return;
+    const node = cardRefs.current.get(id);
+    if (!node) return;
+    node.focus();
+    node.scrollIntoView({ inline: "nearest", block: "nearest" });
+    pendingFocusId.current = null;
+  }, [ordered]);
+
+  const registerCardRef = useCallback((id: string, node: HTMLDivElement | null) => {
+    if (node) cardRefs.current.set(id, node);
+    else cardRefs.current.delete(id);
+  }, []);
 
   const [rawSearchQuery, setRawSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounce(rawSearchQuery, 180);
@@ -439,6 +528,7 @@ export function BottomSlidesPanel({
   );
 
   const ids = useMemo(() => filteredOrdered.map((s) => s.id), [filteredOrdered]);
+  const tabStopId = filteredOrdered.find((s) => s.id === currentSlideId)?.id ?? filteredOrdered[0]?.id;
 
   const onDragStart = useCallback((event: DragStartEvent) => {
     if (searchQuery.trim()) return; // disable drag when filtering
@@ -495,10 +585,11 @@ export function BottomSlidesPanel({
 
   const handleRemove = useCallback(
     (id: string) => {
-      if (ordered.length <= 1) return;
+      if (ordered.length <= 1 || renamingId) return;
       const index = ordered.findIndex((s) => s.id === id);
       const snapshot = ordered[index];
       if (!snapshot) return;
+      pendingFocusId.current = ordered[index + 1]?.id ?? ordered[index - 1]?.id ?? null;
 
       deleteSlide.mutate(id, {
         onSuccess: (proj) => {
@@ -522,7 +613,7 @@ export function BottomSlidesPanel({
         },
       });
     },
-    [ordered, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
+    [ordered, renamingId, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
   );
 
   const handleDuplicate = useCallback(
@@ -620,6 +711,8 @@ export function BottomSlidesPanel({
           <div
             className="flex min-h-0 flex-1 gap-2 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-0.5"
             style={{ touchAction: "pan-x" }}
+            role="listbox"
+            aria-label="Slides"
           >
             {filteredOrdered.map((slide, index) => {
               const originalIndex = ordered.findIndex((s) => s.id === slide.id);
@@ -638,6 +731,10 @@ export function BottomSlidesPanel({
                   onRenameValueChange={setRenameValue}
                   onCommitRename={commitRename}
                   onCancelRename={() => setRenamingId(null)}
+                  registerCardRef={registerCardRef}
+                  navigationIds={ids}
+                  cardRefs={cardRefs}
+                  isTabStop={slide.id === tabStopId}
                 />
               );
             })}
