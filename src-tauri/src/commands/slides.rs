@@ -392,11 +392,12 @@ pub async fn cache_thumbnail(
     // Only write if the code still matches the rendered request. This prevents
     // an older worker response from overwriting a newer thumbnail.
     sqlx::query(
-        "UPDATE slides SET thumbnail_html = ? WHERE id = ? AND code = ?",
+        "UPDATE slides SET thumbnail_html = ? WHERE id = ? AND (code = ? OR substr(code, 1, 400) = ?)",
     )
     .bind(html)
     .bind(slide_id)
-    .bind(code)
+    .bind(&code)
+    .bind(&code)
     .execute(pool.inner())
     .await
     .map_err(|e| format!("Failed to cache thumbnail: {e}"))?;

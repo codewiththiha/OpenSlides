@@ -49,6 +49,38 @@ import { useUiStore, applyUiTheme } from "@/store/useUiStore";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { modKeyLabel } from "@/lib/platform";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { themeBackground, type ProjectSummary } from "@/types";
+import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
+
+/** 16:9 first-slide preview backed by the persisted thumbnail cache. */
+function ProjectThumb({ project }: { project: ProjectSummary }) {
+  const thumb = useSlideThumbnail({
+    slideId: project.firstSlideId || project.id,
+    code: project.firstSlideCode,
+    theme: project.theme,
+    language: project.language,
+    initialHtml: project.firstSlideThumbnail || undefined,
+  });
+
+  return (
+    <div
+      ref={thumb.ref}
+      className="flex h-9 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/60 transition-transform duration-300 group-hover:scale-[1.04]"
+      style={{ backgroundColor: themeBackground(project.theme) }}
+      aria-hidden="true"
+    >
+      {thumb.html ? (
+        <code
+          className="pointer-events-none block font-mono"
+          style={{ fontSize: "4.5px", lineHeight: 1.35, whiteSpace: "pre" }}
+          dangerouslySetInnerHTML={{ __html: thumb.html }}
+        />
+      ) : (
+        <FileCode className="h-4 w-4 text-primary/60" />
+      )}
+    </div>
+  );
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -339,9 +371,7 @@ export function Dashboard() {
                           <CardHeader className="pb-3">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                  <FileCode className="h-4 w-4 text-primary" />
-                                </div>
+                                <ProjectThumb project={project} />
                                 <div className="min-w-0 flex-1">
                                   {renamingId === project.id ? (
                                     <div
