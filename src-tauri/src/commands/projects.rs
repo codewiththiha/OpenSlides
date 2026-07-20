@@ -140,7 +140,7 @@ pub async fn duplicate_project(
         .current_slide_id
         .as_ref()
         .and_then(|id| id_map.get(id).cloned())
-        .or_else(|| slides.first().and_then(|r| id_map.get(r.get::<String, _>("id")).cloned()));
+        .or_else(|| slides.first().and_then(|r| id_map.get(&r.get::<String, _>("id")).cloned()));
     let settings_json = settings_to_json(&settings)?;
     let now = now_ms();
 
