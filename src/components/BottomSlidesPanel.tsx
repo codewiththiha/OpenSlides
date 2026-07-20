@@ -401,11 +401,16 @@ export function BottomSlidesPanel({
 
   const [rawSearchQuery, setRawSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounce(rawSearchQuery, 180);
+  // Keep clearing instant while filtering waits until typing pauses.
   const searchQuery = rawSearchQuery.trim() ? debouncedSearchQuery : "";
+  const isSearchActive = rawSearchQuery.trim().length > 0;
   const searchIndex = useMemo(() => {
-    if (!searchQuery) return null;
-    return ordered.map((slide) => ({ slide, haystack: `${slide.name ?? ""}\n${slide.code}`.toLowerCase() }));
-  }, [ordered, Boolean(searchQuery)]);
+    if (!isSearchActive) return null;
+    return ordered.map((slide) => ({
+      slide,
+      haystack: `${slide.name ?? ""}\n${slide.code}`.toLowerCase(),
+    }));
+  }, [ordered, isSearchActive]);
   const filteredOrdered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q || !searchIndex) return ordered;
