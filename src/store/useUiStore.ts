@@ -48,8 +48,10 @@ export interface UiState {
   previewHighlightIndex: number;
   /** Instant UI preview overrides (not persisted) — separate from DB state */
   previewProject: PreviewProjectSettings;
-  previewSlides: Record<string, PreviewSlideSettings>;
-  previewHighlights: Record<string, Partial<import("@/types").Highlight>>;
+  previewSlides: Map<string, PreviewSlideSettings>;
+  previewHighlights: Map<string, Partial<import("@/types").Highlight>>;
+  previewSlidesRevision: number;
+  previewHighlightsRevision: number;
 
   setCurrentSlideId: (id: string | null) => void;
   setIsPresenting: (v: boolean) => void;
@@ -132,8 +134,10 @@ export const useUiStore = create<UiState>()(
       saveStatus: "idle",
       previewHighlightIndex: -1,
       previewProject: {},
-      previewSlides: {},
-      previewHighlights: {},
+      previewSlides: new Map(),
+      previewHighlights: new Map(),
+      previewSlidesRevision: 0,
+      previewHighlightsRevision: 0,
 
       setCurrentSlideId: (id) => set({ currentSlideId: id }),
       setIsPresenting: (v) => set({ isPresenting: v }),
@@ -187,48 +191,27 @@ export const useUiStore = create<UiState>()(
         }),
       setPreviewSlideSetting: (slideId, key, value) =>
         set((s) => {
-          const current = s.previewSlides[slideId] ?? {};
+          const current = s.previewSlides.get(slideId) ?? {};
           if (value === null || value === undefined) {
-            const nextSlide = { ...current };
-            delete (nextSlide as Record<string, unknown>)[key];
-            if (Object.keys(nextSlide).length === 0) {
-              const nextAll = { ...s.previewSlides };
-              delete nextAll[slideId];
-              return { previewSlides: nextAll };
-            }
-            return {
-              previewSlides: { ...s.previewSlides, [slideId]: nextSlide },
-            };
+            if (!(key in current)) return s;
+            delete current[key];
+            if (Object.keys(current).length === 0) s.previewSlides.delete(slideId);
+          } else {
+            current[key] = value;
+            s.previewSlides.set(slideId, current);
           }
-          return {
-            previewSlides: {
-              ...s.previewSlides,
-              [slideId]: { ...current, [key]: value },
-            },
-          };
+          return { previewSlidesRevision: s.previewSlidesRevision + 1 };
         }),
       setPreviewHighlightSetting: (highlightId, patch) =>
         set((s) => {
-          const current = s.previewHighlights[highlightId] ?? {};
-          const next: Record<string, unknown> = { ...current };
-          for (const [k, v] of Object.entries(patch as Record<string, unknown>)) {
-            if (v === null || v === undefined) {
-              delete next[k];
-            } else {
-              next[k] = v;
-            }
+          const current = s.previewHighlights.get(highlightId) ?? {};
+          for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
+            if (value === null || value === undefined) delete current[key as keyof typeof current];
+            else (current as Record<string, unknown>)[key] = value;
           }
-          if (Object.keys(next).length === 0) {
-            const nextAll = { ...s.previewHighlights };
-            delete nextAll[highlightId];
-            return { previewHighlights: nextAll };
-          }
-          return {
-            previewHighlights: {
-              ...s.previewHighlights,
-              [highlightId]: next as Partial<import("@/types").Highlight>,
-            },
-          };
+          if (Object.keys(current).length === 0) s.previewHighlights.delete(highlightId);
+          else s.previewHighlights.set(highlightId, current);
+          return { previewHighlightsRevision: s.previewHighlightsRevision + 1 };
         }),
       clearPreviewProjectSetting: (key) =>
         set((s) => {
@@ -239,57 +222,46 @@ export const useUiStore = create<UiState>()(
       clearPreviewSlideSetting: (slideId, key) =>
         set((s) => {
           if (key) {
-            const cur = s.previewSlides[slideId];
-            if (!cur) return s;
-            const nextSlide = { ...cur };
-            delete (nextSlide as Record<string, unknown>)[key];
-            if (Object.keys(nextSlide).length === 0) {
-              const nextAll = { ...s.previewSlides };
-              delete nextAll[slideId];
-              return { previewSlides: nextAll };
-            }
-            return {
-              previewSlides: { ...s.previewSlides, [slideId]: nextSlide },
-            };
+            const current = s.previewSlides.get(slideId);
+            if (!current) return s;
+            delete current[key];
+            if (Object.keys(current).length === 0) s.previewSlides.delete(slideId);
+          } else {
+            s.previewSlides.delete(slideId);
           }
-          const nextAll = { ...s.previewSlides };
-          delete nextAll[slideId];
-          return { previewSlides: nextAll };
+          return { previewSlidesRevision: s.previewSlidesRevision + 1 };
         }),
       clearPreviewHighlightSetting: (highlightId, key) =>
         set((s) => {
           if (key) {
-            const cur = s.previewHighlights[highlightId];
-            if (!cur) return s;
-            const next = { ...cur } as Record<string, unknown>;
-            delete next[key];
-            if (Object.keys(next).length === 0) {
-              const nextAll = { ...s.previewHighlights };
-              delete nextAll[highlightId];
-              return { previewHighlights: nextAll };
-            }
-            return {
-              previewHighlights: {
-                ...s.previewHighlights,
-                [highlightId]: next as Partial<import("@/types").Highlight>,
-              },
-            };
+            const current = s.previewHighlights.get(highlightId);
+            if (!current) return s;
+            delete current[key as keyof typeof current];
+            if (Object.keys(current).length === 0) s.previewHighlights.delete(highlightId);
+          } else {
+            s.previewHighlights.delete(highlightId);
           }
-          const nextAll = { ...s.previewHighlights };
-          delete nextAll[highlightId];
-          return { previewHighlights: nextAll };
+          return { previewHighlightsRevision: s.previewHighlightsRevision + 1 };
         }),
       clearAllPreviewSettings: () =>
-        set({
-          previewProject: {},
-          previewSlides: {},
-          previewHighlights: {},
+        set((s) => {
+          s.previewProject = {};
+          s.previewSlides.clear();
+          s.previewHighlights.clear();
+          return {
+            previewProject: s.previewProject,
+            previewSlidesRevision: s.previewSlidesRevision + 1,
+            previewHighlightsRevision: s.previewHighlightsRevision + 1,
+          };
         }),
 
       resetEditorUi: () => {
         clearAllLocalCodeAtoms();
         clearCaretPositions();
-        return set({
+        return set((s) => {
+          s.previewSlides.clear();
+          s.previewHighlights.clear();
+          return {
           currentSlideId: null,
           isPresenting: false,
           isAutoPlaying: false,
@@ -299,8 +271,9 @@ export const useUiStore = create<UiState>()(
           saveStatus: "idle",
           previewHighlightIndex: -1,
           previewProject: {},
-          previewSlides: {},
-          previewHighlights: {},
+          previewSlidesRevision: s.previewSlidesRevision + 1,
+          previewHighlightsRevision: s.previewHighlightsRevision + 1,
+        };
         });
       },
     }),

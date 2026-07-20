@@ -80,7 +80,8 @@ export function CodeEditor({
   );
   // preview overrides
   const previewProject = useUiStore((s) => s.previewProject);
-  const previewSlides = useUiStore((s) => s.previewSlides);
+  useUiStore((s) => s.previewSlidesRevision);
+  const previewSlides = useUiStore.getState().previewSlides;
   const setPreviewProjectSetting = useUiStore((s) => s.setPreviewProjectSetting);
   const setPreviewSlideSetting = useUiStore((s) => s.setPreviewSlideSetting);
   const clearPreviewProjectSetting = useUiStore((s) => s.clearPreviewProjectSetting);
@@ -719,7 +720,7 @@ export function CodeEditor({
   const gutterWidth = Math.max(2, String(lineCount).length) * 0.65 + 1.25;
 
   // Effective per-slide values with preview overrides for instant feedback
-  const previewForThisSlide = slideId ? previewSlides[slideId] : undefined;
+  const previewForThisSlide = slideId ? previewSlides.get(slideId) : undefined;
   const effTransition = useGlobalTransition
     ? (previewProject.globalTransitionDuration ??
       project.settings.globalTransitionDuration)
@@ -1018,7 +1019,7 @@ export function CodeEditor({
               useGlobalTransition
                 ? (previewProject.globalTransitionDuration ??
                   project.settings.globalTransitionDuration)
-                : (previewSlides[slide.id]?.transitionDuration ??
+                : (previewSlides.get(slide.id)?.transitionDuration ??
                   slide.transitionDuration),
             ]}
             onValueChange={([v]) => {
@@ -1066,7 +1067,7 @@ export function CodeEditor({
             value={[
               useGlobalStagger
                 ? (previewProject.globalStagger ?? project.settings.globalStagger)
-                : (previewSlides[slide.id]?.stagger ?? slide.stagger),
+                : (previewSlides.get(slide.id)?.stagger ?? slide.stagger),
             ]}
             onValueChange={([v]) => {
               if (useGlobalStagger) {
@@ -1108,7 +1109,7 @@ export function CodeEditor({
             min={500}
             max={10000}
             step={100}
-            value={[previewSlides[slide.id]?.duration ?? slide.duration]}
+            value={[previewSlides.get(slide.id)?.duration ?? slide.duration]}
             onValueChange={([v]) => setPreviewSlideSetting(slide.id, "duration", v)}
             onValueCommit={([v]) =>
               settingsMutation.mutate(

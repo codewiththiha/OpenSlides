@@ -113,7 +113,8 @@ export function HighlightSettingsPanel({
   const [ordered, setOrdered] = useState(highlights);
   useEffect(() => setOrdered(highlights), [highlights]);
   const snippets = useHighlightSnippets(code, ordered);
-  const previewHighlights = useUiStore((s) => s.previewHighlights);
+  useUiStore((s) => s.previewHighlightsRevision);
+  const previewHighlights = useUiStore.getState().previewHighlights;
   const setPreviewHighlightSetting = useUiStore((s) => s.setPreviewHighlightSetting);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -154,7 +155,7 @@ export function HighlightSettingsPanel({
               ? "…"
               : rawSnippet.replace(/\s+/g, " ").trim() || "(empty selection)";
 
-          const preview = previewHighlights[hl.id];
+          const preview = previewHighlights.get(hl.id);
           const eff = preview ? { ...hl, ...preview } : hl;
 
               return (

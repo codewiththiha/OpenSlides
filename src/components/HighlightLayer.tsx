@@ -173,7 +173,8 @@ export function HighlightLayer({
   const hasSegments = Boolean(plan && measurement && measurement.segments.length > 0);
   const union = measurement?.union;
 
-  const pieces: React.ReactNode[] = [];
+  const pieces = useMemo(() => {
+    const pieces: React.ReactNode[] = [];
   if (highlight) {
     pieces.push(
       <motion.div
@@ -257,6 +258,20 @@ export function HighlightLayer({
       </motion.div>,
     );
   }
+
+    return pieces;
+  }, [
+    highlight,
+    hasSegments,
+    plan,
+    measurement,
+    fontSize,
+    lineHeight,
+    dimDuration,
+    sizeDuration,
+    dimAmount,
+    scaleTarget,
+  ]);
 
   return <AnimatePresence onExitComplete={onExitComplete}>{pieces}</AnimatePresence>;
 }

@@ -52,10 +52,11 @@ export function SlidePreview({
 
   // --- instant preview overrides ---
   const previewProject = useUiStore((s) => s.previewProject);
-  const previewSlide = useUiStore((s) =>
-    slide ? s.previewSlides[slide.id] : undefined,
-  );
-  const previewHighlightsMap = useUiStore((s) => s.previewHighlights);
+  useUiStore((s) => s.previewSlidesRevision);
+  useUiStore((s) => s.previewHighlightsRevision);
+  const previewSlides = useUiStore.getState().previewSlides;
+  const previewHighlightsMap = useUiStore.getState().previewHighlights;
+  const previewSlide = slide ? previewSlides.get(slide.id) : undefined;
 
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
@@ -121,7 +122,7 @@ export function SlidePreview({
   const highlights = useMemo(
     () =>
       rawHighlights.map((hl) => {
-        const preview = previewHighlightsMap[hl.id];
+        const preview = previewHighlightsMap.get(hl.id);
         if (!preview) return hl;
         return { ...hl, ...preview };
       }),
