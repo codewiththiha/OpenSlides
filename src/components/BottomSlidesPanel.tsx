@@ -15,6 +15,7 @@
  * - setCurrentSlideId stable
  */
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
+import { createPortal } from "react-dom";
 import { useDebounce } from "use-debounce";
 import {
   DndContext,
@@ -139,7 +140,6 @@ interface SlideCardProps {
   theme: string;
   language: string;
   searchQuery?: string;
-  tooltipRight?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -166,7 +166,6 @@ const SlideCard = memo(function SlideCard({
   theme,
   language,
   searchQuery = "",
-  tooltipRight = false,
   style,
 }: SlideCardProps) {
   // Per-slide atom: only this card re-renders when its own local code changes
@@ -178,7 +177,9 @@ const SlideCard = memo(function SlideCard({
   const thumbnailCode = codeOverride ?? slide.code;
   const preview = thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty";
   const [showHoverPreview, setShowHoverPreview] = useState(false);
+  const [hoverPosition, setHoverPosition] = useState({ left: 8, top: 8 });
   const hoverTimerRef = useRef<number | null>(null);
+  const cardRootRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => () => {
     if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
   }, []);
@@ -246,6 +247,7 @@ const SlideCard = memo(function SlideCard({
   return (
     <div
       ref={(node) => {
+        cardRootRef.current = node;
         setNodeRef?.(node);
         registerCardRef?.(node);
       }}
@@ -267,7 +269,22 @@ const SlideCard = memo(function SlideCard({
       style={{ width: ITEM_WIDTH, ...style }}
       onMouseEnter={() => {
         if (isOverlay) return;
-        hoverTimerRef.current = window.setTimeout(() => setShowHoverPreview(true), 300);
+        hoverTimerRef.current = window.setTimeout(() => {
+          const rect = cardRootRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const width = 300;
+          const height = 170;
+          const left = Math.min(
+            Math.max(8, rect.left),
+            Math.max(8, window.innerWidth - width - 8),
+          );
+          const above = rect.top - height - 8;
+          const top = above >= 8
+            ? above
+            : Math.min(rect.bottom + 8, window.innerHeight - height - 8);
+          setHoverPosition({ left, top: Math.max(8, top) });
+          setShowHoverPreview(true);
+        }, 300);
       }}
       onMouseLeave={() => {
         if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
@@ -285,14 +302,15 @@ const SlideCard = memo(function SlideCard({
         onRename(slide.id, title);
       }}
     >
-      {showHoverPreview && hoverThumbnail.html && (
+      {showHoverPreview && hoverThumbnail.html && createPortal(
         <div
           ref={hoverThumbnail.ref}
-          className={cn(
-            "pointer-events-none absolute bottom-full z-50 mb-2 h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl",
-            tooltipRight ? "right-0" : "left-0",
-          )}
-          style={{ backgroundColor: themeBackground(theme) }}
+          className="pointer-events-none fixed z-[200] h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl"
+          style={{
+            left: hoverPosition.left,
+            top: hoverPosition.top,
+            backgroundColor: themeBackground(theme),
+          }}
           aria-hidden="true"
         >
           <code
@@ -300,7 +318,8 @@ const SlideCard = memo(function SlideCard({
             style={{ fontSize: "8px", lineHeight: 1.35, whiteSpace: "pre" }}
             dangerouslySetInnerHTML={{ __html: hoverThumbnail.html }}
           />
-        </div>
+        </div>,
+        document.body,
       )}
       <div className="flex min-w-0 items-center justify-between gap-1">
         <div className="flex min-w-0 items-center gap-1">
@@ -467,7 +486,6 @@ const SlideCard = memo(function SlideCard({
   if (prev.theme !== next.theme) return false;
   if (prev.language !== next.language) return false;
   if (prev.searchQuery !== next.searchQuery) return false;
-  if (prev.tooltipRight !== next.tooltipRight) return false;
   // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
   // dragHandleProps is stable from useSortable, but compare ref
@@ -496,7 +514,6 @@ function SortableSlideItem({
   theme,
   language,
   searchQuery,
-  tooltipRight,
 }: {
   slide: Slide;
   index: number;
@@ -517,7 +534,6 @@ function SortableSlideItem({
   theme: string;
   language: string;
   searchQuery: string;
-  tooltipRight: boolean;
 }) {
   const {
     attributes,
@@ -563,7 +579,6 @@ function SortableSlideItem({
       theme={theme}
       language={language}
       searchQuery={searchQuery}
-      tooltipRight={tooltipRight}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
@@ -877,7 +892,6 @@ export function BottomSlidesPanel({
                   theme={theme}
                   language={language}
                   searchQuery={searchQuery}
-                  tooltipRight={index >= filteredOrdered.length - 2}
                 />
               );
             })}
