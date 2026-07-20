@@ -245,11 +245,11 @@ pub async fn delete_slide(
             r#"
             UPDATE slides SET order_index = new_order
             FROM (
-              SELECT json_extract(value, '$.id') as id,
+              SELECT json_extract(value, '$.id') as slide_id,
                      CAST(json_extract(value, '$.new_order') AS INTEGER) as new_order
               FROM json_each(?)
-            )
-            WHERE slides.id = id AND slides.project_id = ?
+            ) AS requested
+            WHERE slides.id = requested.slide_id AND slides.project_id = ?
             "#,
         )
         .bind(&json)
@@ -487,11 +487,11 @@ pub async fn reorder_slides(
         r#"
         UPDATE slides SET order_index = new_order
         FROM (
-          SELECT json_extract(value, '$.id') as id,
+          SELECT json_extract(value, '$.id') as slide_id,
                  CAST(json_extract(value, '$.new_order') AS INTEGER) as new_order
           FROM json_each(?)
-        )
-        WHERE slides.id = id AND slides.project_id = ?
+        ) AS requested
+        WHERE slides.id = requested.slide_id AND slides.project_id = ?
         "#,
     )
     .bind(&json)
