@@ -109,7 +109,6 @@ export const EditorLayout = memo(function EditorLayout({
         <PanelGroup
           direction="vertical"
           className="min-h-0 flex-1"
-          autoSaveId="openslides-v"
         >
           <Panel
             defaultSize={isZenMode ? 100 : 78}
@@ -119,7 +118,6 @@ export const EditorLayout = memo(function EditorLayout({
             <PanelGroup
               direction="horizontal"
               className="h-full min-h-0"
-              autoSaveId="openslides-h"
             >
               <Panel
                 defaultSize={
