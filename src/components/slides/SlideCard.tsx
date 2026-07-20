@@ -2,12 +2,13 @@ import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GripVertical, Pencil, Copy, Trash2, Highlighter as HighlighterIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { slideDisplayName, themeBackground, type Slide } from "@/types";
+import { slideDisplayName, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
 import { useSlideCode } from "@/hooks/useSlideCode";
 import { SearchSnippet } from "./SearchSnippet";
 import { Z_INDEX } from "../ui/overlay";
+import { CodeThumbnail } from "../ui/code-thumbnail";
 
 export const ITEM_WIDTH = 152;
 
@@ -193,23 +194,14 @@ export const SlideCard = memo(function SlideCard({
       }}
     >
       {showHoverPreview && hoverThumbnail.html && createPortal(
-        <div
-          ref={hoverThumbnail.ref}
-          className="pointer-events-none fixed h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl"
-          style={{
-            left: hoverPosition.left,
-            top: hoverPosition.top,
-            backgroundColor: themeBackground(theme),
-            zIndex: Z_INDEX.hoverPreview,
-          }}
-          aria-hidden="true"
-        >
-          <code
-            className="block font-mono"
-            style={{ fontSize: "8px", lineHeight: 1.35, whiteSpace: "pre" }}
-            dangerouslySetInnerHTML={{ __html: hoverThumbnail.html }}
-          />
-        </div>,
+        <CodeThumbnail
+          containerRef={hoverThumbnail.ref}
+          html={hoverThumbnail.html}
+          theme={theme}
+          fontSize={8}
+          className="pointer-events-none fixed h-[170px] w-[300px] rounded-lg border border-border bg-card p-2 shadow-2xl"
+          style={{ left: hoverPosition.left, top: hoverPosition.top, zIndex: Z_INDEX.hoverPreview }}
+        />,
         document.body,
       )}
       <div className="flex min-w-0 items-center justify-between gap-1">
@@ -293,31 +285,22 @@ export const SlideCard = memo(function SlideCard({
           </div>
         )}
       </div>
-      <div
-        ref={thumbnail.ref}
+      <CodeThumbnail
+        containerRef={thumbnail.ref}
+        html={thumbnail.html}
+        theme={theme}
+        fontSize={5.5}
         className={cn(
-          "relative w-full overflow-hidden rounded border border-border/70 p-1",
+          "rounded border border-border/70 p-1",
           isSelected && "ring-1 ring-primary/30",
         )}
-        style={{ aspectRatio: "16 / 9", backgroundColor: themeBackground(theme) }}
-        aria-hidden="true"
-      >
-        {thumbnail.html ? (
-          <code
-            className="pointer-events-none block overflow-hidden font-mono"
-            style={{
-              fontSize: "5.5px",
-              lineHeight: 1.35,
-              whiteSpace: "pre",
-            }}
-            dangerouslySetInnerHTML={{ __html: thumbnail.html }}
-          />
-        ) : (
+        style={{ aspectRatio: "16 / 9" }}
+        fallback={
           <span className="block truncate font-mono text-[10px] leading-tight text-muted-foreground/80">
             {preview}
           </span>
-        )}
-      </div>
+        }
+      />
       {searchQuery && <SearchSnippet code={`${title}\n${thumbnailCode}`} query={searchQuery} />}
       <div className="mt-auto flex items-center justify-between gap-1">
         <span
