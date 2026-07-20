@@ -1,5 +1,5 @@
 /** Project dashboard orchestrator with virtualized project rows. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Command as CommandIcon, FolderOpen, Loader2, Plus, Upload } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -13,6 +13,7 @@ import { ProjectCard } from "./dashboard/ProjectCard";
 import { useProjects, useCreateProject, useDuplicateProject, useDeleteProject, useExportProject, useImportProject, useRenameProject } from "@/hooks/queries";
 import { useInlineRename } from "@/hooks/useInlineRename";
 import { useWindowTitle } from "@/hooks/useWindowTitle";
+import { useBaseAppMenuHandlers } from "@/hooks/useBaseAppMenuHandlers";
 import { isModKey, isTypingTarget } from "@/lib/keyboard";
 import { modKeyLabel } from "@/lib/platform";
 import { useAppMenu } from "@/hooks/useAppMenu";
@@ -30,10 +31,10 @@ export function Dashboard() {
   const createRef = useRef(createMutation); const duplicateRef = useRef(duplicateMutation); const deleteRef = useRef(deleteMutation); const exportRef = useRef(exportMutation); const importRef = useRef(importMutation); const renameRef = useRef(renameMutation); const projectsRef = useRef(projects);
   createRef.current = createMutation; duplicateRef.current = duplicateMutation; deleteRef.current = deleteMutation; exportRef.current = exportMutation; importRef.current = importMutation; renameRef.current = renameMutation; projectsRef.current = projects;
   const [creating, setCreating] = useState(false); const [newName, setNewName] = useState("Untitled Deck");
-  const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen); const isDarkUi = useUiStore((s) => s.isDarkUi); const toggleTheme = useUiStore((s) => s.toggleTheme); const setIsShortcutsOpen = useUiStore((s) => s.setIsShortcutsOpen); const toggleShortcutsOpen = useUiStore((s) => s.toggleShortcutsOpen);
+  const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen); const isDarkUi = useUiStore((s) => s.isDarkUi);
   useWindowTitle("OpenSlides — Projects");
   useEffect(() => { applyUiTheme(isDarkUi); }, [isDarkUi]);
-  useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) { e.preventDefault(); toggleShortcutsOpen(); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [toggleShortcutsOpen]);
+  useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) { e.preventDefault(); useUiStore.getState().setIsShortcutsOpen(true); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, []);
   const handleOpen = useCallback((id: string) => navigate(`/editor/${id}`), [navigate]);
   const handleDuplicate = useCallback((id: string) => duplicateRef.current.mutate(id), []);
   const handleExport = useCallback((id: string) => exportRef.current.mutate(id), []);
@@ -41,7 +42,13 @@ export function Dashboard() {
   const rename = useInlineRename(useCallback(async (id: string, name: string) => { await renameRef.current.mutateAsync({ projectId: id, name: name || "Untitled Deck" }); }, []));
   const handleCreate = useCallback(async () => { try { const project = await createRef.current.mutateAsync(newName.trim() || "Untitled Deck"); setCreating(false); setNewName("Untitled Deck"); navigate(`/editor/${project.id}`); } catch {} }, [newName, navigate]);
   const handleImport = useCallback(async () => { try { const project = await importRef.current.mutateAsync(); navigate(`/editor/${project.id}`); } catch {} }, [navigate]);
-  const menuHandlers = useMemo(() => ({ "menu://new-project": () => setCreating(true), "menu://open-dashboard": () => navigate("/"), "menu://command-palette": () => setIsCommandOpen(true), "menu://toggle-theme": () => toggleTheme(), "menu://export": () => projectsRef.current[0] && exportRef.current.mutate(projectsRef.current[0].id), "menu://shortcuts": () => setIsShortcutsOpen(true) }), [navigate, setIsCommandOpen, toggleTheme, setIsShortcutsOpen]);
+  const menuHandlers = useBaseAppMenuHandlers({
+    onNewProject: () => setCreating(true),
+    onExport: () => {
+      const first = projectsRef.current[0];
+      if (first) exportRef.current.mutate(first.id);
+    },
+  });
   useAppMenu(menuHandlers);
   const parentRef = useRef<HTMLDivElement>(null); const [columnCount, setColumnCount] = useState(3);
   useEffect(() => { const update = () => setColumnCount(window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3); update(); window.addEventListener("resize", update); return () => window.removeEventListener("resize", update); }, []);
