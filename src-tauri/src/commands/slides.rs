@@ -68,6 +68,7 @@ pub async fn create_slide(
         order_index,
         name: slide_name,
         highlights: vec![],
+        thumbnail_html: String::new(),
     })
 }
 
@@ -364,7 +365,7 @@ pub async fn update_slide_code(
     // Use RETURNING to get project_id in same round-trip — eliminates SELECT after UPDATE
     // Previously: UPDATE → SELECT project_id → UPDATE projects updated_at = 3 trips per keystroke
     // Now: UPDATE RETURNING project_id → UPDATE projects updated_at = 2 trips (33% fewer)
-    let row = sqlx::query("UPDATE slides SET code = ? WHERE id = ? RETURNING project_id")
+    let row = sqlx::query("UPDATE slides SET code = ?, thumbnail_html = '' WHERE id = ? RETURNING project_id")
         .bind(&code)
         .bind(&slide_id)
         .fetch_optional(pool.inner())
@@ -378,6 +379,27 @@ pub async fn update_slide_code(
     let pid: String = row.get("project_id");
     let _ = touch_project(pool.inner(), &pid).await;
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cache_thumbnail(
+    pool: State<'_, DbPool>,
+    slide_id: String,
+    code: String,
+    html: String,
+) -> Result<(), String> {
+    // Only write if the code still matches the rendered request. This prevents
+    // an older worker response from overwriting a newer thumbnail.
+    sqlx::query(
+        "UPDATE slides SET thumbnail_html = ? WHERE id = ? AND code = ?",
+    )
+    .bind(html)
+    .bind(slide_id)
+    .bind(code)
+    .execute(pool.inner())
+    .await
+    .map_err(|e| format!("Failed to cache thumbnail: {e}"))?;
     Ok(())
 }
 
@@ -451,6 +473,7 @@ pub async fn update_slide_settings(
         order_index,
         name,
         highlights,
+        thumbnail_html: String::new(),
     })
 }
 

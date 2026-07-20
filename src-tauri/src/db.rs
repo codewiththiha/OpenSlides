@@ -118,7 +118,7 @@ async fn set_version(pool: &SqlitePool, v: i64) -> Result<(), String> {
 }
 
 /// Incremental, additive migrations. Bump TARGET when adding a step.
-const TARGET_VERSION: i64 = 4;
+const TARGET_VERSION: i64 = 5;
 
 async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
     let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
@@ -297,6 +297,18 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
         .await
         .map_err(|e| format!("Failed to create slide search index: {e}"))?;
         version = 4;
+        set_version(pool, version).await?;
+    }
+
+    // v5: write-behind Shiki thumbnail cache.
+    if version < 5 {
+        if !column_exists(pool, "slides", "thumbnail_html").await? {
+            sqlx::query("ALTER TABLE slides ADD COLUMN thumbnail_html TEXT NOT NULL DEFAULT ''")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to add slides.thumbnail_html: {e}"))?;
+        }
+        version = 5;
         set_version(pool, version).await?;
     }
 

@@ -100,6 +100,8 @@ export interface Slide {
   name?: string;
   /** Highlight effects (sub-slide focus indicators). */
   highlights: Highlight[];
+  /** Cached truncated Shiki HTML for the slide-strip thumbnail. */
+  thumbnailHtml?: string;
 }
 
 export interface ProjectSettings {

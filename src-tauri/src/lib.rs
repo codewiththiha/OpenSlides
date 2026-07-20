@@ -59,6 +59,7 @@ pub fn run() {
             duplicate_slide,
             restore_slide,
             update_slide_code,
+            cache_thumbnail,
             update_slide_settings,
             reorder_slides,
             set_current_slide,
