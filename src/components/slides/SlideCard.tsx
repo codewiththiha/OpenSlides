@@ -9,6 +9,7 @@ import { useSlideCode } from "@/hooks/useSlideCode";
 import { SearchSnippet } from "./SearchSnippet";
 import { Z_INDEX } from "../ui/overlay";
 import { CodeThumbnail } from "../ui/code-thumbnail";
+import { InlineRenameInput } from "../ui/inline-rename-input";
 
 export const ITEM_WIDTH = 152;
 
@@ -215,18 +216,12 @@ export const SlideCard = memo(function SlideCard({
             <GripVertical className="h-3.5 w-3.5" />
           </button>
           {isRenaming ? (
-            <input
-              autoFocus
-              className="h-5 min-w-0 flex-1 rounded border border-input bg-background px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
+            <InlineRenameInput
               value={renameValue}
-              onChange={(e) => onRenameValueChange?.(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onBlur={() => onCommitRename?.()}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === "Enter") onCommitRename?.();
-                if (e.key === "Escape") onCancelRename?.();
-              }}
+              onChange={(v) => onRenameValueChange?.(v)}
+              onCommit={() => onCommitRename?.()}
+              onCancel={() => onCancelRename?.()}
+              className="h-5 min-w-0 flex-1 rounded border border-input bg-background px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
             />
           ) : (
             <span
