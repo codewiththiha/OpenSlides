@@ -246,7 +246,6 @@ pub struct NewSlide<'a> {
     pub project_id: &'a str,
     pub order_index: i64,
     pub code: &'a str,
-    pub language: &'a str,
     pub transition_duration: i64,
     pub stagger: i64,
     pub duration: i64,
@@ -261,14 +260,13 @@ where
 {
     sqlx::query(
         r#"INSERT INTO slides
-           (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights, thumbnail_html)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+           (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
     )
     .bind(slide.id)
     .bind(slide.project_id)
     .bind(slide.order_index)
     .bind(slide.code)
-    .bind(slide.language)
     .bind(slide.transition_duration)
     .bind(slide.stagger)
     .bind(slide.duration)
