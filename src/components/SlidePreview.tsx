@@ -45,6 +45,7 @@ export function SlidePreview({
   const codeOverride = useLocalCodeAtom(slide?.id);
   const code = codeOverride ?? slide?.code ?? "";
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
+  const [readyKey, setReadyKey] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
@@ -55,21 +56,21 @@ export function SlidePreview({
   );
   const previewHighlightsMap = useUiStore((s) => s.previewHighlights);
 
-  useEffect(() => {
-    let cancelled = false;
-    getHighlighter().then((h) => {
-      if (!cancelled) setHighlighter(h);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
+  useEffect(() => {
+    let cancelled = false;
+    const key = `${theme}-${language}`;
+    getHighlighter(theme, language).then((h) => {
+      if (!cancelled) {
+        setHighlighter(h);
+        setReadyKey(key);
+      }
+    }).catch(() => { if (!cancelled) setReadyKey(null); });
+    return () => { cancelled = true; };
+  }, [theme, language]);
   const isDarkBg = !/light|latte/i.test(theme);
-  const canUseShiki =
-    highlighter && highlighter.getLoadedLanguages().includes(language);
+  const canUseShiki = readyKey === `${theme}-${language}` && !!highlighter;
 
 
   if (!slide) {
