@@ -141,6 +141,10 @@ export interface ProjectSummary {
   slideCount: number;
   createdAt: number;
   updatedAt: number;
+  language: string;
+  firstSlideId: string;
+  firstSlideCode: string;
+  firstSlideThumbnail: string;
 }
 
 export function slideDisplayName(slide: Slide, index: number): string {

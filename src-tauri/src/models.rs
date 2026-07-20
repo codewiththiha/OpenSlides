@@ -163,6 +163,14 @@ pub struct ProjectSummary {
     pub slide_count: i64,
     pub created_at: i64,
     pub updated_at: i64,
+    #[serde(default = "default_language")]
+    pub language: String,
+    #[serde(default)]
+    pub first_slide_id: String,
+    #[serde(default)]
+    pub first_slide_code: String,
+    #[serde(default)]
+    pub first_slide_thumbnail: String,
 }
 
 #[derive(Debug, Deserialize)]

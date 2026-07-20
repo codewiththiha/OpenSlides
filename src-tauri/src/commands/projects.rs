@@ -15,7 +15,11 @@ pub async fn get_projects(pool: State<'_, DbPool>) -> Result<Vec<ProjectSummary>
     let rows = sqlx::query(
         r#"
         SELECT p.id, p.name, p.theme, p.created_at, p.updated_at,
-               (SELECT COUNT(*) FROM slides s WHERE s.project_id = p.id) AS slide_count
+               (SELECT COUNT(*) FROM slides s WHERE s.project_id = p.id) AS slide_count,
+               COALESCE(json_extract(p.settings, '$.language'), 'typescript') AS language,
+               (SELECT s.id FROM slides s WHERE s.project_id = p.id ORDER BY s.order_index ASC LIMIT 1) AS first_slide_id,
+               COALESCE((SELECT substr(s.code, 1, 400) FROM slides s WHERE s.project_id = p.id ORDER BY s.order_index ASC LIMIT 1), '') AS first_slide_code,
+               COALESCE((SELECT s.thumbnail_html FROM slides s WHERE s.project_id = p.id ORDER BY s.order_index ASC LIMIT 1), '') AS first_slide_thumbnail
         FROM projects p
         ORDER BY p.updated_at DESC
         "#,
@@ -33,6 +37,10 @@ pub async fn get_projects(pool: State<'_, DbPool>) -> Result<Vec<ProjectSummary>
             slide_count: r.get("slide_count"),
             created_at: r.get("created_at"),
             updated_at: r.get("updated_at"),
+            language: r.try_get("language").unwrap_or_else(|_| "typescript".to_string()),
+            first_slide_id: r.try_get("first_slide_id").unwrap_or_default(),
+            first_slide_code: r.try_get("first_slide_code").unwrap_or_default(),
+            first_slide_thumbnail: r.try_get("first_slide_thumbnail").unwrap_or_default(),
         })
         .collect())
 }
@@ -239,7 +247,7 @@ pub async fn update_project_settings(
 
     // Keep slides.language column in sync for legacy/export convenience — only if changed
     if merged.language != existing.language {
-        sqlx::query("UPDATE slides SET language = ? WHERE project_id = ?")
+        sqlx::query("UPDATE slides SET language = ?, thumbnail_html = '' WHERE project_id = ?")
             .bind(&merged.language)
             .bind(&project_id)
             .execute(pool.inner())
@@ -263,6 +271,12 @@ pub async fn update_project_theme(
         .execute(pool.inner())
         .await
         .map_err(|e| format!("Failed to update theme: {e}"))?;
+
+    sqlx::query("UPDATE slides SET thumbnail_html = '' WHERE project_id = ?")
+        .bind(&project_id)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| format!("Failed to invalidate thumbnails: {e}"))?;
 
     fetch_project(pool.inner(), &project_id).await
 }
