@@ -137,7 +137,8 @@ export const HIGHLIGHT_DEFAULTS = {
 export interface Project {
   id: string;
   name: string;
-  theme: ThemeName | string;
+  /** Database-sourced theme id; input APIs use ThemeName. */
+  theme: string;
   settings: ProjectSettings;
   slides: Slide[];
   createdAt: number;

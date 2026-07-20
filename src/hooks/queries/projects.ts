@@ -7,7 +7,7 @@ import { notify } from "../../lib/toast";
 import { api, isCancelledError, type SettingsPatch } from "../../lib/tauri-api";
 import { projectKeys } from "./keys";
 import { showUndoToast } from "../../lib/settings-undo";
-import type { ProjectSettings } from "../../types";
+import type { ProjectSettings, ThemeName } from "../../types";
 
 export function useProjects() {
   return useQuery({
@@ -133,7 +133,7 @@ export function useUpdateSettings(projectId: string) {
 export function useUpdateTheme(projectId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (theme: string) => api.updateProjectTheme(projectId, theme),
+    mutationFn: (theme: ThemeName) => api.updateProjectTheme(projectId, theme),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
     },

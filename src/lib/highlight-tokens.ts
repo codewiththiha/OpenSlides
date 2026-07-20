@@ -192,15 +192,6 @@ export function renderTokensToSpans(tokens: HighlightTokenLine): string {
     .join("");
 }
 
-/** Render full token lines with the `<span class="line">` wrapper the
- *  preview/measurer expects (magic-move uses `.line` per row too),
- *  lines joined by `\n`. */
-export function renderTokenLines(lines: HighlightTokenLine[]): string {
-  return lines
-    .map((l) => `<span class="line">${renderTokensToSpans(l)}</span>`)
-    .join("\n");
-}
-
 /* ----------------------------------------------------------------------- *
  * Color mixing & plan assembly (exact ports)
  * ----------------------------------------------------------------------- */

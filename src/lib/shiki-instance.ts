@@ -11,7 +11,7 @@ function getBaseHighlighter() {
   return highlighterPromise;
 }
 
-export function ensureTheme(h: Highlighter, theme: string): Promise<void> {
+function ensureTheme(h: Highlighter, theme: string): Promise<void> {
   if (h.getLoadedThemes().includes(theme)) return Promise.resolve();
   let load = themeLoads.get(theme);
   if (!load) {
@@ -21,7 +21,7 @@ export function ensureTheme(h: Highlighter, theme: string): Promise<void> {
   return load;
 }
 
-export function ensureLanguage(h: Highlighter, language: string): Promise<void> {
+function ensureLanguage(h: Highlighter, language: string): Promise<void> {
   if (h.getLoadedLanguages().includes(language)) return Promise.resolve();
   let load = langLoads.get(language);
   if (!load) {

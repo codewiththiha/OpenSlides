@@ -6,7 +6,6 @@
 import { createHighlighter } from "shiki";
 import {
   buildPlan,
-  renderTokenLines,
 } from "../src/lib/highlight-tokens.ts";
 
 const h = await createHighlighter({
@@ -71,7 +70,4 @@ if (!plan.lines[1].html.includes("&quot;")) throw new Error("quote entity lost i
 if (plan.lines.length !== 3) throw new Error("plan line count wrong");
 console.log("entity-safe multi-line clone ✓");
 
-// 5. renderTokenLines round-trips for the full-lines render path
-const rendered = renderTokenLines(tokenLines);
-if (!rendered.startsWith('<span class="line">')) throw new Error("line wrapper missing");
 console.log("OK — live Shiki e2e passed");

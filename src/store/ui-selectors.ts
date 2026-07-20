@@ -53,6 +53,24 @@ export function useAutoPlaySlice() {
   );
 }
 
+/** Editor orchestrator slice. */
+export function useEditorSlice() {
+  return useUiStore(
+    useShallow((s) => ({
+      currentSlideId: s.currentSlideId,
+      setCurrentSlideId: s.setCurrentSlideId,
+      isPresenting: s.isPresenting,
+      isZenMode: s.isZenMode,
+      isSettingsOpen: s.isSettingsOpen,
+      setIsSettingsOpen: s.setIsSettingsOpen,
+      resetEditorUi: s.resetEditorUi,
+      previewHighlightIndex: s.previewHighlightIndex,
+      isAutoPlaying: s.isAutoPlaying,
+      setIsAutoPlaying: s.setIsAutoPlaying,
+    })),
+  );
+}
+
 export function usePresentationControls() {
   return useUiStore(
     useShallow((s) => ({
