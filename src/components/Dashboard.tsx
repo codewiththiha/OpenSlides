@@ -168,6 +168,7 @@ export function Dashboard() {
     count: rowCount,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 220,
+    measureElement: (element) => element.getBoundingClientRect().height,
     overscan: 5,
   });
 
@@ -311,6 +312,8 @@ export function Dashboard() {
                 return (
                   <div
                     key={virtualRow.key}
+                    ref={rowVirtualizer.measureElement}
+                    data-index={virtualRow.index}
                     style={{
                       position: "absolute",
                       top: 0,

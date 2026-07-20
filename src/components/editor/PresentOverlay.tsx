@@ -20,7 +20,7 @@ function useRemainingSec(duration: number, resetKey: string) {
     const id = window.setInterval(() => {
       const next = Math.max(0, Math.ceil((duration - (performance.now() - start)) / 1000));
       setRemaining((prev) => prev === next ? prev : next);
-    }, 250);
+    }, 100);
     return () => window.clearInterval(id);
   }, [duration, resetKey]);
   return remaining;

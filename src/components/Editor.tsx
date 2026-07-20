@@ -11,7 +11,7 @@
  *  - usePresentFullscreen (enter/exit/fullscreenchange)
  *  - Zustand slices defined in ui-selectors.ts outside components
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useShallow } from "zustand/react/shallow";
 import { Loader2 } from "lucide-react";
@@ -78,6 +78,14 @@ export function Editor() {
   const duplicateSlide = useDuplicateSlide(projectId ?? "");
   const updateTheme = useUpdateTheme(projectId ?? "");
   const createProject = useCreateProject();
+  const createProjectRef = useRef(createProject);
+  const exportMutationRef = useRef(exportMutation);
+  const createSlideRef = useRef(createSlide);
+  const duplicateSlideRef = useRef(duplicateSlide);
+  createProjectRef.current = createProject;
+  exportMutationRef.current = exportMutation;
+  createSlideRef.current = createSlide;
+  duplicateSlideRef.current = duplicateSlide;
 
   const [editorExpanded, setEditorExpanded] = useState(false);
 
@@ -190,13 +198,13 @@ export function Editor() {
   const menuHandlers = useMemo(
     () => ({
       "menu://new-project": () => {
-        void createProject.mutateAsync("Untitled Deck").then((p) => {
+        void createProjectRef.current.mutateAsync("Untitled Deck").then((p) => {
           navigate(`/editor/${p.id}`);
         });
       },
       "menu://open-dashboard": () => navigate("/"),
       "menu://export": () => {
-        if (projectId) exportMutation.mutate(projectId);
+        if (projectId) exportMutationRef.current.mutate(projectId);
       },
       "menu://present": () => void enterPresent(),
       "menu://zen": () => useUiStore.getState().toggleZenMode(),
@@ -204,10 +212,10 @@ export function Editor() {
       "menu://command-palette": () =>
         useUiStore.getState().setIsCommandOpen(true),
       "menu://add-slide": () => {
-        if (projectId) createSlide.mutate({});
+        if (projectId) createSlideRef.current.mutate({});
       },
       "menu://duplicate-slide": () => {
-        if (projectId && currentSlideId) duplicateSlide.mutate(currentSlideId);
+        if (projectId && currentSlideId) duplicateSlideRef.current.mutate(currentSlideId);
       },
       "menu://toggle-theme": () => useUiStore.getState().toggleTheme(),
       "menu://shortcuts": () =>
@@ -220,13 +228,11 @@ export function Editor() {
       },
     }),
     [
-      createProject,
       navigate,
       projectId,
-      exportMutation,
+      currentSlideId,
       enterPresent,
       setIsSettingsOpen,
-      createSlide,
     ]
   );
   useAppMenu(menuHandlers);

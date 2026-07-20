@@ -97,9 +97,9 @@ self.onmessage = async (e: MessageEvent<WorkerIncoming>) => {
     return;
   }
 
-  // Guard huge files: Shiki codeToHtml is O(n) and can jank worker on 50k+ chars
+  // Guard huge files: Shiki codeToHtml is O(n) and can monopolize the worker on large inputs
   // Let main thread fallback to plain monochrome (no IPC error, just fast path)
-  if (code.length > 50_000) {
+  if (code.length > 20_000) {
     console.warn(`[Shiki Worker] code too large (${code.length} chars) — skipping highlight, using plain fallback`);
     (self as any).postMessage({ id, error: "code_too_large" } as WorkerResponse);
     return;
