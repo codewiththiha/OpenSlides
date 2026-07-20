@@ -168,12 +168,23 @@ const SlideCard = memo(function SlideCard({
 
   const thumbnailCode = codeOverride ?? slide.code;
   const preview = thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty";
+  const [showHoverPreview, setShowHoverPreview] = useState(false);
+  const hoverTimerRef = useRef<number | null>(null);
   const thumbnail = useSlideThumbnail({
     slideId: slide.id,
     code: thumbnailCode,
     theme,
     language,
     initialHtml: slide.thumbnailHtml,
+  });
+  const hoverThumbnail = useSlideThumbnail({
+    slideId: slide.id,
+    code: thumbnailCode,
+    theme,
+    language,
+    maxLines: 10,
+    maxChars: 1000,
+    enabled: showHoverPreview,
   });
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;
@@ -241,6 +252,15 @@ const SlideCard = memo(function SlideCard({
         isActive && !isOverlay && "opacity-30",
       )}
       style={{ width: ITEM_WIDTH, ...style }}
+      onMouseEnter={() => {
+        if (isOverlay) return;
+        hoverTimerRef.current = window.setTimeout(() => setShowHoverPreview(true), 300);
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = null;
+        setShowHoverPreview(false);
+      }}
       onClick={() => {
         if (isOverlay || isRenaming) return;
         setCurrentSlideId(slide.id);
@@ -252,6 +272,20 @@ const SlideCard = memo(function SlideCard({
         onRename(slide.id, title);
       }}
     >
+      {showHoverPreview && hoverThumbnail.html && (
+        <div
+          ref={hoverThumbnail.ref}
+          className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl"
+          style={{ backgroundColor: themeBackground(theme) }}
+          aria-hidden="true"
+        >
+          <code
+            className="block font-mono"
+            style={{ fontSize: "8px", lineHeight: 1.35, whiteSpace: "pre" }}
+            dangerouslySetInnerHTML={{ __html: hoverThumbnail.html }}
+          />
+        </div>
+      )}
       <div className="flex min-w-0 items-center justify-between gap-1">
         <div className="flex min-w-0 items-center gap-1">
           <button

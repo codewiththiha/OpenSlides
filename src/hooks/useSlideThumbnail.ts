@@ -29,8 +29,8 @@ function writeCache(key: string, value: ThumbnailEntry) {
   }
 }
 
-function truncateCode(code: string): string {
-  return code.split("\n").slice(0, MAX_LINES).join("\n").slice(0, MAX_CHARS);
+function truncateCode(code: string, maxLines: number, maxChars: number): string {
+  return code.split("\n").slice(0, maxLines).join("\n").slice(0, maxChars);
 }
 
 interface Args {
@@ -39,10 +39,22 @@ interface Args {
   theme: string;
   language: string;
   initialHtml?: string;
+  maxLines?: number;
+  maxChars?: number;
+  enabled?: boolean;
 }
 
-export function useSlideThumbnail({ slideId, code, theme, language, initialHtml }: Args) {
-  const truncatedCode = truncateCode(code);
+export function useSlideThumbnail({
+  slideId,
+  code,
+  theme,
+  language,
+  initialHtml,
+  maxLines = MAX_LINES,
+  maxChars = MAX_CHARS,
+  enabled = true,
+}: Args) {
+  const truncatedCode = truncateCode(code, maxLines, maxChars);
   const key = `${slideId}\u0000${theme}\u0000${language}\u0000${truncatedCode}`;
   const elementRef = useRef<HTMLDivElement>(null);
   const [entry, setEntry] = useState<ThumbnailEntry | null>(() => readCache(key));
@@ -60,7 +72,7 @@ export function useSlideThumbnail({ slideId, code, theme, language, initialHtml 
       return;
     }
     setEntry(null);
-    if (!truncatedCode) return;
+    if (!enabled || !truncatedCode) return;
 
     const controller = new AbortController();
     let timer: number | null = null;
@@ -106,7 +118,7 @@ export function useSlideThumbnail({ slideId, code, theme, language, initialHtml 
       if (timer !== null) window.clearTimeout(timer);
       observer?.disconnect();
     };
-  }, [key, language, theme, truncatedCode, initialHtml, slideId, code]);
+  }, [key, language, theme, truncatedCode, initialHtml, slideId, code, enabled]);
 
   return { html: entry?.html ?? null, ref: elementRef };
 }
