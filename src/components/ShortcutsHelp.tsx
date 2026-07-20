@@ -4,28 +4,29 @@
 import { X } from "lucide-react";
 import { useUiStore } from "@/store/useUiStore";
 import { modKeyLabel } from "@/lib/platform";
+import { SHORTCUTS } from "@/lib/shortcuts";
 import { Button } from "./ui/button";
 import { Kbd } from "./ui/kbd";
 import { Overlay, OVERLAY_Z } from "./ui/overlay";
 
-const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
+const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[] }[] = [
   {
     title: "General",
     items: [
-      { keys: ["mod", "K"], desc: "Command palette" },
-      { keys: ["?"], desc: "Show this shortcuts list" },
+      { keys: [...SHORTCUTS.commandPalette.keys], desc: SHORTCUTS.commandPalette.description },
+      { keys: [...SHORTCUTS.shortcutsHelp.keys], desc: SHORTCUTS.shortcutsHelp.description },
       { keys: ["Esc"], desc: "Close dialogs / exit present or zen" },
     ],
   },
   {
     title: "Editor",
     items: [
-      { keys: ["mod", "Z"], desc: "Undo code edit" },
-      { keys: ["mod", "Shift", "Z"], desc: "Redo code edit" },
+      { keys: [...SHORTCUTS.undo.keys], desc: SHORTCUTS.undo.description },
+      { keys: [...SHORTCUTS.redo.keys], desc: SHORTCUTS.redo.description },
       { keys: ["mod", "Y"], desc: "Redo (Windows / Linux)" },
-      { keys: ["mod", "B"], desc: "Toggle zen mode" },
-      { keys: ["mod", "G"], desc: "Go to slide by number or name" },
-      { keys: ["mod", "Shift", "F"], desc: "Focus slide search (or / when not typing)" },
+      { keys: [...SHORTCUTS.zen.keys], desc: SHORTCUTS.zen.description },
+      { keys: [...SHORTCUTS.goToSlide.keys], desc: SHORTCUTS.goToSlide.description },
+      { keys: [...SHORTCUTS.focusSlideSearch.keys], desc: SHORTCUTS.focusSlideSearch.description },
       { keys: ["←", "→"], desc: "Step through highlights, then slides" },
       { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
       { keys: ["0"], desc: "Back to clean slide (no highlight)" },
@@ -44,7 +45,7 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
   {
     title: "Presentation",
     items: [
-      { keys: ["mod", "Shift", "P"], desc: "Start presentation (menu)" },
+      { keys: [...SHORTCUTS.present.keys], desc: SHORTCUTS.present.description },
       { keys: ["←", "→", "Space"], desc: "Step through highlights, then slides" },
       { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
       { keys: ["0"], desc: "Back to clean slide (no highlight)" },
@@ -57,10 +58,11 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
   {
     title: "Menu (also in menu bar)",
     items: [
-      { keys: ["mod", "N"], desc: "New project" },
-      { keys: ["mod", "E"], desc: "Export project JSON" },
-      { keys: ["mod", ","], desc: "Project settings" },
-      { keys: ["mod", "Shift", "N"], desc: "Add slide" },
+      { keys: [...SHORTCUTS.newProject.keys], desc: SHORTCUTS.newProject.description },
+      { keys: [...SHORTCUTS.export.keys], desc: SHORTCUTS.export.description },
+      { keys: [...SHORTCUTS.settings.keys], desc: SHORTCUTS.settings.description },
+      { keys: [...SHORTCUTS.addSlide.keys], desc: SHORTCUTS.addSlide.description },
+      { keys: [...SHORTCUTS.duplicateSlide.keys], desc: SHORTCUTS.duplicateSlide.description },
     ],
   },
 ];

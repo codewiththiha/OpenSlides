@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 import { useDebouncedCallback } from "use-debounce";
 import {
-  LIGHT_THEMES,
   SUPPORTED_LANGUAGES,
   resolveProjectLanguage,
+  fallbackForeground,
   type Project,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
-import { useLocalCodeAtom, getLocalCodeAtom } from "@/store/localCodeAtoms";
+import { getLocalCodeAtom } from "@/store/localCodeAtoms";
+import { useSlideCode } from "@/hooks/useSlideCode";
 import { getCaretPosition, setCaretPosition } from "@/store/caretPositions";
 import {
   useUpdateSettings,
@@ -39,7 +40,7 @@ import { useShikiWorker } from "@/hooks/useShikiWorker";
 import { EditorSlideNav } from "./editor/EditorSlideNav";
 import { useEditorHistory } from "@/hooks/useEditorHistory";
 import { useHighlightCrud } from "@/hooks/useHighlightCrud";
-import { useSlideMaps } from "@/hooks/useSlideMaps";
+import { useCurrentSlide } from "@/hooks/useCurrentSlide";
 import { FindReplaceBar } from "./editor/FindReplaceBar";
 import { SlideTimingSliders } from "./editor/SlideTimingSliders";
 import { Kbd } from "./ui/kbd";
@@ -60,7 +61,6 @@ export function CodeEditor({
   onToggleExpand,
   onCollapse,
 }: CodeEditorProps) {
-  const currentSlideId = useUiStore((s) => s.currentSlideId);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
   const setLocalCode = useUiStore((s) => s.setLocalCode);
   const setSaveStatus = useUiStore((s) => s.setSaveStatus);
@@ -68,15 +68,10 @@ export function CodeEditor({
   // preview overrides
   const previewProject = useUiStore((s) => s.previewProject);
 
-  const { slideMap, indexMap } = useSlideMaps(project.slides);
-
-  const slide =
-    (currentSlideId ? slideMap.get(currentSlideId) : undefined) ??
-    project.slides[0];
+  const { activeSlide: slide, activeIndex: currentIndex } = useCurrentSlide(project);
   const slideId = slide?.id;
 
-  const localCodeAtom = useLocalCodeAtom(slideId);
-  const code = localCodeAtom ?? slide?.code ?? "";
+  const code = useSlideCode(slideId, slide?.code ?? "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -139,7 +134,7 @@ export function CodeEditor({
   const projectSettingsMutation = useUpdateSettings(project.id);
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
-  const isDarkBg = !LIGHT_THEMES.has(theme);
+
   const rawEditorFontSize = project.settings.editorFontSize || 14;
   const editorFontSize = previewProject.editorFontSize ?? rawEditorFontSize;
   const lineHeight = 1.55;
@@ -288,7 +283,7 @@ export function CodeEditor({
     }
   };
 
-  const currentIndex = slideId ? (indexMap.get(slideId) ?? -1) : -1;
+
 
   const goSlide = (dir: -1 | 1) => {
     try {
@@ -315,7 +310,7 @@ export function CodeEditor({
 
   const gutterWidth = Math.max(2, String(lineCount).length) * 0.65 + 1.25;
 
-  const defaultFg = isDarkBg ? "#abb2bf" : "#383a42";
+  const defaultFg = fallbackForeground(theme);
 
   return (
     <div className="flex h-full min-w-0 flex-col bg-card">

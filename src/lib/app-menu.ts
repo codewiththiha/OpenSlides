@@ -5,6 +5,7 @@
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/menu";
 import { emit } from "@tauri-apps/api/event";
 import { isMacOS } from "./platform";
+import { SHORTCUTS, shortcutAccelerator } from "./shortcuts";
 
 export type AppMenuEvent =
   | "menu://new-project"
@@ -39,10 +40,10 @@ async function item(
 export async function installAppMenu(): Promise<void> {
   try {
     const fileItems = [
-      await item("menu://new-project", "New Project", "CmdOrCtrl+N"),
-      await item("menu://open-dashboard", "Go to Dashboard", "CmdOrCtrl+Shift+O"),
+      await item("menu://new-project", "New Project", shortcutAccelerator(SHORTCUTS.newProject)),
+      await item("menu://open-dashboard", "Go to Dashboard", shortcutAccelerator(SHORTCUTS.openDashboard)),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await item("menu://export", "Export Project as JSON…", "CmdOrCtrl+E"),
+      await item("menu://export", "Export Project as JSON…", shortcutAccelerator(SHORTCUTS.export)),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "CloseWindow", text: "Close" }),
     ];
@@ -57,8 +58,8 @@ export async function installAppMenu(): Promise<void> {
     // Custom Undo/Redo so our controlled code editor history works
     // (native Predefined Undo/Redo only affect OS text fields).
     const editItems = [
-      await item("menu://undo", "Undo", "CmdOrCtrl+Z"),
-      await item("menu://redo", "Redo", "CmdOrCtrl+Shift+Z"),
+      await item("menu://undo", "Undo", shortcutAccelerator(SHORTCUTS.undo)),
+      await item("menu://redo", "Redo", shortcutAccelerator(SHORTCUTS.redo)),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Cut" }),
       await PredefinedMenuItem.new({ item: "Copy" }),
@@ -67,9 +68,9 @@ export async function installAppMenu(): Promise<void> {
     ];
 
     const viewItems = [
-      await item("menu://present", "Start Presentation", "CmdOrCtrl+Shift+P"),
-      await item("menu://zen", "Toggle Zen Mode", "CmdOrCtrl+B"),
-      await item("menu://command-palette", "Command Palette", "CmdOrCtrl+K"),
+      await item("menu://present", "Start Presentation", shortcutAccelerator(SHORTCUTS.present)),
+      await item("menu://zen", "Toggle Zen Mode", shortcutAccelerator(SHORTCUTS.zen)),
+      await item("menu://command-palette", "Command Palette", shortcutAccelerator(SHORTCUTS.commandPalette)),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await item("menu://toggle-theme", "Toggle Light/Dark UI"),
       await PredefinedMenuItem.new({ item: "Separator" }),
@@ -77,9 +78,9 @@ export async function installAppMenu(): Promise<void> {
     ];
 
     const slideItems = [
-      await item("menu://add-slide", "Add Slide", "CmdOrCtrl+Shift+N"),
-      await item("menu://duplicate-slide", "Duplicate Slide", "CmdOrCtrl+Shift+D"),
-      await item("menu://settings", "Project Settings…", "CmdOrCtrl+,"),
+      await item("menu://add-slide", "Add Slide", shortcutAccelerator(SHORTCUTS.addSlide)),
+      await item("menu://duplicate-slide", "Duplicate Slide", shortcutAccelerator(SHORTCUTS.duplicateSlide)),
+      await item("menu://settings", "Project Settings…", shortcutAccelerator(SHORTCUTS.settings)),
     ];
 
     // Help: only Keyboard Shortcuts (no About — same modal was confusing)

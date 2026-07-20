@@ -19,7 +19,7 @@ import { useUiStore } from "@/store/useUiStore";
 import { THEME_OPTIONS, type ThemeName } from "@/types";
 import { cn } from "@/lib/utils";
 import { Kbd } from "./ui/kbd";
-import { Overlay, OVERLAY_Z } from "./ui/overlay";
+import { CommandDialog } from "./ui/command-dialog";
 import { modKeyLabel } from "@/lib/platform";
 import { isModKey } from "@/lib/keyboard";
 
@@ -63,97 +63,86 @@ export function CommandPalette({
     if (!isCommandOpen) setSearch("");
   }, [isCommandOpen]);
 
-  if (!isCommandOpen) return null;
-
   const run = (fn: () => void) => {
     fn();
     setIsCommandOpen(false);
   };
 
   return (
-    <Overlay onClose={() => setIsCommandOpen(false)} z={OVERLAY_Z.command} placement="top" closeOnEsc className="w-full max-w-lg">
-      <Command
-        className="w-full overflow-hidden rounded-xl border bg-card shadow-2xl"
-        label="Command Menu"
-      >
-        <Command.Input
-          value={search}
-          onValueChange={setSearch}
-          placeholder="Type a command or search…"
-          className="w-full border-b bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground"
-          autoFocus
-        />
-        <Command.List className="max-h-80 overflow-y-auto p-2">
-          <Command.Empty className="px-3 py-6 text-center text-sm text-muted-foreground">
-            No results.
-          </Command.Empty>
-
-          <Command.Group heading="Navigation" className="text-xs text-muted-foreground">
-            <Item
-              icon={<Home className="h-4 w-4" />}
-              label="Go to Dashboard"
-              onSelect={() => run(() => navigate("/"))}
-            />
-            {projectId && (
-              <>
-                <Item
-                  icon={<MonitorPlay className="h-4 w-4" />}
-                  label="Start Presentation"
-                  onSelect={() => run(() => setIsPresenting(true))}
-                />
-                <Item
-                  icon={<Settings className="h-4 w-4" />}
-                  label="Open Settings"
-                  onSelect={() => run(() => setIsSettingsOpen(true))}
-                />
-                <Item
-                  icon={<Focus className="h-4 w-4" />}
-                  label="Toggle Zen Mode"
-                  onSelect={() => run(() => toggleZenMode())}
-                />
-                <Item
-                  icon={<Plus className="h-4 w-4" />}
-                  label="Add Slide"
-                  onSelect={() => run(() => onAddSlide?.())}
-                />
-                <Item
-                  icon={<Download className="h-4 w-4" />}
-                  label="Export Project JSON"
-                  onSelect={() => run(() => onExport?.())}
-                />
-              </>
-            )}
-            <Item
-              icon={isDarkUi ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              label={isDarkUi ? "Switch to Light UI" : "Switch to Dark UI"}
-              onSelect={() => run(() => toggleTheme())}
-            />
-            <Item
-              icon={<Keyboard className="h-4 w-4" />}
-              label="Keyboard shortcuts"
-              onSelect={() => run(() => setIsShortcutsOpen(true))}
-            />
-          </Command.Group>
-
-          {projectId && onTheme && (
-            <Command.Group heading="Themes" className="mt-2 text-xs text-muted-foreground">
-              {THEME_OPTIONS.map((t) => (
-                <Item
-                  key={t.value}
-                  icon={<span className="h-2 w-2 rounded-full bg-primary" />}
-                  label={t.label}
-                  onSelect={() => run(() => onTheme(t.value))}
-                />
-              ))}
-            </Command.Group>
-          )}
-        </Command.List>
+    <CommandDialog
+      open={isCommandOpen}
+      onClose={() => setIsCommandOpen(false)}
+      label="Command Menu"
+      placeholder="Type a command or search…"
+      search={search}
+      onSearchChange={setSearch}
+      className="w-full max-w-lg"
+      footer={
         <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
-          <Kbd>Esc</Kbd> to close ·{" "}
-          <Kbd>{mod}K</Kbd> toggle
+          <Kbd>Esc</Kbd> to close · <Kbd>{mod}K</Kbd> toggle
         </div>
-      </Command>
-    </Overlay>
+      }
+    >
+      <Command.Group heading="Navigation" className="text-xs text-muted-foreground">
+        <Item
+          icon={<Home className="h-4 w-4" />}
+          label="Go to Dashboard"
+          onSelect={() => run(() => navigate("/"))}
+        />
+        {projectId && (
+          <>
+            <Item
+              icon={<MonitorPlay className="h-4 w-4" />}
+              label="Start Presentation"
+              onSelect={() => run(() => setIsPresenting(true))}
+            />
+            <Item
+              icon={<Settings className="h-4 w-4" />}
+              label="Open Settings"
+              onSelect={() => run(() => setIsSettingsOpen(true))}
+            />
+            <Item
+              icon={<Focus className="h-4 w-4" />}
+              label="Toggle Zen Mode"
+              onSelect={() => run(() => toggleZenMode())}
+            />
+            <Item
+              icon={<Plus className="h-4 w-4" />}
+              label="Add Slide"
+              onSelect={() => run(() => onAddSlide?.())}
+            />
+            <Item
+              icon={<Download className="h-4 w-4" />}
+              label="Export Project JSON"
+              onSelect={() => run(() => onExport?.())}
+            />
+          </>
+        )}
+        <Item
+          icon={isDarkUi ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          label={isDarkUi ? "Switch to Light UI" : "Switch to Dark UI"}
+          onSelect={() => run(() => toggleTheme())}
+        />
+        <Item
+          icon={<Keyboard className="h-4 w-4" />}
+          label="Keyboard shortcuts"
+          onSelect={() => run(() => setIsShortcutsOpen(true))}
+        />
+      </Command.Group>
+
+      {projectId && onTheme && (
+        <Command.Group heading="Themes" className="mt-2 text-xs text-muted-foreground">
+          {THEME_OPTIONS.map((t) => (
+            <Item
+              key={t.value}
+              icon={<span className="h-2 w-2 rounded-full bg-primary" />}
+              label={t.label}
+              onSelect={() => run(() => onTheme(t.value))}
+            />
+          ))}
+        </Command.Group>
+      )}
+    </CommandDialog>
   );
 }
 

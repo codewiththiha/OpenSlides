@@ -1,17 +1,15 @@
 import { useMemo } from "react";
 import { useUiStore } from "@/store/useUiStore";
-import type { Project } from "@/types";
-import { useSlideMaps } from "./useSlideMaps";
+import type { Project, Slide } from "@/types";
+import { usePreviewSlidesMap } from "./usePreviewSettings";
 
-export function useEffectiveSettings(project: Project, slideId?: string) {
+export function useEffectiveSettings(project: Project, slide?: Slide) {
   const previewProject = useUiStore((s) => s.previewProject);
-  const previewSlidesRevision = useUiStore((s) => s.previewSlidesRevision);
-  const previewSlides = useUiStore.getState().previewSlides;
-  const { slideMap } = useSlideMaps(project.slides);
+  const previewSlides = usePreviewSlidesMap();
   const settings = project.settings;
-  const slide = slideId ? slideMap.get(slideId) : project.slides[0];
+  const target = slide ?? project.slides[0];
   return useMemo(() => {
-    const previewSlide = slide ? previewSlides.get(slide.id) : undefined;
+    const previewSlide = target ? previewSlides.get(target.id) : undefined;
     const globalTransitionDuration = previewProject.globalTransitionDuration ?? settings.globalTransitionDuration;
     const globalStagger = previewProject.globalStagger ?? settings.globalStagger;
     return {
@@ -23,9 +21,9 @@ export function useEffectiveSettings(project: Project, slideId?: string) {
       useGlobalStagger: settings.useGlobalStagger,
       globalTransitionDuration,
       globalStagger,
-      transitionDuration: settings.useGlobalTransition ? globalTransitionDuration : (previewSlide?.transitionDuration ?? slide?.transitionDuration ?? globalTransitionDuration),
-      stagger: settings.useGlobalStagger ? globalStagger : (previewSlide?.stagger ?? slide?.stagger ?? globalStagger),
-      duration: previewSlide?.duration ?? slide?.duration ?? 3000,
+      transitionDuration: settings.useGlobalTransition ? globalTransitionDuration : (previewSlide?.transitionDuration ?? target?.transitionDuration ?? globalTransitionDuration),
+      stagger: settings.useGlobalStagger ? globalStagger : (previewSlide?.stagger ?? target?.stagger ?? globalStagger),
+      duration: previewSlide?.duration ?? target?.duration ?? 3000,
     };
-  }, [previewProject, previewSlidesRevision, previewSlides, settings, slide]);
+  }, [previewProject, previewSlides, settings, target]);
 }

@@ -44,24 +44,15 @@ export type ThemeName =
   | "catppuccin-mocha"
   | "night-owl";
 
-export const THEME_OPTIONS: { value: ThemeName; label: string }[] = [
-  { value: "dark-plus", label: "Dark+" },
-  { value: "dracula", label: "Dracula" },
-  { value: "github-dark", label: "GitHub Dark" },
-  { value: "github-light", label: "GitHub Light" },
-  { value: "nord", label: "Nord" },
-  { value: "poimandres", label: "Poimandres" },
-  { value: "min-dark", label: "Min Dark" },
-  { value: "min-light", label: "Min Light" },
-  { value: "monokai", label: "Monokai" },
-  { value: "solarized-dark", label: "Solarized Dark" },
-  { value: "solarized-light", label: "Solarized Light" },
-  { value: "andromeeda", label: "Andromeeda" },
-  { value: "aurora-x", label: "Aurora X" },
-  { value: "catppuccin-mocha", label: "Catppuccin Mocha" },
-  { value: "catppuccin-latte", label: "Catppuccin Latte" },
-  { value: "night-owl", label: "Night Owl" },
-];
+export {
+  THEMES,
+  THEME_OPTIONS,
+  themeBackground,
+  LIGHT_THEMES,
+  isLightTheme,
+  isDarkTheme,
+  fallbackForeground,
+} from "@/lib/themes";
 
 export interface Highlight {
   id: string;
@@ -90,7 +81,9 @@ export interface Highlight {
 export interface Slide {
   id: string;
   code: string;
-  /** Mirrored from project settings for UI convenience / export. */
+  /** Derived from project settings on read — export/API compatibility only.
+   *  The per-slide DB column was dropped (migration v6). Never edit or
+   *  display this directly; use resolveProjectLanguage(project). */
   language: string;
   duration: number;
   transitionDuration: number;
@@ -176,32 +169,4 @@ export function resolveProjectLanguage(project: Project): string {
   );
 }
 
-const THEME_BG = new Map<string, string>([
-  ["github-light", "#ffffff"],
-  ["dracula", "#282a36"],
-  ["github-dark", "#24292e"],
-  ["nord", "#2e3440"],
-  ["poimandres", "#1b1e28"],
-  ["min-light", "#ffffff"],
-  ["min-dark", "#1f1f1f"],
-  ["monokai", "#272822"],
-  ["solarized-dark", "#002b36"],
-  ["solarized-light", "#fdf6e3"],
-  ["andromeeda", "#23262e"],
-  ["aurora-x", "#07090f"],
-  ["catppuccin-latte", "#eff1f5"],
-  ["catppuccin-mocha", "#1e1e2e"],
-  ["night-owl", "#011627"],
-  ["dark-plus", "#1e1e1e"],
-]);
 
-export function themeBackground(theme: string): string {
-  return THEME_BG.get(theme) ?? "#1e1e1e";
-}
-
-export const LIGHT_THEMES = new Set([
-  "github-light",
-  "min-light",
-  "solarized-light",
-  "catppuccin-latte",
-]);

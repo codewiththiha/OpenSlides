@@ -11,14 +11,14 @@ import { getHighlighter } from "@/lib/shiki-instance";
 import {
   themeBackground,
   resolveProjectLanguage,
-  LIGHT_THEMES,
+  fallbackForeground,
   type Project,
 } from "@/types";
-import { useSlideMaps } from "@/hooks/useSlideMaps";
 import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/store/useUiStore";
-import { useLocalCodeAtom } from "@/store/localCodeAtoms";
+import { usePreviewHighlightsMap } from "@/hooks/usePreviewSettings";
+import { useSlideCode } from "@/hooks/useSlideCode";
+import { useCurrentSlide } from "@/hooks/useCurrentSlide";
 import { HighlightLayer } from "./HighlightLayer";
 
 interface SlidePreviewProps {
@@ -81,14 +81,8 @@ export function SlidePreview({
   activeHighlightIndex = -1,
   onHighlightExitComplete,
 }: SlidePreviewProps) {
-  const currentSlideId = useUiStore((s) => s.currentSlideId);
-
-  // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans)
-  const { slideMap } = useSlideMaps(project.slides);
-  const slide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? project.slides[0];
-  // Per-slide atom: only re-renders when THIS slide's override changes
-  const codeOverride = useLocalCodeAtom(slide?.id);
-  const code = codeOverride ?? slide?.code ?? "";
+  const { activeSlide: slide } = useCurrentSlide(project);
+  const code = useSlideCode(slide?.id, slide?.code ?? "");
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const [readyKey, setReadyKey] = useState<string | null>(null);
   const [shikiLoadFailed, setShikiLoadFailed] = useState(false);
@@ -96,9 +90,8 @@ export function SlidePreview({
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
   // --- instant preview overrides ---
-  const useEffective = useEffectiveSettings(project, slide?.id);
-  useUiStore((s) => s.previewHighlightsRevision);
-  const previewHighlightsMap = useUiStore.getState().previewHighlights;
+  const useEffective = useEffectiveSettings(project, slide);
+  const previewHighlightsMap = usePreviewHighlightsMap();
 
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
@@ -135,7 +128,7 @@ export function SlidePreview({
   const displayHighlighter = displayState?.highlighter ?? null;
   const displayTheme = displayState?.theme ?? theme;
   const displayLanguage = displayState?.language ?? language;
-  const isDarkBg = !LIGHT_THEMES.has(displayTheme);
+
 
 
   if (!slide) {
@@ -185,7 +178,7 @@ export function SlidePreview({
       return (
         <div ref={containerRef} className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl shadow-2xl" style={{ backgroundColor: bg }}>
           <div className={cn("relative z-10 flex h-full w-full", stagePad, centerBlock ? "items-center justify-center" : "items-center justify-start")}>
-            <pre className="font-mono font-medium tracking-wide text-left" style={{ fontSize: `${previewFontSize}px`, lineHeight: settings.lineHeight, color: isDarkBg ? "#abb2bf" : "#383a42", whiteSpace: "pre" }}>{code}</pre>
+            <pre className="font-mono font-medium tracking-wide text-left" style={{ fontSize: `${previewFontSize}px`, lineHeight: settings.lineHeight, color: fallbackForeground(displayTheme), whiteSpace: "pre" }}>{code}</pre>
           </div>
         </div>
       );

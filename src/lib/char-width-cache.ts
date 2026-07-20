@@ -1,5 +1,7 @@
+import { LruMap } from "./lru-map";
+
 const CHAR_WIDTH_MAX = 32;
-const charWidthCache = new Map<string, number>();
+const charWidthCache = new LruMap<string, number>(CHAR_WIDTH_MAX);
 
 export function measureCharWidth(
   container: HTMLElement,
@@ -9,9 +11,6 @@ export function measureCharWidth(
   const key = `${fontSize}|${fontFamily}`;
   const cached = charWidthCache.get(key);
   if (cached !== undefined) {
-    // Move to end for LRU
-    charWidthCache.delete(key);
-    charWidthCache.set(key, cached);
     return cached;
   }
 
@@ -28,10 +27,5 @@ export function measureCharWidth(
   container.removeChild(test);
 
   charWidthCache.set(key, width);
-  if (charWidthCache.size > CHAR_WIDTH_MAX) {
-    const firstKey = charWidthCache.keys().next().value;
-    if (firstKey) charWidthCache.delete(firstKey);
-  }
   return width;
 }
-

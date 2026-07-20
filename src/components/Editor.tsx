@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEditorSlice } from "@/store/ui-selectors";
-import { useSlideMaps } from "@/hooks/useSlideMaps";
+import { useCurrentSlide } from "@/hooks/useCurrentSlide";
 import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TitleBar } from "./TitleBar";
@@ -39,7 +39,7 @@ import { useAppMenu } from "@/hooks/useAppMenu";
 import { useHighlightNav } from "@/hooks/useHighlightNav";
 import { useEditorKeyboard } from "@/hooks/useEditorKeyboard";
 import { usePresentFullscreen } from "@/hooks/usePresentFullscreen";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useWindowTitle } from "@/hooks/useWindowTitle";
 import { dismissAllUndoToasts } from "@/lib/settings-undo";
 
 export function Editor() {
@@ -80,13 +80,8 @@ export function Editor() {
   const [editorExpanded, setEditorExpanded] = useState(false);
 
   // -- Side effects: title, initial slide, debounced currentSlide persistence --
-  useEffect(() => {
-    const title = project ? `OpenSlides — ${project.name}` : "OpenSlides";
-    document.title = title;
-    getCurrentWindow()
-      .setTitle(title)
-      .catch(() => undefined);
-  }, [project]);
+  const title = project ? `OpenSlides — ${project.name}` : "OpenSlides";
+  useWindowTitle(title);
 
   useEffect(() => {
     if (!project) return;
@@ -121,11 +116,7 @@ export function Editor() {
   // -- Highlight navigation (stable callbacks via refs internally) --
   const slides = project?.slides ?? [];
 
-  // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans per render)
-  const { slideMap, indexMap } = useSlideMaps(slides);
-
-  const currentIndex = currentSlideId ? (indexMap.get(currentSlideId) ?? -1) : -1;
-  const activeSlide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? slides[0];
+  const { activeSlide, activeIndex: currentIndex } = useCurrentSlide(project);
 
   const {
     highlightIndex: activeHighlightIndex,

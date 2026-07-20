@@ -57,7 +57,6 @@ export interface HighlightPlanLine {
   endChar: number;
   /** Syntax-colored HTML for the clone (rendered AFTER slicing). */
   html: string;
-  plainText: string;
   /** Nothing selected on this line — skip erase/clone, keep the entry. */
   isEmpty: boolean;
 }
@@ -66,11 +65,10 @@ export interface HighlightPlan {
   lines: HighlightPlanLine[];
   /** Dimmed-card color the eraser boxes must paint. */
   eraserColor: string;
-  selectedText: string;
 }
 
 /** Per-line clamped selection span (output of `decompose`). */
-export interface LineRange {
+interface LineRange {
   lineIndex: number;
   start: number;
   end: number;
@@ -225,7 +223,6 @@ export function buildPlan(
   const spans = decompose(code, range);
 
   const lines: HighlightPlanLine[] = [];
-  const selectedParts: string[] = [];
 
   for (const lr of spans) {
     const rawLine = codeLines[lr.lineIndex];
@@ -244,14 +241,12 @@ export function buildPlan(
         sliceHtml = escapeHtml(plain);
       }
     }
-    selectedParts.push(plain);
 
     lines.push({
       lineIndex: lr.lineIndex,
       startChar: lr.start,
       endChar: lr.end,
       html: sliceHtml,
-      plainText: plain,
       isEmpty,
     });
   }
@@ -259,7 +254,6 @@ export function buildPlan(
   return {
     lines,
     eraserColor: mixTowardBlack(themeBg, dimPercent),
-    selectedText: selectedParts.join("\n"),
   };
 }
 
