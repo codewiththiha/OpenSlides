@@ -65,6 +65,7 @@ export function HighlightLayer({
   const rafRef = useRef<number>(0);
   const roRafRef = useRef<number>(0);
   const cacheRafRef = useRef<number>(0);
+  const settleRafRef = useRef<number>(0);
   const roRef = useRef<ResizeObserver | null>(null);
   const moRef = useRef<MutationObserver | null>(null);
 
@@ -135,7 +136,7 @@ export function HighlightLayer({
       const r2 = requestAnimationFrame(() => {
         if (!disposed) measure();
       });
-      (roRef as any)._settleRaf = r2;
+      settleRafRef.current = r2;
     });
     rafRef.current = r1 as unknown as number;
 
@@ -145,8 +146,8 @@ export function HighlightLayer({
       cancelAnimationFrame(roRafRef.current);
       cancelAnimationFrame(cacheRafRef.current);
       cacheRafRef.current = 0;
-      const settle = (roRef as any)._settleRaf;
-      if (settle) cancelAnimationFrame(settle);
+      cancelAnimationFrame(settleRafRef.current);
+      settleRafRef.current = 0;
       roRafRef.current = 0;
       roRef.current?.disconnect();
       roRef.current = null;
