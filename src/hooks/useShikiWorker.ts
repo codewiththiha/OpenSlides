@@ -8,7 +8,6 @@ interface Args {
   code: string;
   language: string;
   theme: string;
-  isDark: boolean;
 }
 
 export function useShikiWorker({ code, language, theme }: Args): string | null {

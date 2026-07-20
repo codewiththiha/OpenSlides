@@ -111,7 +111,11 @@ async function pump() {
         (self as any).postMessage({ id: request.id, aborted: true } as WorkerResponse);
         continue;
       }
-      await processRequest(request);
+      try {
+        await processRequest(request);
+      } catch {
+        // processRequest owns error responses; never stall the queue.
+      }
     }
   } finally {
     pumping = false;
