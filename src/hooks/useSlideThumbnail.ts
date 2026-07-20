@@ -42,6 +42,7 @@ interface Args {
   maxLines?: number;
   maxChars?: number;
   enabled?: boolean;
+  priority?: "high" | "low";
 }
 
 export function useSlideThumbnail({
@@ -53,6 +54,7 @@ export function useSlideThumbnail({
   maxLines = MAX_LINES,
   maxChars = MAX_CHARS,
   enabled = true,
+  priority = "low",
 }: Args) {
   const truncatedCode = truncateCode(code, maxLines, maxChars);
   const key = `${slideId}\u0000${theme}\u0000${language}\u0000${truncatedCode}`;
@@ -83,7 +85,7 @@ export function useSlideThumbnail({
       if (requested || controller.signal.aborted) return;
       requested = true;
       timer = window.setTimeout(() => {
-        requestHtml(truncatedCode, language, theme, controller.signal)
+        requestHtml(truncatedCode, language, theme, controller.signal, priority)
           .then((response) => {
             if (controller.signal.aborted || !response.html) return;
             const next = { html: response.html };
@@ -118,7 +120,7 @@ export function useSlideThumbnail({
       if (timer !== null) window.clearTimeout(timer);
       observer?.disconnect();
     };
-  }, [key, language, theme, truncatedCode, initialHtml, slideId, code, enabled]);
+  }, [key, language, theme, truncatedCode, initialHtml, slideId, code, enabled, priority]);
 
   return { html: entry?.html ?? null, ref: elementRef };
 }

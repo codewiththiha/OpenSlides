@@ -197,6 +197,7 @@ const SlideCard = memo(function SlideCard({
     maxLines: 10,
     maxChars: 1000,
     enabled: showHoverPreview,
+    priority: "high",
   });
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;
