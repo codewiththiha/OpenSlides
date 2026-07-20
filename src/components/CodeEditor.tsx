@@ -940,7 +940,7 @@ export function CodeEditor({
             ref={preRef}
             aria-hidden
             className="editor-highlight pointer-events-none absolute inset-0 overflow-auto py-4 pl-3 pr-4 font-mono"
-            style={{ fontSize: editorFontSize, lineHeight, whiteSpace: wrapLines ? "pre-wrap" : "pre", wordBreak: wrapLines ? "break-word" : "normal" }}
+            style={{ fontSize: editorFontSize, lineHeight, whiteSpace: wrapLines ? "pre-wrap" : "pre", overflowWrap: wrapLines ? "break-word" : "normal" }}
           >
             {highlightedHtml ? (
               <code
