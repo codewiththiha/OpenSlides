@@ -11,8 +11,11 @@ import { getHighlighter } from "@/lib/shiki-instance";
 import {
   themeBackground,
   resolveProjectLanguage,
+  LIGHT_THEMES,
   type Project,
 } from "@/types";
+import { useSlideMaps } from "@/hooks/useSlideMaps";
+import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
 import { useLocalCodeAtom } from "@/store/localCodeAtoms";
@@ -81,13 +84,8 @@ export function SlidePreview({
   const currentSlideId = useUiStore((s) => s.currentSlideId);
 
   // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans)
-  const slideMap = useMemo(
-    () => new Map(project.slides.map((s) => [s.id, s] as const)),
-    [project.slides],
-  );
-  const slide =
-    (currentSlideId ? slideMap.get(currentSlideId) : undefined) ??
-    project.slides[0];
+  const { slideMap } = useSlideMaps(project.slides);
+  const slide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? project.slides[0];
   // Per-slide atom: only re-renders when THIS slide's override changes
   const codeOverride = useLocalCodeAtom(slide?.id);
   const code = codeOverride ?? slide?.code ?? "";
@@ -98,12 +96,9 @@ export function SlidePreview({
   const codeContainerRef = useRef<HTMLDivElement>(null);
 
   // --- instant preview overrides ---
-  const previewProject = useUiStore((s) => s.previewProject);
-  useUiStore((s) => s.previewSlidesRevision);
+  const useEffective = useEffectiveSettings(project, slide?.id);
   useUiStore((s) => s.previewHighlightsRevision);
-  const previewSlides = useUiStore.getState().previewSlides;
   const previewHighlightsMap = useUiStore.getState().previewHighlights;
-  const previewSlide = slide ? previewSlides.get(slide.id) : undefined;
 
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
@@ -140,7 +135,7 @@ export function SlidePreview({
   const displayHighlighter = displayState?.highlighter ?? null;
   const displayTheme = displayState?.theme ?? theme;
   const displayLanguage = displayState?.language ?? language;
-  const isDarkBg = !/light|latte/i.test(displayTheme);
+  const isDarkBg = !LIGHT_THEMES.has(displayTheme);
 
 
   if (!slide) {
@@ -151,27 +146,8 @@ export function SlidePreview({
     );
   }
 
-  // Effective settings: preview overrides win over DB
   const s = project.settings;
-  const effectiveFontSize = previewProject.fontSize ?? s.fontSize;
-  const effectiveLineHeight = previewProject.lineHeight ?? s.lineHeight;
-  const effectiveGlobalTransition =
-    previewProject.globalTransitionDuration ?? s.globalTransitionDuration;
-  const effectiveGlobalStagger = previewProject.globalStagger ?? s.globalStagger;
-
-  const effectiveSlideTransition =
-    previewSlide?.transitionDuration ??
-    (s.useGlobalTransition ? effectiveGlobalTransition : slide.transitionDuration);
-  const effectiveSlideStagger =
-    previewSlide?.stagger ?? (s.useGlobalStagger ? effectiveGlobalStagger : slide.stagger);
-
-  const settings = {
-    ...s,
-    fontSize: effectiveFontSize,
-    lineHeight: effectiveLineHeight,
-    globalTransitionDuration: effectiveGlobalTransition,
-    globalStagger: effectiveGlobalStagger,
-  };
+  const settings = { ...s, fontSize: useEffective.fontSize, lineHeight: useEffective.lineHeight };
 
   const bg = themeBackground(displayTheme);
   const codeAlign = settings.codeAlign === "center" ? "center" : "left";
@@ -255,8 +231,8 @@ export function SlidePreview({
           language={displayLanguage}
           highlighter={displayHighlighter}
           code={code}
-          transition={effectiveSlideTransition}
-          stagger={effectiveSlideStagger}
+          transition={useEffective.transitionDuration}
+          stagger={useEffective.stagger}
           showLineNumbers={settings.showLineNumbers}
         />
       </div>
