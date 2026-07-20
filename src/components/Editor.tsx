@@ -20,6 +20,7 @@ import { TitleBar } from "./TitleBar";
 import { SettingsDrawer } from "./SettingsDrawer";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelp } from "./ShortcutsHelp";
+import { GoToSlideDialog } from "./GoToSlideDialog";
 import { EditorToolbar } from "./editor/EditorToolbar";
 import { EditorLayout } from "./editor/EditorLayout";
 import { PresentOverlay } from "./editor/PresentOverlay";
@@ -325,6 +326,7 @@ export function Editor() {
         onAddSlide={() => createSlide.mutate({})}
         onTheme={(theme) => updateTheme.mutate(theme)}
       />
+      <GoToSlideDialog project={project} />
 
       <ShortcutsHelp />
     </div>

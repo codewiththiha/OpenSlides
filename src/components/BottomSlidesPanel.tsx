@@ -55,6 +55,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/lib/tauri-api";
 import { resolveProjectLanguage, slideDisplayName, themeBackground, type Project, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
+import { modKeyLabel } from "@/lib/platform";
 import { useUiStore } from "@/store/useUiStore";
 import { useLocalCodeAtom } from "@/store/localCodeAtoms";
 import { notify } from "@/lib/toast";
@@ -633,6 +634,7 @@ export function BottomSlidesPanel({
   const [ordered, setOrdered] = useState<Slide[]>(project.slides);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const pendingFocusId = useRef<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     setOrdered(project.slides);
   }, [project.slides]);
@@ -649,6 +651,21 @@ export function BottomSlidesPanel({
   const registerCardRef = useCallback((id: string, node: HTMLDivElement | null) => {
     if (node) cardRefs.current.set(id, node);
     else cardRefs.current.delete(id);
+  }, []);
+
+  useEffect(() => {
+    const onFocusRequest = () => {
+      const { isBottomPanelCollapsed, setIsBottomPanelCollapsed } = useUiStore.getState();
+      if (isBottomPanelCollapsed) setIsBottomPanelCollapsed(false);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
+      });
+    };
+    window.addEventListener("openslides:focus-slide-search", onFocusRequest);
+    return () => window.removeEventListener("openslides:focus-slide-search", onFocusRequest);
   }, []);
 
   const [rawSearchQuery, setRawSearchQuery] = useState("");
@@ -842,10 +859,25 @@ export function BottomSlidesPanel({
         <div className="relative flex-1 mx-2">
           <Search className="absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
           <input
+            ref={searchInputRef}
             className="h-6 w-full rounded-md border border-input bg-background pl-6 pr-6 text-xs outline-none focus:ring-1 focus:ring-ring"
             placeholder="Search by name or code…"
+            title={`Search slides (${modKeyLabel()}⇧F or /)`}
             value={rawSearchQuery}
             onChange={(e) => setRawSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                if (rawSearchQuery) setRawSearchQuery("");
+                else e.currentTarget.blur();
+              }
+              if (e.key === "Enter" && filteredOrdered.length > 0) {
+                e.preventDefault();
+                const first = filteredOrdered[0];
+                setCurrentSlideId(first.id);
+                cardRefs.current.get(first.id)?.scrollIntoView({ inline: "nearest" });
+              }
+            }}
           />
           {searchQuery && (
             <button

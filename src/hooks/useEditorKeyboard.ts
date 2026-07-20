@@ -38,7 +38,9 @@ export function useEditorKeyboard({
         isZenMode,
         isSettingsOpen,
         isCommandOpen,
+        isGoToSlideOpen,
         isShortcutsOpen,
+        setIsGoToSlideOpen,
         setIsShortcutsOpen,
         toggleShortcutsOpen,
         toggleZenMode,
@@ -54,7 +56,8 @@ export function useEditorKeyboard({
         !isTypingTarget(e.target) &&
         !isCommandOpen &&
         !isShortcutsOpen &&
-        !isSettingsOpen
+        !isSettingsOpen &&
+        !isGoToSlideOpen
       ) {
         if (e.key >= "1" && e.key <= "9") {
           const idx = parseInt(e.key, 10) - 1;
@@ -69,6 +72,37 @@ export function useEditorKeyboard({
           goToHighlight(-1);
           return;
         }
+      }
+
+      // Cmd/Ctrl+G → go-to-slide dialog.
+      if (
+        isModKey(e) &&
+        !e.shiftKey &&
+        e.key.toLowerCase() === "g" &&
+        !isPresenting &&
+        !isCommandOpen &&
+        !isShortcutsOpen &&
+        !isGoToSlideOpen
+      ) {
+        e.preventDefault();
+        setIsGoToSlideOpen(true);
+        return;
+      }
+
+      // Cmd/Ctrl+Shift+F or / → focus slide-strip search.
+      if (
+        ((isModKey(e) && e.shiftKey && e.key.toLowerCase() === "f") ||
+          (e.key === "/" && !isModKey(e) && !e.altKey && !isTypingTarget(e.target))) &&
+        !isPresenting &&
+        !isZenMode &&
+        !isSettingsOpen &&
+        !isCommandOpen &&
+        !isShortcutsOpen &&
+        !isGoToSlideOpen
+      ) {
+        e.preventDefault();
+        window.dispatchEvent(new Event("openslides:focus-slide-search"));
+        return;
       }
 
       // Present mode: arrows / space / esc / p
@@ -93,6 +127,11 @@ export function useEditorKeyboard({
 
       // Zen / dialogs: Esc handling
       if (e.key === "Escape") {
+        if (isGoToSlideOpen) {
+          e.preventDefault();
+          setIsGoToSlideOpen(false);
+          return;
+        }
         if (isShortcutsOpen) {
           e.preventDefault();
           setIsShortcutsOpen(false);
@@ -131,7 +170,8 @@ export function useEditorKeyboard({
         !e.altKey &&
         !isSettingsOpen &&
         !isCommandOpen &&
-        !isShortcutsOpen
+        !isShortcutsOpen &&
+        !isGoToSlideOpen
       ) {
         e.preventDefault();
         setIsAutoPlaying(false);
