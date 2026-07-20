@@ -23,6 +23,8 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
       { keys: ["mod", "Shift", "Z"], desc: "Redo code edit" },
       { keys: ["mod", "Y"], desc: "Redo (Windows / Linux)" },
       { keys: ["mod", "B"], desc: "Toggle zen mode" },
+      { keys: ["mod", "G"], desc: "Go to slide by number or name" },
+      { keys: ["mod", "Shift", "F"], desc: "Focus slide search (or / when not typing)" },
       { keys: ["←", "→"], desc: "Step through highlights, then slides" },
       { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
       { keys: ["0"], desc: "Back to clean slide (no highlight)" },

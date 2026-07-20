@@ -40,7 +40,9 @@ export interface UiState {
   slidesPanelSize: number;
   isSettingsOpen: boolean;
   isCommandOpen: boolean;
+  isGoToSlideOpen: boolean;
   isShortcutsOpen: boolean;
+  setIsGoToSlideOpen: (v: boolean) => void;
   isDarkUi: boolean;
   editorShowLineNumbers: boolean;
   saveStatus: "idle" | "saving" | "saved" | "error";
@@ -128,6 +130,7 @@ export const useUiStore = create<UiState>()(
       slidesPanelSize: DEFAULT_SLIDES_SIZE,
       isSettingsOpen: false,
       isCommandOpen: false,
+      isGoToSlideOpen: false,
       isShortcutsOpen: false,
       isDarkUi: true,
       editorShowLineNumbers: true,
@@ -157,6 +160,7 @@ export const useUiStore = create<UiState>()(
         }),
       setIsSettingsOpen: (v) => set({ isSettingsOpen: v }),
       setIsCommandOpen: (v) => set({ isCommandOpen: v }),
+      setIsGoToSlideOpen: (v) => set({ isGoToSlideOpen: v }),
       setIsShortcutsOpen: (v) => set({ isShortcutsOpen: v }),
       toggleShortcutsOpen: () => set((s) => ({ isShortcutsOpen: !s.isShortcutsOpen })),
       setIsDarkUi: (v) => {
@@ -267,6 +271,7 @@ export const useUiStore = create<UiState>()(
           isAutoPlaying: false,
           isZenMode: false,
           isSettingsOpen: false,
+          isGoToSlideOpen: false,
           isShortcutsOpen: false,
           saveStatus: "idle",
           previewHighlightIndex: -1,
