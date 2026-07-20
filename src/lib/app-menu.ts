@@ -15,6 +15,7 @@ export type AppMenuEvent =
   | "menu://settings"
   | "menu://command-palette"
   | "menu://add-slide"
+  | "menu://duplicate-slide"
   | "menu://toggle-theme"
   | "menu://shortcuts"
   | "menu://undo"
@@ -39,7 +40,7 @@ export async function installAppMenu(): Promise<void> {
   try {
     const fileItems = [
       await item("menu://new-project", "New Project", "CmdOrCtrl+N"),
-      await item("menu://open-dashboard", "Go to Dashboard", "CmdOrCtrl+Shift+D"),
+      await item("menu://open-dashboard", "Go to Dashboard", "CmdOrCtrl+Shift+O"),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await item("menu://export", "Export Project as JSON…", "CmdOrCtrl+E"),
       await PredefinedMenuItem.new({ item: "Separator" }),
@@ -77,6 +78,7 @@ export async function installAppMenu(): Promise<void> {
 
     const slideItems = [
       await item("menu://add-slide", "Add Slide", "CmdOrCtrl+Shift+N"),
+      await item("menu://duplicate-slide", "Duplicate Slide", "CmdOrCtrl+Shift+D"),
       await item("menu://settings", "Project Settings…", "CmdOrCtrl+,"),
     ];
 

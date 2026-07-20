@@ -50,6 +50,7 @@ pub fn run() {
             update_project_theme,
             create_slide,
             delete_slide,
+            duplicate_slide,
             restore_slide,
             update_slide_code,
             update_slide_settings,

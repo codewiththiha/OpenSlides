@@ -103,6 +103,24 @@ export function useDeleteSlide(projectId: string) {
   });
 }
 
+export function useDuplicateSlide(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slideId: string) => api.duplicateSlide(projectId, slideId),
+    onSuccess: (project) => {
+      qc.setQueryData(projectKeys.detail(projectId), project);
+      // Set current to duplicated slide (last currentSlideId from backend)
+      const newId = project.settings.currentSlideId;
+      if (newId) {
+        useUiStore.getState().setCurrentSlideId(newId);
+      }
+      notify.success("Slide duplicated");
+    },
+    onError: (err: Error) =>
+      notify.error(`Duplicate failed: ${err.message}`),
+  });
+}
+
 export function useRestoreSlide(projectId: string) {
   const qc = useQueryClient();
   return useMutation({

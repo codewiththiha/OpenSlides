@@ -90,6 +90,9 @@ export const api = {
   deleteSlide: (projectId: string, slideId: string) =>
     call<Project>("delete_slide", { projectId, slideId }),
 
+  duplicateSlide: (projectId: string, slideId: string) =>
+    call<Project>("duplicate_slide", { projectId, slideId }),
+
   restoreSlide: (projectId: string, slide: Slide, insertAt?: number) =>
     call<Project>("restore_slide", { projectId, slide, insertAt }),
 

@@ -15,6 +15,10 @@ import {
   Minimize2,
   PanelRightClose,
   Highlighter as HighlighterIcon,
+  Search,
+  X,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useDebouncedCallback } from "use-debounce";
 import {
@@ -140,6 +144,8 @@ export function CodeEditor({
     } catch {}
   }, [slideId, setCaretPosition]);
 
+  // Find/replace helpers — TS because editor is textarea, needs instant feedback
+
   // Highlight mode state
   const [highlightMode, setHighlightMode] = useState(false);
   const [contextMenuVisible, setContextMenuVisible] = useState(false);
@@ -151,6 +157,13 @@ export function CodeEditor({
     endChar: number;
   } | null>(null);
   const [expandedHighlightId, setExpandedHighlightId] = useState<string | null>(null);
+
+  // Find/replace state — TypeScript, not Rust: editor is textarea, needs instant feedback, no IPC, O(n) string search is fast for few KB slide
+  const [isFindOpen, setIsFindOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [replaceTerm, setReplaceTerm] = useState("");
+  const [matchCase, setMatchCase] = useState(false);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
   const codeMutation = useUpdateSlideCode();
   const settingsMutation = useUpdateSlideSettings(project.id);
@@ -172,6 +185,24 @@ export function CodeEditor({
     () => Array.from({ length: lineCount }, (_, i) => i + 1).join("\n"),
     [lineCount],
   );
+
+  // Find matches — pure TS string search, O(n) but n is few KB per slide, instant, no Rust IPC needed
+  // Rust would add IPC round-trip per keystroke, worse UX. TS is correct choice.
+  const matches = useMemo(() => {
+    if (!searchTerm) return [];
+    const needle = matchCase ? searchTerm : searchTerm.toLowerCase();
+    const haystack = matchCase ? code : code.toLowerCase();
+    const res: Array<{ start: number; end: number }> = [];
+    let pos = 0;
+    while (true) {
+      const idx = haystack.indexOf(needle, pos);
+      if (idx === -1) break;
+      res.push({ start: idx, end: idx + needle.length });
+      pos = idx + Math.max(needle.length, 1);
+      if (res.length > 1000) break; // cap for huge files
+    }
+    return res;
+  }, [code, searchTerm, matchCase]);
 
   const highlightedHtml = useShikiWorker({
     code,
@@ -215,6 +246,72 @@ export function CodeEditor({
 
   const handleChange = applyCode;
 
+  const selectMatch = useCallback(
+    (idx: number) => {
+      const el = textareaRef.current;
+      const m = matches[idx];
+      if (!el || !m) return;
+      el.focus();
+      el.selectionStart = m.start;
+      el.selectionEnd = m.end;
+      saveCaret();
+      // Scroll match into view roughly
+      const line = code.slice(0, m.start).split("\n").length;
+      const lineHeightPx = editorFontSize * 1.55;
+      el.scrollTop = Math.max(0, line * lineHeightPx - el.clientHeight / 2);
+    },
+    [matches, code, editorFontSize, saveCaret],
+  );
+
+  const goNextMatch = useCallback(() => {
+    if (matches.length === 0) return;
+    const next = (currentMatchIndex + 1) % matches.length;
+    setCurrentMatchIndex(next);
+    selectMatch(next);
+  }, [matches, currentMatchIndex, selectMatch]);
+
+  const goPrevMatch = useCallback(() => {
+    if (matches.length === 0) return;
+    const prev = (currentMatchIndex - 1 + matches.length) % matches.length;
+    setCurrentMatchIndex(prev);
+    selectMatch(prev);
+  }, [matches, currentMatchIndex, selectMatch]);
+
+  const replaceCurrent = useCallback(() => {
+    if (matches.length === 0) return;
+    const m = matches[currentMatchIndex];
+    if (!m) return;
+    const nextCode = code.slice(0, m.start) + replaceTerm + code.slice(m.end);
+    applyCode(nextCode);
+    // After replace, move to next match
+    setTimeout(() => {
+      const newIdx = Math.min(currentMatchIndex, matches.length - 1);
+      setCurrentMatchIndex(newIdx);
+    }, 0);
+  }, [matches, currentMatchIndex, code, replaceTerm, applyCode]);
+
+  const replaceAll = useCallback(() => {
+    if (!searchTerm || matches.length === 0) return;
+    let nextCode: string;
+    if (matchCase) {
+      nextCode = code.split(searchTerm).join(replaceTerm);
+    } else {
+      const re = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+      nextCode = code.replace(re, replaceTerm);
+    }
+    applyCode(nextCode);
+  }, [code, searchTerm, replaceTerm, matchCase, applyCode]);
+
+  // When search term changes, reset current match index and auto-select first
+  useEffect(() => {
+    setCurrentMatchIndex(0);
+    if (matches.length > 0 && isFindOpen) {
+      // Defer so textarea exists
+      requestAnimationFrame(() => selectMatch(0));
+    }
+  }, [searchTerm, matches.length, isFindOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   // Undo/redo bridge for native menu
   useEffect(() => {
     const exec = (cmd: "undo" | "redo") => {
@@ -236,6 +333,26 @@ export function CodeEditor({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Cmd+F → open find/replace (TypeScript, instant, no Rust IPC)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f" && !e.shiftKey) {
+        e.preventDefault();
+        setIsFindOpen(true);
+        // If there's a selection, use it as search term
+        try {
+          const el = e.currentTarget;
+          const sel = el.value.slice(el.selectionStart, el.selectionEnd);
+          if (sel && sel.length > 0 && sel.length < 100) {
+            setSearchTerm(sel);
+          }
+        } catch {}
+        return;
+      }
+      // Escape closes find when open
+      if (e.key === "Escape" && isFindOpen) {
+        e.preventDefault();
+        setIsFindOpen(false);
+        return;
+      }
       if (e.key !== "Tab" || !slideId) return;
       e.preventDefault();
       const el = e.currentTarget;
@@ -275,7 +392,7 @@ export function CodeEditor({
       } catch {}
       handleChange(next);
     },
-    [slideId, handleChange],
+    [slideId, handleChange, isFindOpen],
   );
 
   const syncScroll = () => {
@@ -570,8 +687,75 @@ export function CodeEditor({
               <PanelRightClose className="h-3.5 w-3.5" />
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={() => setIsFindOpen((v) => !v)}
+            title="Find/Replace (Cmd+F)"
+          >
+            <Search className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
+
+      {isFindOpen && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/30 px-2 py-1.5">
+          <div className="flex items-center gap-1">
+            <Search className="h-3 w-3 text-muted-foreground" />
+            <input
+              className="h-6 w-32 rounded border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring sm:w-48"
+              placeholder="Find"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (e.shiftKey) goPrevMatch();
+                  else goNextMatch();
+                }
+                if (e.key === "Escape") setIsFindOpen(false);
+              }}
+              autoFocus
+            />
+            <span className="text-[10px] text-muted-foreground">
+              {matches.length ? `${currentMatchIndex + 1}/${matches.length}` : "0/0"}
+            </span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={goPrevMatch} title="Previous (Shift+Enter)">
+              <ChevronUp className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={goNextMatch} title="Next (Enter)">
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            <input
+              className="h-6 w-32 rounded border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring sm:w-48"
+              placeholder="Replace"
+              value={replaceTerm}
+              onChange={(e) => setReplaceTerm(e.target.value)}
+            />
+            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={replaceCurrent} disabled={matches.length === 0}>
+              Replace
+            </Button>
+            <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={replaceAll} disabled={matches.length === 0}>
+              Replace All
+            </Button>
+            <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={matchCase}
+                onChange={(e) => setMatchCase(e.target.checked)}
+                className="h-3 w-3"
+              />
+              Aa
+            </label>
+          </div>
+          <Button variant="ghost" size="icon" className="ml-auto h-6 w-6" onClick={() => setIsFindOpen(false)}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {editorShowLineNumbers && (

@@ -72,6 +72,111 @@ pub async fn create_slide(
 }
 
 #[tauri::command]
+pub async fn duplicate_slide(
+    pool: State<'_, DbPool>,
+    project_id: String,
+    slide_id: String,
+) -> Result<Project, String> {
+    // Atomic duplicate: copy slide at original.order+1, shift others, set current to new
+    // Rust side for atomicity and single round-trip DB, not frontend copy-paste
+    let mut tx = pool
+        .inner()
+        .begin()
+        .await
+        .map_err(|e| format!("TX begin failed: {e}"))?;
+
+    let orig = sqlx::query(
+        r#"
+        SELECT id, code, language, transition_duration, stagger, duration, order_index, name, highlights
+        FROM slides WHERE id = ? AND project_id = ?
+        "#,
+    )
+    .bind(&slide_id)
+    .bind(&project_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| format!("Failed to fetch original slide: {e}"))?
+    .ok_or_else(|| format!("Slide not found: {slide_id}"))?;
+
+    let orig_code: String = orig.get("code");
+    let orig_lang: String = orig.get("language");
+    let orig_trans: i64 = orig.get("transition_duration");
+    let orig_stagger: i64 = orig.get("stagger");
+    let orig_duration: i64 = orig.get("duration");
+    let orig_order: i64 = orig.get("order_index");
+    let orig_name: String = orig.try_get("name").unwrap_or_default();
+    let orig_highlights: String = orig.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
+
+    let new_order = orig_order + 1;
+    let new_id = Uuid::new_v4().to_string();
+    let new_name = if orig_name.trim().is_empty() {
+        format!("Slide {} Copy", new_order + 1)
+    } else if orig_name.ends_with(" Copy") {
+        format!("{} 2", orig_name)
+    } else {
+        format!("{} Copy", orig_name)
+    };
+
+    // Shift slides after original
+    sqlx::query(
+        "UPDATE slides SET order_index = order_index + 1 WHERE project_id = ? AND order_index > ?",
+    )
+    .bind(&project_id)
+    .bind(orig_order)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| format!("Failed to shift slides: {e}"))?;
+
+    // Insert duplicated slide
+    sqlx::query(
+        r#"
+        INSERT INTO slides
+          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#,
+    )
+    .bind(&new_id)
+    .bind(&project_id)
+    .bind(new_order)
+    .bind(&orig_code)
+    .bind(&orig_lang)
+    .bind(orig_trans)
+    .bind(orig_stagger)
+    .bind(orig_duration)
+    .bind(&new_name)
+    .bind(&orig_highlights)
+    .execute(&mut *tx)
+    .await
+    .map_err(|e| format!("Failed to insert duplicated slide: {e}"))?;
+
+    // Update project current_slide_id to new duplicated slide and touch updated_at
+    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
+        .bind(&project_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| format!("Failed to load settings: {e}"))?
+        .ok_or_else(|| format!("Project not found: {project_id}"))?;
+    let settings_raw: String = settings_row.get("settings");
+    let mut settings = crate::models::parse_settings(&settings_raw);
+    settings.current_slide_id = Some(new_id.clone());
+    let settings_json = crate::models::settings_to_json(&settings).map_err(|e| e.to_string())?;
+
+    sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
+        .bind(settings_json)
+        .bind(now_ms())
+        .bind(&project_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("TX commit failed: {e}"))?;
+
+    fetch_project(pool.inner(), &project_id).await
+}
+
+#[tauri::command]
 pub async fn delete_slide(
     pool: State<'_, DbPool>,
     project_id: String,

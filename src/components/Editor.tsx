@@ -27,6 +27,7 @@ import { useUiStore } from "@/store/useUiStore";
 import {
   useProject,
   useCreateSlide,
+  useDuplicateSlide,
   useCreateProject,
   useExportProject,
   useUpdateTheme,
@@ -74,6 +75,7 @@ export function Editor() {
 
   const exportMutation = useExportProject();
   const createSlide = useCreateSlide(projectId ?? "");
+  const duplicateSlide = useDuplicateSlide(projectId ?? "");
   const updateTheme = useUpdateTheme(projectId ?? "");
   const createProject = useCreateProject();
 
@@ -203,6 +205,9 @@ export function Editor() {
         useUiStore.getState().setIsCommandOpen(true),
       "menu://add-slide": () => {
         if (projectId) createSlide.mutate({});
+      },
+      "menu://duplicate-slide": () => {
+        if (projectId && currentSlideId) duplicateSlide.mutate(currentSlideId);
       },
       "menu://toggle-theme": () => useUiStore.getState().toggleTheme(),
       "menu://shortcuts": () =>

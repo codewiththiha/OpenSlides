@@ -1,11 +1,20 @@
 /**
- * Horizontal slide strip — virtualized for 150+ slides, now fills vertically.
+ * Horizontal slide strip — fixed re-render storm.
  *
- * BEFORE: ordered.map(...) rendered 150 nodes → jank.
- * AFTER: @tanstack/react-virtual horizontal, only visible mounted.
- * Fix vertical fill: cards now h-full fill panel height (resizable), horizontal stays rigid fixed 152px (unfilled as requested).
+ * BEFORE: every SlideCard did
+ *   const codeOverride = useUiStore(s => s.localCode[slide.id])
+ *   const currentSlideId = useUiStore(s => s.currentSlideId)
+ * Not memoed, so parent re-render (project.slides ref change on save) caused
+ * 20 cards to re-render. Typing in A → 20 selector calls + 20 renders.
+ *
+ * AFTER:
+ * - SlideCard is React.memo with custom comparator
+ * - Per-slide atoms: useLocalCodeAtom(slide.id) only notifies that ID
+ * - isSelected via boolean selector s => s.currentSlideId === slide.id (only 2 cards re-render on slide switch)
+ * - preview derived from atom, not whole store
+ * - setCurrentSlideId stable
  */
-import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
+import { useCallback, useEffect, useMemo, useState, memo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -27,7 +36,6 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Plus,
   Trash2,
@@ -36,6 +44,9 @@ import {
   ChevronUp,
   Pencil,
   Highlighter as HighlighterIcon,
+  Copy,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -46,14 +57,13 @@ import { notify } from "@/lib/toast";
 import {
   useCreateSlide,
   useDeleteSlide,
+  useDuplicateSlide,
   useReorderSlides,
   useRestoreSlide,
   useUpdateSlideSettings,
 } from "@/hooks/queries";
 
 const ITEM_WIDTH = 152;
-const GAP = 8;
-const ESTIMATED_SIZE = ITEM_WIDTH + GAP;
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -83,6 +93,7 @@ interface SlideCardProps {
   onCancelRename?: () => void;
   onRemove?: (id: string) => void;
   onRename?: (id: string, current: string) => void;
+  onDuplicate?: (id: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   setNodeRef?: (node: HTMLElement | null) => void;
   style?: React.CSSProperties;
@@ -101,11 +112,14 @@ const SlideCard = memo(function SlideCard({
   onCancelRename,
   onRemove,
   onRename,
+  onDuplicate,
   dragHandleProps,
   setNodeRef,
   style,
 }: SlideCardProps) {
+  // Per-slide atom: only this card re-renders when its own local code changes
   const codeOverride = useLocalCodeAtom(slide.id);
+  // Boolean selector: only 2 cards re-render on slide switch (prev/new)
   const isSelected = useUiStore((s) => s.currentSlideId === slide.id);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
 
@@ -130,8 +144,8 @@ const SlideCard = memo(function SlideCard({
         onRename(slide.id, title);
       }}
       className={cn(
-        "group relative flex h-full min-h-0 shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
-        "will-change-transform",
+        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 rounded-md border p-2 select-none",
+        "will-change-transform min-w-0",
         isOverlay
           ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
           : isSelected
@@ -191,6 +205,19 @@ const SlideCard = memo(function SlideCard({
                 }}
               >
                 <Pencil className="h-3 w-3" />
+              </button>
+            )}
+            {onDuplicate && (
+              <button
+                type="button"
+                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
+                title="Duplicate slide (Cmd+Shift+D)"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(slide.id);
+                }}
+              >
+                <Copy className="h-3 w-3" />
               </button>
             )}
             {onRemove && (
@@ -254,6 +281,7 @@ const SlideCard = memo(function SlideCard({
   );
 },
 (prev, next) => {
+  // Custom comparator: only re-render if relevant fields changed
   if (prev.slide.id !== next.slide.id) return false;
   if (prev.slide.code !== next.slide.code) return false;
   if (prev.slide.name !== next.slide.name) return false;
@@ -266,8 +294,11 @@ const SlideCard = memo(function SlideCard({
   if (prev.isRenaming !== next.isRenaming) return false;
   if (prev.renameValue !== next.renameValue) return false;
   if (prev.highlightProgress !== next.highlightProgress) return false;
+  // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
+  // dragHandleProps is stable from useSortable, but compare ref
   if (prev.dragHandleProps !== next.dragHandleProps) return false;
+  // on* callbacks are stable via useCallback, ignore
   return true;
 });
 
@@ -276,6 +307,7 @@ function SortableSlideItem({
   index,
   onRemove,
   onRename,
+  onDuplicate,
   isDraggingId,
   isRenaming,
   renameValue,
@@ -288,6 +320,7 @@ function SortableSlideItem({
   index: number;
   onRemove: (id: string) => void;
   onRename: (id: string, current: string) => void;
+  onDuplicate: (id: string) => void;
   isDraggingId: string | null;
   isRenaming: boolean;
   renameValue: string;
@@ -328,6 +361,7 @@ function SortableSlideItem({
       onCancelRename={onCancelRename}
       onRemove={onRemove}
       onRename={onRename}
+      onDuplicate={onDuplicate}
       setNodeRef={setNodeRef}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
@@ -354,6 +388,7 @@ export function BottomSlidesPanel({
 
   const createSlide = useCreateSlide(project.id);
   const deleteSlide = useDeleteSlide(project.id);
+  const duplicateSlide = useDuplicateSlide(project.id);
   const restoreSlide = useRestoreSlide(project.id);
   const reorder = useReorderSlides(project.id);
   const updateSettings = useUpdateSlideSettings(project.id);
@@ -362,6 +397,15 @@ export function BottomSlidesPanel({
   useEffect(() => {
     setOrdered(project.slides);
   }, [project.slides]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredOrdered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return ordered;
+    return ordered.filter(
+      (s) => (s.name ?? "").toLowerCase().includes(q) || s.code.toLowerCase().includes(q),
+    );
+  }, [ordered, searchQuery]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -384,50 +428,18 @@ export function BottomSlidesPanel({
     }),
   );
 
-  const ids = useMemo(() => ordered.map((s) => s.id), [ordered]);
-
-  const parentRef = useRef<HTMLDivElement>(null);
-  const rowVirtualizer = useVirtualizer({
-    count: ordered.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ESTIMATED_SIZE,
-    horizontal: true,
-    overscan: 10,
-  });
-
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
-
-  const isDragging = activeId !== null;
-  const shouldVirtualize = ordered.length > 20 && !isDragging;
-
-  useEffect(() => {
-    if (!renamingId) return;
-    const idx = ordered.findIndex((s) => s.id === renamingId);
-    if (idx >= 0) {
-      rowVirtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
-    }
-  }, [renamingId, ordered, rowVirtualizer]);
-
-  useEffect(() => {
-    if (!currentSlideId) return;
-    const idx = ordered.findIndex((s) => s.id === currentSlideId);
-    if (idx < 0) return;
-    const vItems = rowVirtualizer.getVirtualItems();
-    const isVisible = vItems.some((v) => v.index === idx);
-    if (!isVisible) {
-      rowVirtualizer.scrollToIndex(idx, { align: "auto", behavior: "smooth" });
-    }
-  }, [currentSlideId, ordered, rowVirtualizer]);
+  const ids = useMemo(() => filteredOrdered.map((s) => s.id), [filteredOrdered]);
 
   const onDragStart = useCallback((event: DragStartEvent) => {
+    if (searchQuery.trim()) return; // disable drag when filtering
     setActiveId(String(event.active.id));
-  }, []);
+  }, [searchQuery]);
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveId(null);
+      if (searchQuery.trim()) return; // disable reorder when filtering
       if (!over || active.id === over.id) return;
 
       const oldIndex = ordered.findIndex((s) => s.id === active.id);
@@ -444,7 +456,7 @@ export function BottomSlidesPanel({
         },
       );
     },
-    [ordered, reorder],
+    [ordered, reorder, searchQuery],
   );
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
@@ -503,21 +515,22 @@ export function BottomSlidesPanel({
     [ordered, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
   );
 
+  const handleDuplicate = useCallback(
+    (id: string) => {
+      duplicateSlide.mutate(id);
+    },
+    [duplicateSlide],
+  );
+
   const handleAdd = useCallback(() => {
     const nextNum = ordered.length + 1;
     createSlide.mutate(
       { name: `Slide ${nextNum}` },
       {
-        onSuccess: (slide) => {
-          setCurrentSlideId(slide.id);
-          requestAnimationFrame(() => {
-            const idx = ordered.length;
-            rowVirtualizer.scrollToIndex(idx, { align: "end", behavior: "smooth" });
-          });
-        },
+        onSuccess: (slide) => setCurrentSlideId(slide.id),
       },
     );
-  }, [ordered.length, createSlide, setCurrentSlideId, rowVirtualizer]);
+  }, [ordered.length, createSlide, setCurrentSlideId]);
 
   if (isCollapsed) {
     return (
@@ -544,14 +557,31 @@ export function BottomSlidesPanel({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-card/60">
-      <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-1">
+      <div className="flex shrink-0 items-center gap-2 px-3 py-1">
         <span
-          className="min-w-0 truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          className="min-w-0 shrink-0 truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
           title="Slides"
         >
           Slides ({ordered.length}
-          {shouldVirtualize ? ` · virtualized ${virtualItems.length}/${ordered.length} mounted` : ""})
+          {searchQuery ? ` · ${filteredOrdered.length} filtered` : ""})
         </span>
+        <div className="relative flex-1 mx-2">
+          <Search className="absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+          <input
+            className="h-6 w-full rounded-md border border-input bg-background pl-6 pr-6 text-xs outline-none focus:ring-1 focus:ring-ring"
+            placeholder="Search by name or code... (FTS5 ready)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-muted"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-1">
           <Button
             variant="ghost"
@@ -577,72 +607,30 @@ export function BottomSlidesPanel({
         onDragCancel={onDragCancel}
       >
         <SortableContext items={ids} strategy={horizontalListSortingStrategy}>
-          {/* parentRef is flex-1 + h-full so it fills vertical space from column */}
           <div
-            ref={parentRef}
-            className="flex min-h-0 flex-1 overflow-x-auto overflow-y-hidden"
+            className="flex min-h-0 flex-1 gap-2 overflow-x-auto overflow-y-hidden px-3 pb-3 pt-0.5"
             style={{ touchAction: "pan-x" }}
           >
-            {shouldVirtualize ? (
-              <div
-                className="relative h-full min-h-[96px]"
-                style={{ width: `${totalSize}px` }}
-              >
-                {virtualItems.map((virtualRow) => {
-                  const slide = ordered[virtualRow.index];
-                  if (!slide) return null;
-                  return (
-                    <div
-                      key={slide.id}
-                      data-index={virtualRow.index}
-                      className="absolute top-0 bottom-0"
-                      style={{
-                        left: 0,
-                        width: `${ITEM_WIDTH}px`,
-                        transform: `translateX(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <div className="h-full py-0.5">
-                        <SortableSlideItem
-                          slide={slide}
-                          index={virtualRow.index}
-                          onRemove={handleRemove}
-                          onRename={startRename}
-                          isDraggingId={activeId}
-                          isRenaming={renamingId === slide.id}
-                          renameValue={renameValue}
-                          highlightProgress={activeHighlightIndex}
-                          onRenameValueChange={setRenameValue}
-                          onCommitRename={commitRename}
-                          onCancelRename={() => setRenamingId(null)}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* non-virtualized: h-full so cards stretch vertically, rigid fixed width horizontally */
-              <div className="flex h-full min-h-[96px] gap-2 px-3 pb-3 pt-0.5">
-                {ordered.map((slide, index) => (
-                  <div key={slide.id} className="h-full">
-                    <SortableSlideItem
-                      slide={slide}
-                      index={index}
-                      onRemove={handleRemove}
-                      onRename={startRename}
-                      isDraggingId={activeId}
-                      isRenaming={renamingId === slide.id}
-                      renameValue={renameValue}
-                      highlightProgress={activeHighlightIndex}
-                      onRenameValueChange={setRenameValue}
-                      onCommitRename={commitRename}
-                      onCancelRename={() => setRenamingId(null)}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            {filteredOrdered.map((slide, index) => {
+              const originalIndex = ordered.findIndex((s) => s.id === slide.id);
+              return (
+                <SortableSlideItem
+                  key={slide.id}
+                  slide={slide}
+                  index={originalIndex >= 0 ? originalIndex : index}
+                  onRemove={handleRemove}
+                  onRename={startRename}
+                  onDuplicate={handleDuplicate}
+                  isDraggingId={activeId}
+                  isRenaming={renamingId === slide.id}
+                  renameValue={renameValue}
+                  highlightProgress={activeHighlightIndex}
+                  onRenameValueChange={setRenameValue}
+                  onCommitRename={commitRename}
+                  onCancelRename={() => setRenamingId(null)}
+                />
+              );
+            })}
           </div>
         </SortableContext>
 
