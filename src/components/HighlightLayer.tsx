@@ -24,9 +24,9 @@ import type { Highlight } from "@/types";
 import {
   measureHighlight,
   measureHighlightPureMath,
-  clearLineNodesCache,
   type HighlightMeasurement,
 } from "@/lib/highlight-utils";
+import { clearLineNodesCache } from "@/lib/line-nodes-cache";
 import { useHighlightPlan } from "@/hooks/useHighlightPlan";
 
 interface HighlightLayerProps {

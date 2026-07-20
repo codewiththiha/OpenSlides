@@ -7,8 +7,9 @@
  * - LRU for char width (32 entries)
  */
 
-import { HIGHLIGHT_DEFAULTS, type Highlight } from "@/types";
 import type { HighlightPlan, HighlightPlanLine } from "@/lib/highlight-tokens";
+import { getLineTextNodes } from "./line-nodes-cache";
+import { measureCharWidth } from "./char-width-cache";
 
 export interface HighlightLineRect {
   x: number;
@@ -25,123 +26,6 @@ export interface MeasuredSegment {
 export interface HighlightMeasurement {
   segments: MeasuredSegment[];
   union: HighlightLineRect;
-}
-
-export function generateHighlightId(): string {
-  return `hl_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-export function createDefaultHighlight(
-  startLine: number,
-  startChar: number,
-  endLine: number,
-  endChar: number,
-): Highlight {
-  return {
-    id: generateHighlightId(),
-    startLine,
-    startChar,
-    endLine,
-    endChar,
-    ...HIGHLIGHT_DEFAULTS,
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Line text node collection — cached per codeRoot, MutationObserver invalidation */
-/* ------------------------------------------------------------------ */
-
-interface LineNodesCache {
-  lineSpans: Element[];
-  nodes: Text[][];
-  dirty: boolean;
-}
-
-const nodesCache = new WeakMap<HTMLElement, LineNodesCache>();
-
-function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
-  const lineSpans = root.querySelectorAll("span.line");
-  if (lineSpans.length > 0) {
-    const lines: Text[][] = [];
-    lineSpans.forEach((span) => {
-      const nodes: Text[] = [];
-      const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
-      let n = walker.nextNode();
-      while (n) {
-        if ((n as Text).data) nodes.push(n as Text);
-        n = walker.nextNode();
-      }
-      lines.push(nodes);
-    });
-    return lines;
-  }
-
-  const current: Text[][] = [[]];
-  const walk = (node: Node) => {
-    node.childNodes.forEach((child) => {
-      if (child.nodeType === Node.ELEMENT_NODE) {
-        const el = child as HTMLElement;
-        if (el.tagName === "BR") {
-          current.push([]);
-          return;
-        }
-        if (el.tagName === "STYLE" || el.tagName === "SCRIPT") return;
-        if (el.classList.contains("shiki-magic-move-line-number")) return;
-        if (el.classList.contains("shiki-magic-move-leave-active")) return;
-        walk(el);
-        return;
-      }
-      if (child.nodeType === Node.TEXT_NODE) {
-        const t = child as Text;
-        if (t.data === "\n") {
-          current.push([]);
-        } else if (t.data) {
-          current[current.length - 1].push(t);
-        }
-      }
-    });
-  };
-  walk(root);
-  while (current.length > 1 && current[current.length - 1].length === 0) {
-    current.pop();
-  }
-  return current;
-}
-
-function collectLineSpanTextNodes(span: Element): Text[] {
-  const nodes: Text[] = [];
-  const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  while (node) {
-    if ((node as Text).data) nodes.push(node as Text);
-    node = walker.nextNode();
-  }
-  return nodes;
-}
-
-function getLineTextNodes(root: HTMLElement): Text[][] {
-  const cached = nodesCache.get(root);
-  if (cached && !cached.dirty) return cached.nodes;
-
-  const lineSpans = Array.from(root.querySelectorAll("span.line"));
-  if (lineSpans.length > 0 && cached && cached.lineSpans.length === lineSpans.length) {
-    const nodes = lineSpans.map((span, index) =>
-      span === cached.lineSpans[index]
-        ? cached.nodes[index]
-        : collectLineSpanTextNodes(span),
-    );
-    nodesCache.set(root, { lineSpans, nodes, dirty: false });
-    return nodes;
-  }
-
-  const nodes = collectLineTextNodesUncached(root);
-  nodesCache.set(root, { lineSpans, nodes, dirty: false });
-  return nodes;
-}
-
-export function clearLineNodesCache(root: HTMLElement) {
-  const cached = nodesCache.get(root);
-  if (cached) cached.dirty = true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -204,47 +88,6 @@ function rectForCharRange(
   } catch {
     return null;
   }
-}
-
-/* ------------------------------------------------------------------ */
-/* Char width cache — LRU 32 entries (16 themes × 2 font sizes)       */
-/* ------------------------------------------------------------------ */
-
-const CHAR_WIDTH_MAX = 32;
-const charWidthCache = new Map<string, number>();
-
-export function measureCharWidth(
-  container: HTMLElement,
-  fontSize: number,
-  fontFamily: string,
-): number {
-  const key = `${fontSize}|${fontFamily}`;
-  const cached = charWidthCache.get(key);
-  if (cached !== undefined) {
-    // Move to end for LRU
-    charWidthCache.delete(key);
-    charWidthCache.set(key, cached);
-    return cached;
-  }
-
-  const test = document.createElement("span");
-  test.style.position = "absolute";
-  test.style.visibility = "hidden";
-  test.style.whiteSpace = "pre";
-  test.style.fontSize = `${fontSize}px`;
-  test.style.fontFamily = fontFamily;
-  test.style.lineHeight = "1";
-  test.textContent = "xxxxxxxxxx";
-  container.appendChild(test);
-  const width = test.getBoundingClientRect().width / 10;
-  container.removeChild(test);
-
-  charWidthCache.set(key, width);
-  if (charWidthCache.size > CHAR_WIDTH_MAX) {
-    const firstKey = charWidthCache.keys().next().value;
-    if (firstKey) charWidthCache.delete(firstKey);
-  }
-  return width;
 }
 
 /* ------------------------------------------------------------------ */
