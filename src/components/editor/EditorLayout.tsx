@@ -21,6 +21,7 @@ import { usePanelSlice, useZenSlice } from "@/store/ui-selectors";
 import { useCollapsiblePanel } from "@/hooks/useCollapsiblePanel";
 import { cn } from "@/lib/utils";
 import type { Project, Slide } from "@/types";
+import { Z_INDEX } from "../ui/overlay";
 
 const CODE_COLLAPSE_THRESHOLD = 14;
 const SLIDES_COLLAPSE_THRESHOLD = 10;
@@ -97,7 +98,7 @@ export const EditorLayout = memo(function EditorLayout({
   return (
     <>
       {editorExpanded && (
-        <div className="fixed inset-0 z-[90] bg-background/98 p-4 backdrop-blur-xl">
+        <div className="fixed inset-0 bg-background/98 p-4 backdrop-blur-xl" style={{ zIndex: Z_INDEX.editorExpanded }}>
           <RenderErrorBoundary key={`expanded-editor-${project.id}`}>
             <CodeEditor
               project={project}

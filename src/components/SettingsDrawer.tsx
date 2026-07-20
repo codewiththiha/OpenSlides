@@ -15,6 +15,7 @@ import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
 import { showUndoToast } from "@/lib/settings-undo";
+import { Z_INDEX } from "./ui/overlay";
 
 interface SettingsDrawerProps {
   project: Project;
@@ -76,16 +77,18 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-black/40 transition-opacity",
+          "fixed inset-0 bg-black/40 transition-opacity",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
+        style={{ zIndex: Z_INDEX.drawerBackdrop }}
         onClick={onClose}
       />
       <aside
         className={cn(
-          "fixed right-0 top-0 z-50 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
+          "fixed right-0 top-0 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
           open ? "translate-x-0" : "translate-x-full",
         )}
+        style={{ zIndex: Z_INDEX.drawer }}
       >
         <div className="flex h-12 items-center justify-between border-b px-4">
           <h2 className="text-sm font-semibold">Project Settings</h2>
