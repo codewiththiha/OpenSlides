@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { requestHtml } from "@/lib/shiki-worker-client";
+import { useShikiHtml } from "./useShikiHtml";
 import { api } from "@/lib/tauri-api";
 
 const MAX_CACHE_ENTRIES = 120;
@@ -13,7 +13,6 @@ const cache = new Map<string, ThumbnailEntry>();
 function readCache(key: string): ThumbnailEntry | null {
   const value = cache.get(key);
   if (!value) return null;
-  // Touch the entry so the Map insertion order acts as an LRU.
   cache.delete(key);
   cache.set(key, value);
   return value;
@@ -62,6 +61,7 @@ export function useSlideThumbnail({
   const key = `${slideId}\u0000${theme}\u0000${language}\u0000${truncatedCode}`;
   const elementRef = useRef<HTMLDivElement>(null);
   const [entry, setEntry] = useState<ThumbnailEntry | null>(() => readCache(key));
+  const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
 
   useEffect(() => {
     const cached = readCache(key);
@@ -76,53 +76,47 @@ export function useSlideThumbnail({
       return;
     }
     setEntry(null);
-    if (!enabled || !truncatedCode) return;
-
-    const controller = new AbortController();
-    let timer: number | null = null;
-    let observer: IntersectionObserver | null = null;
-    let requested = false;
-
-    const request = () => {
-      if (requested || controller.signal.aborted) return;
-      requested = true;
-      timer = window.setTimeout(() => {
-        requestHtml(truncatedCode, language, theme, controller.signal, priority)
-          .then((response) => {
-            if (controller.signal.aborted || !response.html) return;
-            const next = { html: response.html };
-            writeCache(key, next);
-            setEntry(next);
-            void api.cacheThumbnail(slideId, code, response.html).catch(() => undefined);
-            observer?.disconnect();
-          })
-          .catch((error) => {
-            if ((error as DOMException)?.name !== "AbortError") {
-              // Keep the text fallback; thumbnails are progressive enhancement.
-            }
-          });
-      }, debounceMs);
-    };
+    setInView(typeof IntersectionObserver === "undefined");
 
     const element = elementRef.current;
     if (typeof IntersectionObserver === "undefined" || !element) {
-      request();
-    } else {
-      observer = new IntersectionObserver(
-        (entries) => {
-          if (entries.some((item) => item.isIntersecting)) request();
-        },
-        { rootMargin: "120px" },
-      );
-      observer.observe(element);
+      setInView(true);
+      return;
     }
 
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((item) => item.isIntersecting)) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "120px" },
+    );
+    observer.observe(element);
+
     return () => {
-      controller.abort();
-      if (timer !== null) window.clearTimeout(timer);
-      observer?.disconnect();
+      observer.disconnect();
     };
-  }, [key, language, theme, truncatedCode, initialHtml, slideId, code, enabled, priority, debounceMs]);
+  }, [key, initialHtml]);
+
+  const shouldRequest = enabled && !entry && inView && !!truncatedCode;
+  const freshHtml = useShikiHtml({
+    code: truncatedCode,
+    language,
+    theme,
+    debounceMs,
+    priority,
+    enabled: shouldRequest,
+  });
+
+  useEffect(() => {
+    if (!freshHtml || entry) return;
+    const next = { html: freshHtml };
+    writeCache(key, next);
+    setEntry(next);
+    void api.cacheThumbnail(slideId, code, freshHtml).catch(() => undefined);
+  }, [freshHtml, entry, key, slideId, code]);
 
   return { html: entry?.html ?? null, ref: elementRef };
 }

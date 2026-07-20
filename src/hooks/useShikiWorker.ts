@@ -1,8 +1,5 @@
 /** Shared Shiki worker hook for the editor HTML overlay. */
-import { useEffect, useRef, useState } from "react";
-import { requestHtml } from "@/lib/shiki-worker-client";
-
-const DEBOUNCE_MS = 80;
+import { useShikiHtml } from "./useShikiHtml";
 
 interface Args {
   code: string;
@@ -11,29 +8,5 @@ interface Args {
 }
 
 export function useShikiWorker({ code, language, theme }: Args): string | null {
-  const lastRef = useRef<string | null>(null);
-  const [html, setHtml] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      requestHtml(code, language, theme, controller.signal)
-        .then((response) => {
-          if (controller.signal.aborted || !response.html) return;
-          lastRef.current = response.html;
-          setHtml(response.html);
-        })
-        .catch((error) => {
-          if ((error as DOMException)?.name === "AbortError") return;
-          // Keep the last successful markup visible on worker/language errors.
-        });
-    }, DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [code, language, theme]);
-
-  return html ?? lastRef.current;
+  return useShikiHtml({ code, language, theme, debounceMs: 80, priority: "high" });
 }
