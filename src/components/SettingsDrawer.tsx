@@ -26,6 +26,8 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
   const updateSettings = useUpdateSettings(project.id);
   const updateTheme = useUpdateTheme(project.id);
   const editorShowLineNumbers = useUiStore((s) => s.editorShowLineNumbers);
+  const showSlideHoverPreview = useUiStore((s) => s.showSlideHoverPreview);
+  const setShowSlideHoverPreview = useUiStore((s) => s.setShowSlideHoverPreview);
   const setEditorShowLineNumbers = useUiStore(
     (s) => s.setEditorShowLineNumbers,
   );
@@ -179,6 +181,19 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
                     () => setEditorShowLineNumbers(before),
                   );
                 }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Slide hover previews</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Show enlarged thumbnails when hovering slide cards
+                </p>
+              </div>
+              <Switch
+                checked={showSlideHoverPreview}
+                onCheckedChange={setShowSlideHoverPreview}
               />
             </div>
 

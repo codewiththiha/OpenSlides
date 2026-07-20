@@ -78,6 +78,7 @@ export function BottomSlidesPanel({
   onToggleCollapse,
 }: BottomSlidesPanelProps) {
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
+  const showSlideHoverPreview = useUiStore((s) => s.showSlideHoverPreview);
   const currentSlideId = useUiStore((s) => s.currentSlideId);
   const isBottomPanelCollapsed = useUiStore((s) => s.isBottomPanelCollapsed);
   const setIsBottomPanelCollapsed = useUiStore(
@@ -384,6 +385,7 @@ export function BottomSlidesPanel({
                   theme={theme}
                   language={language}
                   searchQuery={searchQuery}
+                  enableHoverPreview={showSlideHoverPreview}
                 />
               );
             })}

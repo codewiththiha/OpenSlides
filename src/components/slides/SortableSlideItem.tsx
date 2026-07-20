@@ -23,6 +23,7 @@ export function SortableSlideItem({
   theme,
   language,
   searchQuery,
+  enableHoverPreview,
 }: {
   slide: Slide;
   index: number;
@@ -43,6 +44,7 @@ export function SortableSlideItem({
   theme: string;
   language: string;
   searchQuery: string;
+  enableHoverPreview: boolean;
 }) {
   const {
     attributes,
@@ -88,6 +90,7 @@ export function SortableSlideItem({
       theme={theme}
       language={language}
       searchQuery={searchQuery}
+      enableHoverPreview={enableHoverPreview}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
