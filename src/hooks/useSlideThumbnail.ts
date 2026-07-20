@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useShikiHtml } from "./useShikiHtml";
 import { api } from "@/lib/tauri-api";
+import { LruMap } from "@/lib/lru-map";
 
 const MAX_CACHE_ENTRIES = 120;
 const MAX_LINES = 6;
@@ -8,25 +9,7 @@ const MAX_CHARS = 400;
 const REQUEST_DEBOUNCE_MS = 400;
 
 type ThumbnailEntry = { html: string };
-const cache = new Map<string, ThumbnailEntry>();
-
-function readCache(key: string): ThumbnailEntry | null {
-  const value = cache.get(key);
-  if (!value) return null;
-  cache.delete(key);
-  cache.set(key, value);
-  return value;
-}
-
-function writeCache(key: string, value: ThumbnailEntry) {
-  cache.delete(key);
-  cache.set(key, value);
-  while (cache.size > MAX_CACHE_ENTRIES) {
-    const oldest = cache.keys().next().value;
-    if (oldest === undefined) break;
-    cache.delete(oldest);
-  }
-}
+const cache = new LruMap<string, ThumbnailEntry>(MAX_CACHE_ENTRIES);
 
 function truncateCode(code: string, maxLines: number, maxChars: number): string {
   return code.split("\n").slice(0, maxLines).join("\n").slice(0, maxChars);
@@ -60,18 +43,18 @@ export function useSlideThumbnail({
   const truncatedCode = truncateCode(code, maxLines, maxChars);
   const key = `${slideId}\u0000${theme}\u0000${language}\u0000${truncatedCode}`;
   const elementRef = useRef<HTMLDivElement>(null);
-  const [entry, setEntry] = useState<ThumbnailEntry | null>(() => readCache(key));
+  const [entry, setEntry] = useState<ThumbnailEntry | null>(() => cache.get(key) ?? null);
   const [inView, setInView] = useState(() => typeof IntersectionObserver === "undefined");
 
   useEffect(() => {
-    const cached = readCache(key);
+    const cached = cache.get(key);
     if (cached) {
       setEntry(cached);
       return;
     }
     if (initialHtml) {
       const initial = { html: initialHtml };
-      writeCache(key, initial);
+      cache.set(key, initial);
       setEntry(initial);
       return;
     }
@@ -113,7 +96,7 @@ export function useSlideThumbnail({
   useEffect(() => {
     if (!freshHtml || entry) return;
     const next = { html: freshHtml };
-    writeCache(key, next);
+    cache.set(key, next);
     setEntry(next);
     void api.cacheThumbnail(slideId, code, freshHtml).catch(() => undefined);
   }, [freshHtml, entry, key, slideId, code]);
