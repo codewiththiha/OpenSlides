@@ -9,8 +9,6 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   Maximize2,
   Minimize2,
   PanelRightClose,
@@ -54,6 +52,7 @@ import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
 import { createDefaultHighlight } from "@/lib/highlight-utils";
 import { useShikiWorker } from "@/hooks/useShikiWorker";
+import { EditorSlideNav } from "./editor/EditorSlideNav";
 
 interface CodeEditorProps {
   project: Project;
@@ -735,29 +734,7 @@ export function CodeEditor({
   return (
     <div className="flex h-full min-w-0 flex-col bg-card">
       <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-2">
-        <div className="flex min-w-0 items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            disabled={currentIndex <= 0}
-            onClick={() => goSlide(-1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="shrink-0 text-center text-[10px] text-muted-foreground/80">
-            {currentIndex + 1}/{project.slides.length}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            disabled={currentIndex >= project.slides.length - 1}
-            onClick={() => goSlide(1)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
+        <EditorSlideNav index={currentIndex} total={project.slides.length} onNavigate={goSlide} />
 
         <div className="flex min-w-0 items-center gap-1">
           <select
