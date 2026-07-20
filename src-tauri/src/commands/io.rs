@@ -59,6 +59,7 @@ pub async fn export_project_to_json(
             "transitionDuration": s.transition_duration,
             "stagger": s.stagger,
             "name": s.name,
+            "highlights": s.highlights,
         })).collect::<Vec<_>>(),
     });
 
@@ -184,7 +185,7 @@ pub async fn import_project_from_json(
     let project_id = Uuid::new_v4().to_string();
     let ts = now_ms();
 
-    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String)> = Vec::new();
+    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String, String)> = Vec::new();
     for (i, s) in slides_val.iter().enumerate() {
         let id = s
             .get("id")
@@ -208,10 +209,14 @@ pub async fn import_project_from_json(
             .filter(|n| !n.trim().is_empty())
             .map(|n| n.to_string())
             .unwrap_or_else(|| format!("Slide {}", i + 1));
+        let highlights_json = s
+            .get("highlights")
+            .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()))
+            .unwrap_or_else(|| "[]".to_string());
         if i == 0 {
             settings.current_slide_id = Some(id.clone());
         }
-        parsed_slides.push((id, code, duration, transition, stagger, sname));
+        parsed_slides.push((id, code, duration, transition, stagger, sname, highlights_json));
     }
 
     // Prefer imported currentSlideId if it matches a slide we keep
@@ -245,12 +250,12 @@ pub async fn import_project_from_json(
     .await
     .map_err(|e| IoCommandError::Failed(format!("Failed to insert project: {e}")))?;
 
-    for (i, (id, code, duration, transition, stagger, sname)) in parsed_slides.iter().enumerate() {
+    for (i, (id, code, duration, transition, stagger, sname, highlights_json)) in parsed_slides.iter().enumerate() {
         sqlx::query(
             r#"
             INSERT INTO slides
-              (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(id)
@@ -262,6 +267,7 @@ pub async fn import_project_from_json(
         .bind(stagger)
         .bind(duration)
         .bind(sname)
+        .bind(highlights_json)
         .execute(&mut *tx)
         .await
         .map_err(|e| IoCommandError::Failed(format!("Failed to insert slide: {e}")))?;

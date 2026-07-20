@@ -8,14 +8,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
 import { getHighlighter } from "@/lib/shiki-instance";
-import { api } from "@/lib/tauri-api";
 import {
-  plainTokenLines,
-  renderTokenLines,
-  type HighlightTokenLine,
-} from "@/lib/highlight-tokens";
-import {
-  LIGHT_THEMES,
   themeBackground,
   resolveProjectLanguage,
   type Project,
@@ -74,43 +67,9 @@ export function SlidePreview({
 
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
-  const isDarkBg = !LIGHT_THEMES.has(theme);
   const canUseShiki =
     highlighter && highlighter.getLoadedLanguages().includes(language);
-  const needsMerustmar = language === "merustmar" && !canUseShiki;
 
-  const [mmTokens, setMmTokens] = useState<{
-    code: string;
-    dark: boolean;
-    lines: HighlightTokenLine[];
-  } | null>(() =>
-    needsMerustmar
-      ? { code, dark: isDarkBg, lines: plainTokenLines(code) }
-      : null,
-  );
-  const mmReqRef = useRef(0);
-  useEffect(() => {
-    if (!needsMerustmar) return;
-    const controller = new AbortController();
-    const req = ++mmReqRef.current;
-    const dark = isDarkBg;
-    api
-      .merustmarTokens(code, dark, controller.signal)
-      .then((lines) => {
-        if (controller.signal.aborted) return;
-        if (mmReqRef.current === req) setMmTokens({ code, dark, lines });
-      })
-      .catch((err) => {
-        if ((err as DOMException)?.name === "AbortError") return;
-        if (controller.signal.aborted) return;
-        if (mmReqRef.current === req) {
-          setMmTokens({ code, dark, lines: plainTokenLines(code) });
-        }
-      });
-    return () => {
-      controller.abort();
-    };
-  }, [needsMerustmar, code, isDarkBg]);
 
   if (!slide) {
     return (
@@ -169,52 +128,6 @@ export function SlidePreview({
     ? settings.fontSize * 1.15
     : settings.fontSize;
 
-  if (needsMerustmar) {
-    const html = renderTokenLines(mmTokens?.lines ?? plainTokenLines(code));
-    return (
-      <div
-        ref={containerRef}
-        className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl shadow-2xl"
-        style={{ backgroundColor: bg }}
-      >
-        <div
-          className={cn(
-            "relative z-10 flex h-full w-full",
-            stagePad,
-            centerBlock ? "items-center justify-center" : "items-center justify-start",
-          )}
-        >
-          <div
-            ref={codeContainerRef}
-            className={cn(centerBlock ? "w-max max-w-full" : "w-full")}
-            style={{
-              lineHeight: settings.lineHeight.toString(),
-              fontSize: `${previewFontSize.toFixed(1)}px`,
-            }}
-          >
-            <pre
-              className="font-mono font-medium tracking-wide text-left"
-              style={{ backgroundColor: "transparent", margin: 0, whiteSpace: "pre" }}
-              dangerouslySetInnerHTML={{ __html: html || "&nbsp;" }}
-            />
-          </div>
-        </div>
-
-        <HighlightLayer
-          containerRef={containerRef}
-          codeContainerRef={codeContainerRef}
-          code={code}
-          highlight={activeHighlight}
-          highlighter={highlighter}
-          theme={theme}
-          language={language}
-          fontSize={previewFontSize}
-          lineHeight={settings.lineHeight}
-          onExitComplete={onHighlightExitComplete}
-        />
-      </div>
-    );
-  }
 
   if (!highlighter || !canUseShiki) {
     return (
