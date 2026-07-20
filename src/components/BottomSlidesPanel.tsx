@@ -70,12 +70,19 @@ const ITEM_WIDTH = 152;
 
 function SearchSnippet({ code, query }: { code: string; query: string }) {
   const q = query.trim();
-  if (!q) return null;
-  const lower = code.toLowerCase();
-  const match = lower.indexOf(q.toLowerCase());
-  if (match < 0) return null;
-  const lines = code.split("\\n");
-  const lineIndex = code.slice(0, match).split("\\n").length - 1;
+  const lines = useMemo(() => code.split("\\n"), [code]);
+  const lineStarts = useMemo(() => {
+    const starts = [0];
+    for (let i = 0; i < lines.length - 1; i++) {
+      starts.push(starts[i] + lines[i].length + 1);
+    }
+    return starts;
+  }, [lines]);
+  const match = useMemo(() => code.toLowerCase().indexOf(q.toLowerCase()), [code, q]);
+  if (!q || match < 0) return null;
+  const lineIndex = lineStarts.findIndex((start, index) =>
+    match < start + lines[index].length + 1,
+  );
   const visible = lines.slice(Math.max(0, lineIndex - 2), lineIndex + 3);
   const firstVisible = Math.max(0, lineIndex - 2);
   return (
@@ -84,7 +91,7 @@ function SearchSnippet({ code, query }: { code: string; query: string }) {
       {visible.map((line, index) => {
         const absolute = firstVisible + index;
         if (absolute !== lineIndex) return <span key={absolute}>{line}{index < visible.length - 1 ? "\\n" : ""}</span>;
-        const lineStart = absolute === 0 ? 0 : code.split("\\n").slice(0, absolute).join("\\n").length + 1;
+        const lineStart = lineStarts[absolute] ?? 0;
         const from = Math.max(0, match - lineStart);
         const to = Math.min(line.length, from + q.length);
         return <span key={absolute}>{line.slice(0, from)}<mark className="rounded bg-primary/30 text-foreground">{line.slice(from, to)}</mark>{line.slice(to)}{index < visible.length - 1 ? "\\n" : ""}</span>;
@@ -132,6 +139,7 @@ interface SlideCardProps {
   theme: string;
   language: string;
   searchQuery?: string;
+  tooltipRight?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -158,6 +166,7 @@ const SlideCard = memo(function SlideCard({
   theme,
   language,
   searchQuery = "",
+  tooltipRight = false,
   style,
 }: SlideCardProps) {
   // Per-slide atom: only this card re-renders when its own local code changes
@@ -170,6 +179,9 @@ const SlideCard = memo(function SlideCard({
   const preview = thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty";
   const [showHoverPreview, setShowHoverPreview] = useState(false);
   const hoverTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
+  }, []);
   const thumbnail = useSlideThumbnail({
     slideId: slide.id,
     code: thumbnailCode,
@@ -275,7 +287,10 @@ const SlideCard = memo(function SlideCard({
       {showHoverPreview && hoverThumbnail.html && (
         <div
           ref={hoverThumbnail.ref}
-          className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl"
+          className={cn(
+            "pointer-events-none absolute bottom-full z-50 mb-2 h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl",
+            tooltipRight ? "right-0" : "left-0",
+          )}
           style={{ backgroundColor: themeBackground(theme) }}
           aria-hidden="true"
         >
@@ -451,6 +466,7 @@ const SlideCard = memo(function SlideCard({
   if (prev.theme !== next.theme) return false;
   if (prev.language !== next.language) return false;
   if (prev.searchQuery !== next.searchQuery) return false;
+  if (prev.tooltipRight !== next.tooltipRight) return false;
   // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
   // dragHandleProps is stable from useSortable, but compare ref
@@ -479,6 +495,7 @@ function SortableSlideItem({
   theme,
   language,
   searchQuery,
+  tooltipRight,
 }: {
   slide: Slide;
   index: number;
@@ -499,6 +516,7 @@ function SortableSlideItem({
   theme: string;
   language: string;
   searchQuery: string;
+  tooltipRight: boolean;
 }) {
   const {
     attributes,
@@ -544,6 +562,7 @@ function SortableSlideItem({
       theme={theme}
       language={language}
       searchQuery={searchQuery}
+      tooltipRight={tooltipRight}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
@@ -614,19 +633,16 @@ export function BottomSlidesPanel({
     });
     return () => { cancelled = true; };
   }, [project.id, searchQuery]);
-  const searchIndex = useMemo(() =>
-    ordered.map((slide) => ({
-      slide,
-      haystack: `${slide.name ?? ""}\n${slide.code}`.toLowerCase(),
-    })),
-    [ordered],
-  );
   const filteredOrdered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return ordered;
     if (searchResultIds) return ordered.filter((slide) => searchResultIds.has(slide.id));
-    return searchIndex.filter(({ haystack }) => haystack.includes(q)).map(({ slide }) => slide);
-  }, [ordered, searchIndex, searchQuery, searchResultIds]);
+    // Only build the JS fallback index if FTS is unavailable.
+    return ordered
+      .map((slide) => ({ slide, haystack: `${slide.name ?? ""}\n${slide.code}`.toLowerCase() }))
+      .filter(({ haystack }) => haystack.includes(q))
+      .map(({ slide }) => slide);
+  }, [ordered, searchQuery, searchResultIds]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -860,6 +876,7 @@ export function BottomSlidesPanel({
                   theme={theme}
                   language={language}
                   searchQuery={searchQuery}
+                  tooltipRight={index >= filteredOrdered.length - 2}
                 />
               );
             })}

@@ -36,7 +36,7 @@ export function useUpdateSlideCode() {
         return {
           ...old,
           slides: old.slides.map((s) =>
-            s.id === slideId ? { ...s, code } : s,
+            s.id === slideId ? { ...s, code, thumbnailHtml: "" } : s,
           ),
         };
       });
