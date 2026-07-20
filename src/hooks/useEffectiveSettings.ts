@@ -1,13 +1,15 @@
 import { useMemo } from "react";
 import { useUiStore } from "@/store/useUiStore";
 import type { Project } from "@/types";
+import { useSlideMaps } from "./useSlideMaps";
 
 export function useEffectiveSettings(project: Project, slideId?: string) {
   const previewProject = useUiStore((s) => s.previewProject);
   const previewSlidesRevision = useUiStore((s) => s.previewSlidesRevision);
   const previewSlides = useUiStore.getState().previewSlides;
+  const { slideMap } = useSlideMaps(project.slides);
   const settings = project.settings;
-  const slide = slideId ? project.slides.find((item) => item.id === slideId) : project.slides[0];
+  const slide = slideId ? slideMap.get(slideId) : project.slides[0];
   return useMemo(() => {
     const previewSlide = slide ? previewSlides.get(slide.id) : undefined;
     const globalTransitionDuration = previewProject.globalTransitionDuration ?? settings.globalTransitionDuration;
