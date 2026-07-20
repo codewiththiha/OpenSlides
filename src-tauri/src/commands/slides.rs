@@ -23,14 +23,19 @@ pub async fn create_slide(
         .code
         .unwrap_or_else(|| "// New Slide\n// Edit me!".to_string());
 
-    // Language comes from project settings
-    let mut settings = load_settings(pool.inner(), &payload.project_id).await?;
+    let mut tx = pool
+        .inner()
+        .begin()
+        .await
+        .map_err(|e| format!("TX begin failed: {e}"))?;
+
+    let mut settings = load_settings(&mut *tx, &payload.project_id).await?;
     let language = settings.language.clone();
 
     let max_order: (Option<i64>,) =
         sqlx::query_as("SELECT MAX(order_index) FROM slides WHERE project_id = ?")
             .bind(&payload.project_id)
-            .fetch_one(pool.inner())
+            .fetch_one(&mut *tx)
             .await
             .map_err(|e| format!("Failed to get max order: {e}"))?;
 
@@ -41,7 +46,7 @@ pub async fn create_slide(
         .unwrap_or_else(|| default_slide_name(order_index));
 
     insert_slide_row(
-        pool.inner(),
+        &mut *tx,
         &NewSlide {
             id: &slide_id,
             project_id: &payload.project_id,
@@ -59,7 +64,11 @@ pub async fn create_slide(
     .await?;
 
     settings.current_slide_id = Some(slide_id.clone());
-    save_settings(pool.inner(), &payload.project_id, &settings, true).await?;
+    save_settings(&mut *tx, &payload.project_id, &settings, true).await?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("TX commit failed: {e}"))?;
 
     Ok(Slide {
         id: slide_id,
@@ -150,25 +159,9 @@ pub async fn duplicate_slide(
     )
     .await?;
 
-    // Update project current_slide_id to new duplicated slide and touch updated_at
-    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to load settings: {e}"))?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
-    let settings_raw: String = settings_row.get("settings");
-    let mut settings = crate::models::parse_settings(&settings_raw);
+    let mut settings = load_settings(&mut *tx, &project_id).await?;
     settings.current_slide_id = Some(new_id.clone());
-    let settings_json = crate::models::settings_to_json(&settings).map_err(|e| e.to_string())?;
-
-    sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
-        .bind(settings_json)
-        .bind(now_ms())
-        .bind(&project_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+    save_settings(&mut *tx, &project_id, &settings, true).await?;
 
     tx.commit()
         .await
@@ -217,35 +210,12 @@ pub async fn delete_slide(
     let remaining_ids: Vec<String> = remaining_rows.iter().map(|row| row.get("id")).collect();
     batch_reindex(&mut *tx, &project_id, &remaining_ids).await?;
 
-    // Load settings (inside tx)
-    let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
-        .bind(&project_id)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(|e| format!("Failed to load project settings: {e}"))?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
-    let settings_raw: String = settings_row.get("settings");
-    let mut settings = crate::models::parse_settings(&settings_raw);
-
+    let mut settings = load_settings(&mut *tx, &project_id).await?;
     if settings.current_slide_id.as_deref() == Some(slide_id.as_str()) {
-        // Fallback to first remaining slide
-        let fallback = remaining_ids.first().cloned();
-        settings.current_slide_id = fallback;
-        let json = crate::models::settings_to_json(&settings).map_err(|e| e.to_string())?;
-        sqlx::query("UPDATE projects SET settings = ?, updated_at = ? WHERE id = ?")
-            .bind(json)
-            .bind(now_ms())
-            .bind(&project_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        settings.current_slide_id = remaining_ids.first().cloned();
+        save_settings(&mut *tx, &project_id, &settings, true).await?;
     } else {
-        sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
-            .bind(now_ms())
-            .bind(&project_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| format!("Failed to update project timestamp: {e}"))?;
+        touch_project(&mut *tx, &project_id).await?;
     }
 
     tx.commit()
@@ -263,22 +233,24 @@ pub async fn restore_slide(
     slide: Slide,
     insert_at: Option<i64>,
 ) -> Result<Project, String> {
-    let order_index = insert_at.unwrap_or_else(|| {
-        // append if not specified — caller should pass the original index
-        0
-    });
+    let order_index = insert_at.unwrap_or(0);
 
-    // Shift existing slides at/after insert point
+    let mut tx = pool
+        .inner()
+        .begin()
+        .await
+        .map_err(|e| format!("TX begin failed: {e}"))?;
+
     sqlx::query(
         "UPDATE slides SET order_index = order_index + 1 WHERE project_id = ? AND order_index >= ?",
     )
     .bind(&project_id)
     .bind(order_index)
-    .execute(pool.inner())
+    .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?;
 
-    let settings = load_settings(pool.inner(), &project_id).await?;
+    let settings = load_settings(&mut *tx, &project_id).await?;
 
     let restore_name = if slide.name.trim().is_empty() {
         default_slide_name(order_index)
@@ -288,28 +260,30 @@ pub async fn restore_slide(
 
     let highlights_json = serialize_highlights(&slide.highlights)?;
 
-    sqlx::query(
-        r#"
-        INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
+    insert_slide_row(
+        &mut *tx,
+        &NewSlide {
+            id: &slide.id,
+            project_id: &project_id,
+            order_index,
+            code: &slide.code,
+            language: &settings.language,
+            transition_duration: slide.transition_duration,
+            stagger: slide.stagger,
+            duration: slide.duration,
+            name: &restore_name,
+            highlights_json: &highlights_json,
+            thumbnail_html: "",
+        },
     )
-    .bind(&slide.id)
-    .bind(&project_id)
-    .bind(order_index)
-    .bind(&slide.code)
-    .bind(&settings.language)
-    .bind(slide.transition_duration)
-    .bind(slide.stagger)
-    .bind(slide.duration)
-    .bind(&restore_name)
-    .bind(&highlights_json)
-    .execute(pool.inner())
-    .await
-    .map_err(|e| format!("Failed to restore slide: {e}"))?;
+    .await?;
 
-    touch_project(pool.inner(), &project_id).await?;
+    touch_project(&mut *tx, &project_id).await?;
+
+    tx.commit()
+        .await
+        .map_err(|e| format!("TX commit failed: {e}"))?;
+
     fetch_project(pool.inner(), &project_id).await
 }
 
@@ -339,6 +313,8 @@ pub async fn update_slide_code(
     Ok(())
 }
 
+/// Only write if the code still matches the rendered request — prevents a
+/// stale worker response from overwriting a newer thumbnail.
 #[tauri::command]
 pub async fn cache_thumbnail(
     pool: State<'_, DbPool>,
@@ -346,15 +322,13 @@ pub async fn cache_thumbnail(
     code: String,
     html: String,
 ) -> Result<(), String> {
-    sqlx::query(
-        "UPDATE slides SET thumbnail_html = ? WHERE id = ? AND code = ?",
-    )
-    .bind(html)
-    .bind(slide_id)
-    .bind(&code)
-    .execute(pool.inner())
-    .await
-    .map_err(|e| format!("Failed to cache thumbnail: {e}"))?;
+    sqlx::query("UPDATE slides SET thumbnail_html = ? WHERE id = ? AND code = ?")
+        .bind(html)
+        .bind(slide_id)
+        .bind(&code)
+        .execute(pool.inner())
+        .await
+        .map_err(|e| format!("Failed to cache thumbnail: {e}"))?;
     Ok(())
 }
 
