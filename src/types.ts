@@ -81,8 +81,9 @@ export interface Highlight {
 export interface Slide {
   id: string;
   code: string;
-  /** DEPRECATED legacy mirror of project settings language — display the
-   * resolved project language instead (resolveProjectLanguage). */
+  /** Derived from project settings on read — export/API compatibility only.
+   *  The per-slide DB column was dropped (migration v6). Never edit or
+   *  display this directly; use resolveProjectLanguage(project). */
   language: string;
   duration: number;
   transitionDuration: number;

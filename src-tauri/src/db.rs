@@ -32,7 +32,6 @@ CREATE TABLE IF NOT EXISTS slides (
     project_id TEXT NOT NULL,
     order_index INTEGER NOT NULL,
     code TEXT NOT NULL,
-    language TEXT NOT NULL DEFAULT 'typescript',
     transition_duration INTEGER NOT NULL DEFAULT 750,
     stagger INTEGER NOT NULL DEFAULT 5,
     duration INTEGER NOT NULL DEFAULT 3000,
@@ -118,7 +117,7 @@ async fn set_version(pool: &SqlitePool, v: i64) -> Result<(), String> {
 }
 
 /// Incremental, additive migrations. Bump TARGET when adding a step.
-const TARGET_VERSION: i64 = 5;
+const TARGET_VERSION: i64 = 6;
 
 async fn column_exists(pool: &SqlitePool, table: &str, column: &str) -> Result<bool, String> {
     let rows = sqlx::query(&format!("PRAGMA table_info({table})"))
@@ -309,6 +308,23 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
                 .map_err(|e| format!("Failed to add slides.thumbnail_html: {e}"))?;
         }
         version = 5;
+        set_version(pool, version).await?;
+    }
+
+    // v6: drop the legacy per-slide language mirror. Project settings JSON has
+    // been the source of truth since v1; the column survived only for export
+    // compatibility and is now derived on read. Safe on fresh DBs too: the
+    // column_exists guard skips the DROP when BASE_SCHEMA never created it.
+    // (v1's slide-language queries only run for version-0 DBs, which always
+    // predate this schema and therefore still have the column.)
+    if version < 6 {
+        if column_exists(pool, "slides", "language").await? {
+            sqlx::query("ALTER TABLE slides DROP COLUMN language")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to drop slides.language: {e}"))?;
+        }
+        version = 6;
         set_version(pool, version).await?;
     }
 
