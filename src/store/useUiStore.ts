@@ -10,6 +10,7 @@ import {
   clearLocalCodeAtom,
   clearAllLocalCodeAtoms,
 } from "./localCodeAtoms";
+import { clearCaretPositions } from "./caretPositions";
 
 export type PreviewProjectSettings = {
   fontSize?: number;
@@ -45,9 +46,6 @@ export interface UiState {
   saveStatus: "idle" | "saving" | "saved" | "error";
   /** Highlight index being previewed from the editor (-1 = none). */
   previewHighlightIndex: number;
-  /** Caret position per slide — massive UX win for multi-slide editing */
-  caretPositions: Record<string, { start: number; end: number }>;
-
   /** Instant UI preview overrides (not persisted) — separate from DB state */
   previewProject: PreviewProjectSettings;
   previewSlides: Record<string, PreviewSlideSettings>;
@@ -75,7 +73,6 @@ export interface UiState {
   clearLocalCode: (slideId: string) => void;
   setSaveStatus: (s: UiState["saveStatus"]) => void;
   setPreviewHighlightIndex: (v: number) => void;
-  setCaretPosition: (slideId: string, start: number, end: number) => void;
   resetEditorUi: () => void;
 
   setPreviewProjectSetting: <K extends keyof PreviewProjectSettings>(
@@ -134,7 +131,6 @@ export const useUiStore = create<UiState>()(
       editorShowLineNumbers: true,
       saveStatus: "idle",
       previewHighlightIndex: -1,
-      caretPositions: {},
       previewProject: {},
       previewSlides: {},
       previewHighlights: {},
@@ -178,11 +174,6 @@ export const useUiStore = create<UiState>()(
       },
       setSaveStatus: (saveStatus) => set({ saveStatus }),
       setPreviewHighlightIndex: (v) => set({ previewHighlightIndex: v }),
-      setCaretPosition: (slideId, start, end) =>
-        set((s) => ({
-          caretPositions: { ...s.caretPositions, [slideId]: { start, end } },
-        })),
-
       setPreviewProjectSetting: (key, value) =>
         set((s) => {
           if (value === null || value === undefined) {
@@ -297,6 +288,7 @@ export const useUiStore = create<UiState>()(
 
       resetEditorUi: () => {
         clearAllLocalCodeAtoms();
+        clearCaretPositions();
         return set({
           currentSlideId: null,
           isPresenting: false,
@@ -306,7 +298,6 @@ export const useUiStore = create<UiState>()(
           isShortcutsOpen: false,
           saveStatus: "idle",
           previewHighlightIndex: -1,
-          caretPositions: {},
           previewProject: {},
           previewSlides: {},
           previewHighlights: {},
