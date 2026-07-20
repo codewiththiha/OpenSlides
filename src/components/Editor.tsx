@@ -38,6 +38,7 @@ import { useHighlightNav } from "@/hooks/useHighlightNav";
 import { useEditorKeyboard } from "@/hooks/useEditorKeyboard";
 import { usePresentFullscreen } from "@/hooks/usePresentFullscreen";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { dismissAllUndoToasts } from "@/lib/settings-undo";
 
 export function Editor() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -119,8 +120,9 @@ export function Editor() {
   }, [projectId, currentSlideId]);
 
   useEffect(() => {
-    // Clear transient preview overrides when switching projects to avoid leaking
+    // Clear transient preview overrides and stale setting undos on project switch.
     useUiStore.getState().clearAllPreviewSettings();
+    dismissAllUndoToasts();
   }, [projectId]);
 
   useEffect(() => {
