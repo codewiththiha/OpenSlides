@@ -1,11 +1,13 @@
 //! Slide-level Tauri commands.
 
 use crate::commands::helpers::{
-    fetch_project, load_settings, now_ms, save_settings, touch_project,
+    batch_reindex, fetch_project, insert_slide_row, load_settings, now_ms, save_settings,
+    touch_project, NewSlide,
 };
 use crate::db::DbPool;
 use crate::models::{
     CreateSlidePayload, Project, Slide, UpdateSlideSettingsPayload,
+    DEFAULT_SLIDE_DURATION_MS, DEFAULT_SLIDE_STAGGER, DEFAULT_SLIDE_TRANSITION_MS,
 };
 use sqlx::Row;
 use tauri::State;
@@ -38,22 +40,23 @@ pub async fn create_slide(
         .filter(|s| !s.trim().is_empty())
         .unwrap_or_else(|| format!("Slide {}", order_index + 1));
 
-    sqlx::query(
-        r#"
-        INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
-        VALUES (?, ?, ?, ?, ?, 750, 5, 3000, ?, '[]')
-        "#,
+    insert_slide_row(
+        pool.inner(),
+        &NewSlide {
+            id: &slide_id,
+            project_id: &payload.project_id,
+            order_index,
+            code: &code,
+            language: &language,
+            transition_duration: DEFAULT_SLIDE_TRANSITION_MS,
+            stagger: DEFAULT_SLIDE_STAGGER,
+            duration: DEFAULT_SLIDE_DURATION_MS,
+            name: &slide_name,
+            highlights_json: "[]",
+            thumbnail_html: "",
+        },
     )
-    .bind(&slide_id)
-    .bind(&payload.project_id)
-    .bind(order_index)
-    .bind(&code)
-    .bind(&language)
-    .bind(&slide_name)
-    .execute(pool.inner())
-    .await
-    .map_err(|e| format!("Failed to create slide: {e}"))?;
+    .await?;
 
     settings.current_slide_id = Some(slide_id.clone());
     save_settings(pool.inner(), &payload.project_id, &settings, true).await?;
@@ -62,9 +65,9 @@ pub async fn create_slide(
         id: slide_id,
         code,
         language,
-        duration: 3000,
-        transition_duration: 750,
-        stagger: 5,
+        duration: DEFAULT_SLIDE_DURATION_MS,
+        transition_duration: DEFAULT_SLIDE_TRANSITION_MS,
+        stagger: DEFAULT_SLIDE_STAGGER,
         order_index,
         name: slide_name,
         highlights: vec![],
@@ -128,27 +131,23 @@ pub async fn duplicate_slide(
     .await
     .map_err(|e| format!("Failed to shift slides: {e}"))?;
 
-    // Insert duplicated slide
-    sqlx::query(
-        r#"
-        INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#,
+    insert_slide_row(
+        &mut *tx,
+        &NewSlide {
+            id: &new_id,
+            project_id: &project_id,
+            order_index: new_order,
+            code: &orig_code,
+            language: &orig_lang,
+            transition_duration: orig_trans,
+            stagger: orig_stagger,
+            duration: orig_duration,
+            name: &new_name,
+            highlights_json: &orig_highlights,
+            thumbnail_html: "",
+        },
     )
-    .bind(&new_id)
-    .bind(&project_id)
-    .bind(new_order)
-    .bind(&orig_code)
-    .bind(&orig_lang)
-    .bind(orig_trans)
-    .bind(orig_stagger)
-    .bind(orig_duration)
-    .bind(&new_name)
-    .bind(&orig_highlights)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| format!("Failed to insert duplicated slide: {e}"))?;
+    .await?;
 
     // Update project current_slide_id to new duplicated slide and touch updated_at
     let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
@@ -208,57 +207,14 @@ pub async fn delete_slide(
         .await
         .map_err(|e| format!("Failed to delete slide: {e}"))?;
 
-    // Fetch remaining slides (inside tx) for re-index and for current_slide fallback
-    let remaining_rows = sqlx::query(
-        r#"
-        SELECT id, code, duration, transition_duration, stagger, order_index, name, highlights
-        FROM slides
-        WHERE project_id = ?
-        ORDER BY order_index ASC
-        "#,
-    )
-    .bind(&project_id)
-    .fetch_all(&mut *tx)
-    .await
-    .map_err(|e| format!("Failed to fetch slides: {e}"))?;
-
-    let mut remaining_ids: Vec<String> = Vec::new();
-    let mut remaining_for_fallback: Vec<(String, i64)> = Vec::new(); // (id, order)
-    for row in &remaining_rows {
-        let id: String = row.get("id");
-        let order: i64 = row.get("order_index");
-        remaining_ids.push(id.clone());
-        remaining_for_fallback.push((id, order));
-    }
-
-    // Batch re-index using JSON + json_each — infinitely scalable
-    if !remaining_ids.is_empty() {
-        let json = serde_json::to_string(
-            &remaining_ids
-                .iter()
-                .enumerate()
-                .map(|(i, id)| serde_json::json!({ "id": id, "new_order": i as i64 }))
-                .collect::<Vec<_>>(),
-        )
-        .map_err(|e| e.to_string())?;
-
-        sqlx::query(
-            r#"
-            UPDATE slides SET order_index = new_order
-            FROM (
-              SELECT json_extract(value, '$.id') as slide_id,
-                     CAST(json_extract(value, '$.new_order') AS INTEGER) as new_order
-              FROM json_each(?)
-            ) AS requested
-            WHERE slides.id = requested.slide_id AND slides.project_id = ?
-            "#,
-        )
-        .bind(&json)
+    // Fetch remaining IDs after deletion; the reindex reads post-delete state.
+    let remaining_rows = sqlx::query("SELECT id FROM slides WHERE project_id = ? ORDER BY order_index ASC")
         .bind(&project_id)
-        .execute(&mut *tx)
+        .fetch_all(&mut *tx)
         .await
-        .map_err(|e| e.to_string())?;
-    }
+        .map_err(|e| format!("Failed to fetch slides: {e}"))?;
+    let remaining_ids: Vec<String> = remaining_rows.iter().map(|row| row.get("id")).collect();
+    batch_reindex(&mut *tx, &project_id, &remaining_ids).await?;
 
     // Load settings (inside tx)
     let settings_row = sqlx::query("SELECT settings FROM projects WHERE id = ?")
@@ -488,48 +444,13 @@ pub async fn reorder_slides(
         return fetch_project(pool.inner(), &project_id).await;
     }
 
-    // Scalable JSON + json_each approach — avoids massive CASE with 300 WHEN clauses
-    // that can hit SQLITE_MAX_EXPR_DEPTH and parser limits.
-    // Pass JSON array [{"id":"uuid","new_order":0},...] and use UPDATE FROM json_each(?)
-    // Infinitely scalable, no SQL string bloat.
     let mut tx = pool
         .inner()
         .begin()
         .await
         .map_err(|e| format!("TX begin failed: {e}"))?;
-
-    let json = serde_json::to_string(
-        &slide_ids
-            .iter()
-            .enumerate()
-            .map(|(i, id)| serde_json::json!({ "id": id, "new_order": i as i64 }))
-            .collect::<Vec<_>>(),
-    )
-    .map_err(|e| e.to_string())?;
-
-    sqlx::query(
-        r#"
-        UPDATE slides SET order_index = new_order
-        FROM (
-          SELECT json_extract(value, '$.id') as slide_id,
-                 CAST(json_extract(value, '$.new_order') AS INTEGER) as new_order
-          FROM json_each(?)
-        ) AS requested
-        WHERE slides.id = requested.slide_id AND slides.project_id = ?
-        "#,
-    )
-    .bind(&json)
-    .bind(&project_id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| format!("Failed to reorder slides batch: {e}"))?;
-
-    sqlx::query("UPDATE projects SET updated_at = ? WHERE id = ?")
-        .bind(now_ms())
-        .bind(&project_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
+    batch_reindex(&mut *tx, &project_id, &slide_ids).await?;
+    touch_project(&mut *tx, &project_id).await?;
 
     tx.commit()
         .await
