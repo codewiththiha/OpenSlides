@@ -10,20 +10,7 @@ type Handlers = Partial<Record<AppMenuEvent, () => void>>;
 export function useAppMenu(handlers: Handlers) {
   useEffect(() => {
     const unsubs: Array<() => void> = [];
-    const events: AppMenuEvent[] = [
-      "menu://new-project",
-      "menu://open-dashboard",
-      "menu://export",
-      "menu://present",
-      "menu://zen",
-      "menu://settings",
-      "menu://command-palette",
-      "menu://add-slide",
-      "menu://toggle-theme",
-      "menu://shortcuts",
-      "menu://undo",
-      "menu://redo",
-    ];
+    const events = Object.keys(handlers) as AppMenuEvent[];
 
     let cancelled = false;
 

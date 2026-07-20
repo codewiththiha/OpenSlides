@@ -7,11 +7,11 @@ export function useEditorSlice() {
 }
 
 export function usePresentationControls() {
-  return useUiStore(useShallow((s) => ({ isPresenting: s.isPresenting, setIsPresenting: s.setIsPresenting, isAutoPlaying: s.isAutoPlaying, setIsAutoPlaying: s.setIsAutoPlaying, toggleAutoPlaying: s.toggleAutoPlaying })));
+  return useUiStore(useShallow((s) => ({ isAutoPlaying: s.isAutoPlaying, setIsAutoPlaying: s.setIsAutoPlaying, toggleAutoPlaying: s.toggleAutoPlaying })));
 }
 
 export function useZenSlice() {
-  return useUiStore(useShallow((s) => ({ isZenMode: s.isZenMode, setIsZenMode: s.setIsZenMode, toggleZenMode: s.toggleZenMode })));
+  return useUiStore(useShallow((s) => ({ isZenMode: s.isZenMode, toggleZenMode: s.toggleZenMode })));
 }
 
 export function usePanelSlice() {
@@ -19,5 +19,5 @@ export function usePanelSlice() {
 }
 
 export function useToolbarSlice() {
-  return useUiStore(useShallow((s) => ({ saveStatus: s.saveStatus, isAutoPlaying: s.isAutoPlaying, toggleAutoPlaying: s.toggleAutoPlaying, setIsAutoPlaying: s.setIsAutoPlaying, isDarkUi: s.isDarkUi, toggleTheme: s.toggleTheme, isZenMode: s.isZenMode, toggleZenMode: s.toggleZenMode, isSettingsOpen: s.isSettingsOpen, setIsSettingsOpen: s.setIsSettingsOpen, isCommandOpen: s.isCommandOpen, setIsCommandOpen: s.setIsCommandOpen, isPresenting: s.isPresenting, setIsPresenting: s.setIsPresenting })));
+  return useUiStore(useShallow((s) => ({ saveStatus: s.saveStatus, isAutoPlaying: s.isAutoPlaying, toggleAutoPlaying: s.toggleAutoPlaying, isDarkUi: s.isDarkUi, toggleTheme: s.toggleTheme, isZenMode: s.isZenMode, toggleZenMode: s.toggleZenMode, isSettingsOpen: s.isSettingsOpen, setIsSettingsOpen: s.setIsSettingsOpen, isCommandOpen: s.isCommandOpen, setIsCommandOpen: s.setIsCommandOpen })));
 }

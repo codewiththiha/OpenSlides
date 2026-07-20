@@ -26,7 +26,6 @@ interface SlideCardProps {
   onDuplicate?: (id: string) => void;
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
   setNodeRef?: (node: HTMLElement | null) => void;
-  registerCardRef?: (node: HTMLElement | null) => void;
   navigationIds?: string[];
   cardRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
   isTabStop?: boolean;
@@ -53,7 +52,6 @@ export const SlideCard = memo(function SlideCard({
   onDuplicate,
   dragHandleProps,
   setNodeRef,
-  registerCardRef,
   navigationIds = [],
   cardRefs,
   isTabStop = false,
@@ -145,7 +143,6 @@ export const SlideCard = memo(function SlideCard({
       ref={(node) => {
         cardRootRef.current = node;
         setNodeRef?.(node);
-        registerCardRef?.(node);
       }}
       data-slide-id={slide.id}
       role="option"

@@ -58,7 +58,6 @@ export function useHighlightNav({
 }: UseHighlightNavArgs) {
   const [highlightIndex, setHighlightIndexState] = useState(-1);
   /** True while an outro is playing and input is temporarily swallowed. */
-  const [isAdvancing, setIsAdvancing] = useState(false);
 
   const highlightIndexRef = useRef(-1);
   const slidesRef = useRef(slides);
@@ -91,7 +90,6 @@ export function useHighlightNav({
     window.clearTimeout(failSafeRef.current);
     const pending = pendingRef.current;
     pendingRef.current = null;
-    setIsAdvancing(false);
 
     if (pending?.advance) {
       const list = slidesRef.current;
@@ -121,7 +119,6 @@ export function useHighlightNav({
     highlightIndexRef.current = -1;
     setHighlightIndexState(-1);
     pendingRef.current = null;
-    setIsAdvancing(false);
   }, [currentSlideId]);
 
   /**
@@ -152,7 +149,6 @@ export function useHighlightNav({
         // Play the last outro first; the slide advance happens in
         // finishPending once the layer's exit animations complete.
         pendingRef.current = { advance: true, dir: 1 };
-        setIsAdvancing(true);
         armFailSafe(slide.highlights[idx]);
         setIdx(-1);
       } else {
@@ -164,7 +160,6 @@ export function useHighlightNav({
     // Last slide: fade the active highlight out, then the deck is done.
     if (idx >= 0) {
       pendingRef.current = { advance: false, dir: 1 };
-      setIsAdvancing(true);
       armFailSafe(slide.highlights[idx]);
       setIdx(-1);
       return true;
@@ -187,7 +182,6 @@ export function useHighlightNav({
     if (idx === 0) {
       // Outro back to a clean slide (stay put).
       pendingRef.current = { advance: false, dir: -1 };
-      setIsAdvancing(true);
       armFailSafe(list[i]?.highlights[idx]);
       setIdx(-1);
       return true;
@@ -219,8 +213,7 @@ export function useHighlightNav({
       if (pendingRef.current) {
         window.clearTimeout(failSafeRef.current);
         pendingRef.current = null;
-        setIsAdvancing(false);
-      }
+        }
       const list = slidesRef.current;
       const i = indexRef.current;
       const slide = list[i];
@@ -241,7 +234,6 @@ export function useHighlightNav({
 
   return {
     highlightIndex,
-    isAdvancing,
     goNext,
     goPrev,
     goToHighlight,

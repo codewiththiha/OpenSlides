@@ -60,7 +60,6 @@ export interface UiState {
   setIsPresenting: (v: boolean) => void;
   setIsAutoPlaying: (v: boolean) => void;
   toggleAutoPlaying: () => void;
-  setIsZenMode: (v: boolean) => void;
   toggleZenMode: () => void;
   setIsBottomPanelCollapsed: (v: boolean) => void;
   setIsCodePanelCollapsed: (v: boolean) => void;
@@ -70,7 +69,6 @@ export interface UiState {
   setIsCommandOpen: (v: boolean) => void;
   setIsShortcutsOpen: (v: boolean) => void;
   toggleShortcutsOpen: () => void;
-  setIsDarkUi: (v: boolean) => void;
   toggleTheme: () => void;
   setEditorShowLineNumbers: (v: boolean) => void;
   setShowSlideHoverPreview: (v: boolean) => void;
@@ -149,7 +147,6 @@ export const useUiStore = create<UiState>()(
       setIsPresenting: (v) => set({ isPresenting: v }),
       setIsAutoPlaying: (v) => set({ isAutoPlaying: v }),
       toggleAutoPlaying: () => set((s) => ({ isAutoPlaying: !s.isAutoPlaying })),
-      setIsZenMode: (v) => set({ isZenMode: v }),
       toggleZenMode: () => set((s) => ({ isZenMode: !s.isZenMode })),
       setIsBottomPanelCollapsed: (v) => set({ isBottomPanelCollapsed: v }),
       setIsCodePanelCollapsed: (v) => set({ isCodePanelCollapsed: v }),
@@ -166,10 +163,6 @@ export const useUiStore = create<UiState>()(
       setIsGoToSlideOpen: (v) => set({ isGoToSlideOpen: v }),
       setIsShortcutsOpen: (v) => set({ isShortcutsOpen: v }),
       toggleShortcutsOpen: () => set((s) => ({ isShortcutsOpen: !s.isShortcutsOpen })),
-      setIsDarkUi: (v) => {
-        applyUiTheme(v);
-        set({ isDarkUi: v });
-      },
       toggleTheme: () =>
         set((s) => {
           applyUiTheme(!s.isDarkUi);
