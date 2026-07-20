@@ -537,16 +537,6 @@ export function CodeEditor({
     [highlightMode, saveCaret, showHighlightMenuAt],
   );
 
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent<HTMLTextAreaElement>) => {
-      saveCaret();
-      if (!highlightMode) return;
-      const touch = e.changedTouches[0];
-      if (touch) showHighlightMenuAt(touch.clientX, touch.clientY);
-    },
-    [highlightMode, saveCaret, showHighlightMenuAt],
-  );
-
   const handleKeyUp = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       saveCaret();
@@ -963,7 +953,6 @@ export function CodeEditor({
               pointerRef.current = { x: e.clientX, y: e.clientY };
             }}
             onMouseUp={handleMouseUp}
-            onTouchEnd={handleTouchEnd}
             onBlur={saveCaret}
             onScroll={syncScroll}
             onContextMenu={handleContextMenu}
