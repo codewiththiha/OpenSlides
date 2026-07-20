@@ -67,6 +67,7 @@ export function SlidePreview({
 
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
+  const isDarkBg = !/light|latte/i.test(theme);
   const canUseShiki =
     highlighter && highlighter.getLoadedLanguages().includes(language);
 
@@ -130,11 +131,16 @@ export function SlidePreview({
 
 
   if (!highlighter || !canUseShiki) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-        Loading highlighter…
-      </div>
-    );
+    if (highlighter && language === "merustmar") {
+      return (
+        <div ref={containerRef} className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl shadow-2xl" style={{ backgroundColor: bg }}>
+          <div className={cn("relative z-10 flex h-full w-full", stagePad, centerBlock ? "items-center justify-center" : "items-center justify-start")}>
+            <pre className="font-mono font-medium tracking-wide text-left" style={{ fontSize: `${previewFontSize}px`, lineHeight: settings.lineHeight, color: isDarkBg ? "#abb2bf" : "#383a42", whiteSpace: "pre" }}>{code}</pre>
+          </div>
+        </div>
+      );
+    }
+    return <div className="flex h-full w-full items-center justify-center text-muted-foreground">Loading highlighter…</div>;
   }
 
   return (
