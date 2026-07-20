@@ -15,6 +15,7 @@
  * - setCurrentSlideId stable
  */
 import { useCallback, useEffect, useMemo, useState, memo } from "react";
+import { useDebounce } from "use-debounce";
 import {
   DndContext,
   DragOverlay,
@@ -398,14 +399,18 @@ export function BottomSlidesPanel({
     setOrdered(project.slides);
   }, [project.slides]);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [rawSearchQuery, setRawSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(rawSearchQuery, 180);
+  const searchQuery = rawSearchQuery.trim() ? debouncedSearchQuery : "";
+  const searchIndex = useMemo(() => {
+    if (!searchQuery) return null;
+    return ordered.map((slide) => ({ slide, haystack: `${slide.name ?? ""}\n${slide.code}`.toLowerCase() }));
+  }, [ordered, Boolean(searchQuery)]);
   const filteredOrdered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return ordered;
-    return ordered.filter(
-      (s) => (s.name ?? "").toLowerCase().includes(q) || s.code.toLowerCase().includes(q),
-    );
-  }, [ordered, searchQuery]);
+    if (!q || !searchIndex) return ordered;
+    return searchIndex.filter(({ haystack }) => haystack.includes(q)).map(({ slide }) => slide);
+  }, [ordered, searchIndex, searchQuery]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -569,14 +574,14 @@ export function BottomSlidesPanel({
           <Search className="absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
           <input
             className="h-6 w-full rounded-md border border-input bg-background pl-6 pr-6 text-xs outline-none focus:ring-1 focus:ring-ring"
-            placeholder="Search by name or code... (FTS5 ready)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or code…"
+            value={rawSearchQuery}
+            onChange={(e) => setRawSearchQuery(e.target.value)}
           />
           {searchQuery && (
             <button
               className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-muted"
-              onClick={() => setSearchQuery("")}
+              onClick={() => setRawSearchQuery("")}
             >
               <X className="h-3 w-3" />
             </button>

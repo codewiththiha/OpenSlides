@@ -113,9 +113,3 @@ export function useShikiWorker({ code, language, theme }: Args): string | null {
   return html ?? lastRef.current;
 }
 
-export function createShikiWorker() {
-  return new Worker(
-    new URL("../workers/shiki.worker.ts", import.meta.url),
-    { type: "module" },
-  );
-}

@@ -31,13 +31,6 @@ export function enqueueCodeSave(
   return job;
 }
 
-export function pendingSaveChains() {
-  return tails.size;
-}
-export function pendingSaveChainKeys() {
-  return [...tails.keys()];
-}
-
 // -- Pending-save flush for quit (previously save-flush.ts) --
 let pending: { slideId: string; code: string } | null = null;
 

@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/** Absolute fallback for formatRelative (kept private — nothing imports it). */
+/** Absolute-date fallback used by formatRelative for entries older than 30 days. */
 function formatDate(timestamp: number): string {
   return new Date(timestamp).toLocaleDateString("en-US", {
     year: "numeric",
