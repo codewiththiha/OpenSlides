@@ -83,6 +83,7 @@ export function requestHtml(
   language: string,
   theme: string,
   signal?: AbortSignal,
+  priority: "high" | "low" = "high",
 ): Promise<WorkerResponse> {
-  return send({ code, lang: language, theme }, signal);
+  return send({ code, lang: language, theme, priority }, signal);
 }
