@@ -60,11 +60,11 @@ const MagicMoveBlock = memo(function MagicMoveBlock({
       } as React.CSSProperties}
     >
       <ShikiMagicMove
-        key={`${theme}-${language}`}
-        lang={language}
-        theme={theme}
-        highlighter={highlighter}
-        code={code}
+            key={`${theme}-${language}`}
+            lang={language}
+            theme={theme}
+            highlighter={highlighter}
+            code={code}
         options={{ duration: transition, stagger, lineNumbers: showLineNumbers }}
         className="shiki-magic-move-container font-mono font-medium tracking-wide"
       />
@@ -124,8 +124,23 @@ export function SlidePreview({
     });
     return () => { cancelled = true; };
   }, [theme, language]);
-  const isDarkBg = !/light|latte/i.test(theme);
   const canUseShiki = readyKey === `${theme}-${language}` && !!highlighter;
+  const [displayState, setDisplayState] = useState<{
+    highlighter: Highlighter;
+    theme: string;
+    language: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (canUseShiki && highlighter) {
+      setDisplayState({ highlighter, theme, language });
+    }
+  }, [canUseShiki, highlighter, theme, language]);
+
+  const displayHighlighter = displayState?.highlighter ?? null;
+  const displayTheme = displayState?.theme ?? theme;
+  const displayLanguage = displayState?.language ?? language;
+  const isDarkBg = !/light|latte/i.test(displayTheme);
 
 
   if (!slide) {
@@ -158,7 +173,7 @@ export function SlidePreview({
     globalStagger: effectiveGlobalStagger,
   };
 
-  const bg = themeBackground(theme);
+  const bg = themeBackground(displayTheme);
   const codeAlign = settings.codeAlign === "center" ? "center" : "left";
   const centerBlock = codeAlign === "center";
 
@@ -186,11 +201,11 @@ export function SlidePreview({
     : settings.fontSize;
 
 
-  if (!highlighter || !canUseShiki) {
+  if (!displayHighlighter) {
     // A grammar load failure must not leave Merustmar stuck on a spinner.
     // Shiki remains the primary path; plain text is only the last-resort
     // display when the custom grammar cannot be loaded.
-    if (language === "merustmar" && (highlighter || shikiLoadFailed)) {
+    if (language === "merustmar" && shikiLoadFailed) {
       return (
         <div ref={containerRef} className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl shadow-2xl" style={{ backgroundColor: bg }}>
           <div className={cn("relative z-10 flex h-full w-full", stagePad, centerBlock ? "items-center justify-center" : "items-center justify-start")}>
@@ -236,9 +251,9 @@ export function SlidePreview({
           centerBlock={centerBlock}
           lineHeight={settings.lineHeight}
           fontSize={previewFontSize}
-          theme={theme}
-          language={language}
-          highlighter={highlighter}
+          theme={displayTheme}
+          language={displayLanguage}
+          highlighter={displayHighlighter}
           code={code}
           transition={effectiveSlideTransition}
           stagger={effectiveSlideStagger}
@@ -251,9 +266,9 @@ export function SlidePreview({
         codeContainerRef={codeContainerRef}
         code={code}
         highlight={activeHighlight}
-        highlighter={highlighter}
-        theme={theme}
-        language={language}
+        highlighter={displayHighlighter}
+        theme={displayTheme}
+        language={displayLanguage}
         fontSize={previewFontSize}
         lineHeight={settings.lineHeight}
         onExitComplete={onHighlightExitComplete}
