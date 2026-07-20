@@ -4,12 +4,39 @@
  * Enhancement: HighlightStepIndicator now clickable to jump to steps.
  * Enhancement: Presentation timer + progress bar for autoplay (TypeScript, not Rust — UI animation, no DB needed)
  */
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Pause, Play, Timer } from "lucide-react";
 import { SlidePreview } from "../SlidePreview";
 import { HighlightStepIndicator } from "../HighlightStepIndicator";
 import { usePresentationControls } from "@/store/ui-selectors";
 import type { Project, Slide } from "@/types";
+import { cn } from "@/lib/utils";
+
+function useRemainingSec(duration: number, resetKey: string) {
+  const [remaining, setRemaining] = useState(() => Math.ceil(duration / 1000));
+  useEffect(() => {
+    const start = performance.now();
+    setRemaining(Math.ceil(duration / 1000));
+    const id = window.setInterval(() => {
+      const next = Math.max(0, Math.ceil((duration - (performance.now() - start)) / 1000));
+      setRemaining((prev) => prev === next ? prev : next);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [duration, resetKey]);
+  return remaining;
+}
+function formatSec(s: number) { return s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+function PresentProgressBar({ duration, resetKey, className }: { duration: number; resetKey: string; className?: string }) {
+  return <div className={cn("overflow-hidden", className)}><div key={resetKey} className="openslides-progress-anim h-full w-full origin-left bg-primary" style={{ animation: `openslides-present-progress ${duration}ms linear forwards` }} /></div>;
+}
+function AutoplayTimerChip({ duration, resetKey }: { duration: number; resetKey: string }) {
+  const remaining = useRemainingSec(duration, resetKey);
+  return <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs text-white/80 backdrop-blur"><Timer className="h-3 w-3" /><span className="font-mono tabular-nums">{formatSec(remaining)}</span><span className="text-white/40">/ {Math.ceil(duration / 1000)}s</span></div>;
+}
+function AutoplayMiniPill({ duration, resetKey }: { duration: number; resetKey: string }) {
+  const remaining = useRemainingSec(duration, resetKey);
+  return <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] text-white/80 shadow backdrop-blur"><PresentProgressBar duration={duration} resetKey={resetKey} className="h-1.5 w-12 rounded-full bg-white/20" /><span className="font-mono tabular-nums">{formatSec(remaining)}</span></div>;
+}
 
 interface PresentOverlayProps {
   project: Project;
@@ -35,40 +62,8 @@ export const PresentOverlay = memo(function PresentOverlay({
   const { isAutoPlaying, toggleAutoPlaying, setIsAutoPlaying } =
     usePresentationControls();
 
-  // Presentation timer — TypeScript, not Rust: UI animation, countdown, no DB/IO needed
-  // Rust would add IPC round-trip per 100ms tick, worse UX. TS is correct choice.
-  const [progress, setProgress] = useState(0);
-  const [remainingMs, setRemainingMs] = useState(activeSlide?.duration ?? 3000);
-  const startRef = useRef<number>(performance.now());
-
-  useEffect(() => {
-    if (!isAutoPlaying) {
-      setProgress(0);
-      setRemainingMs(activeSlide?.duration ?? 3000);
-      return;
-    }
-    const duration = activeSlide?.duration ?? 3000;
-    startRef.current = performance.now();
-    setProgress(0);
-    setRemainingMs(duration);
-
-    const id = window.setInterval(() => {
-      const elapsed = performance.now() - startRef.current;
-      const p = Math.min(elapsed / duration, 1);
-      setProgress(p);
-      setRemainingMs(Math.max(duration - elapsed, 0));
-    }, 100);
-
-    return () => window.clearInterval(id);
-  }, [isAutoPlaying, activeSlide?.id, activeSlide?.duration, activeHighlightIndex]);
-
-  const formatRemaining = (ms: number) => {
-    const s = Math.ceil(ms / 1000);
-    if (s < 60) return `${s}s`;
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${String(sec).padStart(2, "0")}`;
-  };
+  const duration = activeSlide?.duration ?? 3000;
+  const resetKey = `${activeSlide?.id}-${duration}-${activeHighlightIndex}`;
 
   return (
     <div
@@ -76,23 +71,10 @@ export const PresentOverlay = memo(function PresentOverlay({
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
     >
       {/* Slide duration progress bar — TypeScript timer, not Rust, for smooth 60fps animation */}
-      {isAutoPlaying && (
-        <div className="absolute left-0 top-0 z-[120] h-1 w-full bg-white/10">
-          <div
-            className="h-full bg-primary transition-all duration-100 ease-linear"
-            style={{ width: `${progress * 100}%` }}
-          />
-        </div>
-      )}
+      {isAutoPlaying && <PresentProgressBar duration={duration} resetKey={resetKey} className="absolute left-0 top-0 z-[120] h-1 w-full bg-white/10" />}
 
       <div className="absolute right-4 top-4 z-[110] flex items-center gap-2">
-        {isAutoPlaying && (
-          <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs text-white/80 backdrop-blur">
-            <Timer className="h-3 w-3" />
-            <span className="font-mono tabular-nums">{formatRemaining(remainingMs)}</span>
-            <span className="text-white/40">/ {Math.ceil((activeSlide?.duration ?? 3000) / 1000)}s</span>
-          </div>
-        )}
+        {isAutoPlaying && <AutoplayTimerChip duration={duration} resetKey={resetKey} />}
         <button
           type="button"
           className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
@@ -144,14 +126,7 @@ export const PresentOverlay = memo(function PresentOverlay({
           {/* Bottom bar: timer (left) + highlight dots (center) — both clickable */}
           <div className="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4">
             <div className="pointer-events-none flex-1">
-              {isAutoPlaying && (
-                <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] text-white/80 shadow backdrop-blur">
-                  <div className="h-1.5 w-12 rounded-full bg-white/20 overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: `${progress * 100}%` }} />
-                  </div>
-                  <span className="font-mono tabular-nums">{formatRemaining(remainingMs)}</span>
-                </div>
-              )}
+              {isAutoPlaying && <AutoplayMiniPill duration={duration} resetKey={resetKey} />}
             </div>
             <div className="pointer-events-none flex justify-center">
               <div className="pointer-events-auto">

@@ -13,61 +13,15 @@
 import { createHighlighter, type Highlighter } from "shiki";
 import { merustmarLanguage } from "@/lib/merustmar-language";
 
-// Themes — must match shiki-instance.ts
-const THEMES = [
-  "dark-plus",
-  "dracula",
-  "github-dark",
-  "github-light",
-  "nord",
-  "poimandres",
-  "min-light",
-  "min-dark",
-  "monokai",
-  "solarized-dark",
-  "solarized-light",
-  "andromeeda",
-  "aurora-x",
-  "catppuccin-latte",
-  "catppuccin-mocha",
-  "night-owl",
-] as const;
-
-// Lightweight language list without merustmar (we load custom separately)
-const BUILTIN_LANGS = [
-  "typescript",
-  "javascript",
-  "tsx",
-  "jsx",
-  "python",
-  "java",
-  "go",
-  "rust",
-  "php",
-  "css",
-  "html",
-  "json",
-  "yaml",
-  "sql",
-  "bash",
-  "markdown",
-] as const;
-
 let highlighterPromise: Promise<Highlighter> | null = null;
 
 function getHighlighter(): Promise<Highlighter> {
   if (!highlighterPromise) {
     highlighterPromise = (async () => {
       const h = await createHighlighter({
-        themes: [...THEMES],
-        langs: [...BUILTIN_LANGS],
+        themes: ["dark-plus"],
+        langs: ["typescript"],
       });
-      try {
-        // @ts-ignore - merustmar custom grammar
-        await h.loadLanguage(merustmarLanguage as any);
-      } catch (e) {
-        console.error("[Shiki Worker] merustmar load failed", e);
-      }
       return h;
     })();
   }
@@ -168,14 +122,19 @@ self.onmessage = async (e: MessageEvent<WorkerIncoming>) => {
       return;
     }
 
-    const loaded = highlighter.getLoadedLanguages();
-    if (!loaded.includes(lang)) {
-      try {
-        // @ts-ignore dynamic load attempt
-        await highlighter.loadLanguage(lang as any);
-      } catch {
-        // ignore, will fall back
+    if (!highlighter.getLoadedThemes().includes(theme)) {
+      try { await highlighter.loadTheme(theme as any); } catch { /* report below */ }
+      if (isAborted(id)) {
+        abortedIds.delete(id);
+        (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+        return;
       }
+    }
+    if (!highlighter.getLoadedLanguages().includes(lang)) {
+      try {
+        if (lang === "merustmar") await highlighter.loadLanguage(merustmarLanguage as any);
+        else await highlighter.loadLanguage(lang as any);
+      } catch { /* report below */ }
       if (isAborted(id)) {
         abortedIds.delete(id);
         (self as any).postMessage({ id, aborted: true } as WorkerResponse);
