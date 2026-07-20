@@ -101,6 +101,7 @@ export function CodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
+  const pointerRef = useRef({ x: 0, y: 0 });
 
   // ── Uncontrolled textarea, by design ─────────────
   // Fix Caret Restoration Flash: useLayoutEffect fires synchronously after DOM mutation
@@ -396,6 +397,7 @@ export function CodeEditor({
   );
 
   const syncScroll = () => {
+    setContextMenuVisible(false);
     if (!textareaRef.current) return;
     const top = textareaRef.current.scrollTop;
     const left = textareaRef.current.scrollLeft;
@@ -425,11 +427,9 @@ export function CodeEditor({
   // Highlight CRUD
   const currentHighlights = slide?.highlights ?? [];
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
+  const showHighlightMenuAt = useCallback(
+    (x: number, y: number) => {
       if (!highlightMode) return;
-      e.preventDefault();
-
       const textarea = textareaRef.current;
       if (!textarea) return;
 
@@ -438,10 +438,68 @@ export function CodeEditor({
       if (start === end) return;
 
       setPendingSelection(selectionToRange(code, start, end));
-      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      const menuWidth = 180;
+      const menuHeight = 84;
+      setContextMenuPosition({
+        x: Math.min(Math.max(8, x), Math.max(8, window.innerWidth - menuWidth - 8)),
+        y: Math.min(Math.max(8, y - menuHeight), Math.max(8, window.innerHeight - menuHeight - 8)),
+      });
       setContextMenuVisible(true);
     },
     [highlightMode, code],
+  );
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!highlightMode) return;
+      e.preventDefault();
+      showHighlightMenuAt(e.clientX, e.clientY);
+    },
+    [highlightMode, showHighlightMenuAt],
+  );
+
+  const handleSelect = useCallback(() => {
+    saveCaret();
+    const textarea = textareaRef.current;
+    if (textarea && textarea.selectionStart === textarea.selectionEnd) {
+      setContextMenuVisible(false);
+    }
+  }, [saveCaret]);
+
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent<HTMLTextAreaElement>) => {
+      saveCaret();
+      if (e.button === 0 && highlightMode) {
+        pointerRef.current = { x: e.clientX, y: e.clientY };
+        const textarea = textareaRef.current;
+        if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+          showHighlightMenuAt(e.clientX, e.clientY);
+        }
+      }
+    },
+    [highlightMode, saveCaret, showHighlightMenuAt],
+  );
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLTextAreaElement>) => {
+      saveCaret();
+      if (!highlightMode) return;
+      const touch = e.changedTouches[0];
+      if (touch) showHighlightMenuAt(touch.clientX, touch.clientY);
+    },
+    [highlightMode, saveCaret, showHighlightMenuAt],
+  );
+
+  const handleKeyUp = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      saveCaret();
+      if (!e.shiftKey || !highlightMode || contextMenuVisible) return;
+      const textarea = textareaRef.current;
+      if (!textarea || textarea.selectionStart === textarea.selectionEnd) return;
+      const rect = textarea.getBoundingClientRect();
+      showHighlightMenuAt(rect.left + rect.width / 2 - 90, rect.top + 8);
+    },
+    [contextMenuVisible, highlightMode, saveCaret, showHighlightMenuAt],
   );
 
   const handleAddHighlight = useCallback(() => {
@@ -646,10 +704,15 @@ export function CodeEditor({
               "relative h-7 w-7 shrink-0",
               highlightMode && "bg-primary/15 text-primary",
             )}
-            onClick={() => setHighlightMode((v) => !v)}
+            onClick={() =>
+              setHighlightMode((v) => {
+                if (v) setContextMenuVisible(false);
+                return !v;
+              })
+            }
             title={
               highlightMode
-                ? "Highlight mode ON — select text and right-click to add highlights"
+                ? "Highlight mode ON — select text — toolbar or right-click to add highlights"
                 : "Toggle highlight mode"
             }
           >
@@ -808,9 +871,13 @@ export function CodeEditor({
             defaultValue={code}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            onKeyUp={saveCaret}
-            onSelect={saveCaret}
-            onMouseUp={saveCaret}
+            onKeyUp={handleKeyUp}
+            onSelect={handleSelect}
+            onMouseMove={(e) => {
+              pointerRef.current = { x: e.clientX, y: e.clientY };
+            }}
+            onMouseUp={handleMouseUp}
+            onTouchEnd={handleTouchEnd}
             onBlur={saveCaret}
             onScroll={syncScroll}
             onContextMenu={handleContextMenu}
@@ -976,7 +1043,7 @@ export function CodeEditor({
       {highlightMode && currentHighlights.length === 0 && (
         <div className="shrink-0 border-t border-border/50 bg-muted/20 px-3 py-2">
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Highlight mode is on — select code, then right-click and choose{" "}
+            Highlight mode is on — select code and a toolbar appears (or right-click) to choose{" "}
             <span className="font-medium text-foreground/80">Add Highlight</span>.
             Steps play in order with <kbd className="rounded border border-border bg-background px-1 font-mono text-[9px]">→</kbd>{" "}
             or a click before the next slide.
