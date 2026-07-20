@@ -1,9 +1,9 @@
-# OpenSlides Qwen — Offline-First Code Presentation Studio
+# OpenSlides — Offline-First Code Presentation Studio
 
 > **Desktop-native code presentation editor** built with **Tauri 2 · Rust · SQLite · React 19 · Shiki · Magic Move**. 
-> Forked and hardened from [open-slides](https://github.com/codewiththiha/open-slides), rebuilt on [tauri_template](https://github.com/codewiththiha/tauri_template) with a focus on **performance, correctness, and cinematic highlight playback**.
+> Maintained by **codewiththiha**, with a focus on **performance, correctness, and cinematic highlight playback**.
 
-`open-slides-qwen` is the Qwen-branded evolution — same open core, with a roadmap toward AI-assisted slide generation and content aware refactoring powered by Qwen models.
+`OpenSlides` is an offline-first code presentation studio for creating, editing, and presenting code slides.
 
 ---
 
