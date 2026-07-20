@@ -51,7 +51,8 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { slideDisplayName, type Project, type Slide } from "@/types";
+import { resolveProjectLanguage, slideDisplayName, themeBackground, type Project, type Slide } from "@/types";
+import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
 import { useLocalCodeAtom } from "@/store/localCodeAtoms";
 import { notify } from "@/lib/toast";
@@ -101,6 +102,8 @@ interface SlideCardProps {
   navigationIds?: string[];
   cardRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
   isTabStop?: boolean;
+  theme: string;
+  language: string;
   style?: React.CSSProperties;
 }
 
@@ -124,6 +127,8 @@ const SlideCard = memo(function SlideCard({
   navigationIds = [],
   cardRefs,
   isTabStop = false,
+  theme,
+  language,
   style,
 }: SlideCardProps) {
   // Per-slide atom: only this card re-renders when its own local code changes
@@ -132,8 +137,14 @@ const SlideCard = memo(function SlideCard({
   const isSelected = useUiStore((s) => s.currentSlideId === slide.id);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
 
-  const preview =
-    (codeOverride ?? slide.code).split("\n")[0]?.slice(0, 28) || "Empty";
+  const thumbnailCode = codeOverride ?? slide.code;
+  const preview = thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty";
+  const thumbnail = useSlideThumbnail({
+    slideId: slide.id,
+    code: thumbnailCode,
+    theme,
+    language,
+  });
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;
   const progress = isSelected ? highlightProgress : -1;
@@ -293,10 +304,29 @@ const SlideCard = memo(function SlideCard({
         )}
       </div>
       <div
-        className="truncate font-mono text-[10px] leading-tight text-muted-foreground"
-        title={preview}
+        ref={thumbnail.ref}
+        className={cn(
+          "relative w-full overflow-hidden rounded border border-border/70 p-1",
+          isSelected && "ring-1 ring-primary/30",
+        )}
+        style={{ aspectRatio: "16 / 9", backgroundColor: themeBackground(theme) }}
+        aria-hidden="true"
       >
-        {preview}
+        {thumbnail.html ? (
+          <code
+            className="pointer-events-none block overflow-hidden font-mono"
+            style={{
+              fontSize: "5.5px",
+              lineHeight: 1.35,
+              whiteSpace: "pre",
+            }}
+            dangerouslySetInnerHTML={{ __html: thumbnail.html }}
+          />
+        ) : (
+          <span className="block truncate font-mono text-[10px] leading-tight text-muted-foreground/80">
+            {preview}
+          </span>
+        )}
       </div>
       <div className="mt-auto flex items-center justify-between gap-1">
         <span
@@ -353,6 +383,8 @@ const SlideCard = memo(function SlideCard({
   if (prev.highlightProgress !== next.highlightProgress) return false;
   if (prev.isTabStop !== next.isTabStop) return false;
   if (prev.navigationIds !== next.navigationIds) return false;
+  if (prev.theme !== next.theme) return false;
+  if (prev.language !== next.language) return false;
   // style reference changes often during drag, check shallow
   if (prev.style !== next.style) return false;
   // dragHandleProps is stable from useSortable, but compare ref
@@ -378,6 +410,8 @@ function SortableSlideItem({
   navigationIds,
   cardRefs,
   isTabStop,
+  theme,
+  language,
 }: {
   slide: Slide;
   index: number;
@@ -395,6 +429,8 @@ function SortableSlideItem({
   navigationIds: string[];
   cardRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   isTabStop: boolean;
+  theme: string;
+  language: string;
 }) {
   const {
     attributes,
@@ -437,6 +473,8 @@ function SortableSlideItem({
       navigationIds={navigationIds}
       cardRefs={cardRefs}
       isTabStop={isTabStop}
+      theme={theme}
+      language={language}
       style={style}
       dragHandleProps={{ ...attributes, ...listeners }}
     />
@@ -466,6 +504,8 @@ export function BottomSlidesPanel({
   const restoreSlide = useRestoreSlide(project.id);
   const reorder = useReorderSlides(project.id);
   const updateSettings = useUpdateSlideSettings(project.id);
+  const theme = project.theme;
+  const language = resolveProjectLanguage(project);
 
   const [ordered, setOrdered] = useState<Slide[]>(project.slides);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
@@ -735,6 +775,8 @@ export function BottomSlidesPanel({
                   navigationIds={ids}
                   cardRefs={cardRefs}
                   isTabStop={slide.id === tabStopId}
+                  theme={theme}
+                  language={language}
                 />
               );
             })}
@@ -743,7 +785,7 @@ export function BottomSlidesPanel({
 
         <DragOverlay dropAnimation={dropAnimation}>
           {activeSlide ? (
-            <SlideCard slide={activeSlide} index={activeIndex} isOverlay />
+            <SlideCard slide={activeSlide} index={activeIndex} isOverlay theme={theme} language={language} />
           ) : null}
         </DragOverlay>
       </DndContext>
