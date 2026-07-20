@@ -26,16 +26,8 @@ const queryClient = new QueryClient({
 
 // Default to dark UI chrome (Zustand persist may override on hydrate)
 document.documentElement.classList.add("dark");
-// Globally disable spellcheck to prevent macOS NSSpellServer timeouts
-// WKWebView spell server attempts to generate candidates for selected ranges
-// and times out on large code blocks — we disable at every level.
-document.documentElement.setAttribute("spellcheck", "false");
-(document.documentElement as any).spellcheck = false;
-try {
-  // body may not exist yet during module eval, guard
-  document.body?.setAttribute("spellcheck", "false");
-} catch {}
-// Also prevent Grammarly/LanguageTool/Microsoft Editor from hooking
+// Prevent Grammarly/LanguageTool/Microsoft Editor from hooking the document;
+// the editor textarea carries the actual spellcheck/autocorrect controls.
 document.documentElement.setAttribute("data-gramm", "false");
 document.documentElement.setAttribute("data-gramm_editor", "false");
 document.documentElement.setAttribute("data-enable-grammarly", "false");

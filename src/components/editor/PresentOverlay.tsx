@@ -33,11 +33,6 @@ function AutoplayTimerChip({ duration, resetKey }: { duration: number; resetKey:
   const remaining = useRemainingSec(duration, resetKey);
   return <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs text-white/80 backdrop-blur"><Timer className="h-3 w-3" /><span className="font-mono tabular-nums">{formatSec(remaining)}</span><span className="text-white/40">/ {Math.ceil(duration / 1000)}s</span></div>;
 }
-function AutoplayMiniPill({ duration, resetKey }: { duration: number; resetKey: string }) {
-  const remaining = useRemainingSec(duration, resetKey);
-  return <div className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[11px] text-white/80 shadow backdrop-blur"><PresentProgressBar duration={duration} resetKey={resetKey} className="h-1.5 w-12 rounded-full bg-white/20" /><span className="font-mono tabular-nums">{formatSec(remaining)}</span></div>;
-}
-
 interface PresentOverlayProps {
   project: Project;
   activeSlide?: Slide;
@@ -125,9 +120,7 @@ export const PresentOverlay = memo(function PresentOverlay({
           />
           {/* Bottom bar: timer (left) + highlight dots (center) — both clickable */}
           <div className="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4">
-            <div className="pointer-events-none flex-1">
-              {isAutoPlaying && <AutoplayMiniPill duration={duration} resetKey={resetKey} />}
-            </div>
+            <div className="flex-1" />
             <div className="pointer-events-none flex justify-center">
               <div className="pointer-events-auto">
                 <HighlightStepIndicator
