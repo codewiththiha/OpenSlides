@@ -22,7 +22,6 @@ import {
   SUPPORTED_LANGUAGES,
   resolveProjectLanguage,
   type Project,
-  type Highlight,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
 import { useLocalCodeAtom, getLocalCodeAtom } from "@/store/localCodeAtoms";
@@ -30,19 +29,17 @@ import { getCaretPosition, setCaretPosition } from "@/store/caretPositions";
 import {
   useUpdateSettings,
   useUpdateSlideCode,
-  useUpdateSlideSettings,
 } from "@/hooks/queries";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { selectionToRange } from "@/lib/highlight-tokens";
 import { record as recordEditorHistory, type Snapshot } from "@/lib/editor-history";
 import { markSavePending, clearPendingSave } from "@/lib/code-save";
 import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
-import { createDefaultHighlight } from "@/lib/highlight-utils";
 import { useShikiWorker } from "@/hooks/useShikiWorker";
 import { EditorSlideNav } from "./editor/EditorSlideNav";
 import { useEditorHistory } from "@/hooks/useEditorHistory";
+import { useHighlightCrud } from "@/hooks/useHighlightCrud";
 import { FindReplaceBar } from "./editor/FindReplaceBar";
 import { SlideTimingSliders } from "./editor/SlideTimingSliders";
 import { useFindReplace } from "@/hooks/useFindReplace";
@@ -67,13 +64,8 @@ export function CodeEditor({
   const setLocalCode = useUiStore((s) => s.setLocalCode);
   const setSaveStatus = useUiStore((s) => s.setSaveStatus);
   const editorShowLineNumbers = useUiStore((s) => s.editorShowLineNumbers);
-  const previewHighlightIndex = useUiStore((s) => s.previewHighlightIndex);
-  const setPreviewHighlightIndex = useUiStore(
-    (s) => s.setPreviewHighlightIndex,
-  );
   // preview overrides
   const previewProject = useUiStore((s) => s.previewProject);
-  const clearPreviewHighlightSetting = useUiStore((s) => s.clearPreviewHighlightSetting);
 
   const slideMap = useMemo(() => {
     const sMap = new Map<string, (typeof project.slides)[number]>();
@@ -95,7 +87,6 @@ export function CodeEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
-  const pointerRef = useRef({ x: 0, y: 0 });
   const editorSnapshotRef = useRef<Snapshot>({ code: "", caretStart: 0, caretEnd: 0 });
 
   // ── Uncontrolled textarea, by design ─────────────
@@ -152,14 +143,7 @@ export function CodeEditor({
 
   const [highlightMode, setHighlightMode] = useState(false);
   const [wrapLines, setWrapLines] = useState(false);
-  const [contextMenuVisible, setContextMenuVisible] = useState(false);
-  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
-  const [pendingSelection, setPendingSelection] = useState<{
-    startLine: number; startChar: number; endLine: number; endChar: number;
-  } | null>(null);
-  const [expandedHighlightId, setExpandedHighlightId] = useState<string | null>(null);
   const codeMutation = useUpdateSlideCode();
-  const settingsMutation = useUpdateSlideSettings(project.id);
   const projectSettingsMutation = useUpdateSettings(project.id);
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
@@ -300,7 +284,7 @@ export function CodeEditor({
   );
 
   const syncScroll = () => {
-    setContextMenuVisible(false);
+    crud.closeContextMenu();
     if (!textareaRef.current) return;
     const top = textareaRef.current.scrollTop;
     const left = textareaRef.current.scrollLeft;
@@ -327,223 +311,8 @@ export function CodeEditor({
     if (next) setCurrentSlideId(next.id);
   };
 
-  // Highlight CRUD
   const currentHighlights = slide?.highlights ?? [];
-
-  const showHighlightMenuAt = useCallback(
-    (x: number, y: number) => {
-      if (!highlightMode) return;
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      if (start === end) return;
-
-      setPendingSelection(selectionToRange(code, start, end));
-      const menuWidth = 180;
-      const menuHeight = 84;
-      setContextMenuPosition({
-        x: Math.min(Math.max(8, x), Math.max(8, window.innerWidth - menuWidth - 8)),
-        y: Math.min(Math.max(8, y - menuHeight), Math.max(8, window.innerHeight - menuHeight - 8)),
-      });
-      setContextMenuVisible(true);
-    },
-    [highlightMode, code],
-  );
-
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      if (!highlightMode) return;
-      e.preventDefault();
-      showHighlightMenuAt(e.clientX, e.clientY);
-    },
-    [highlightMode, showHighlightMenuAt],
-  );
-
-  const handleSelect = useCallback(() => {
-    saveCaret();
-    const textarea = textareaRef.current;
-    if (textarea && textarea.selectionStart === textarea.selectionEnd) {
-      setContextMenuVisible(false);
-    }
-  }, [saveCaret]);
-
-  const handleMouseUp = useCallback(
-    (e: React.MouseEvent<HTMLTextAreaElement>) => {
-      saveCaret();
-      if (e.button === 0 && highlightMode) {
-        pointerRef.current = { x: e.clientX, y: e.clientY };
-        const textarea = textareaRef.current;
-        if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
-          showHighlightMenuAt(e.clientX, e.clientY);
-        }
-      }
-    },
-    [highlightMode, saveCaret, showHighlightMenuAt],
-  );
-
-  const handleKeyUp = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      saveCaret();
-      if (!e.shiftKey || !highlightMode || contextMenuVisible) return;
-      const textarea = textareaRef.current;
-      if (!textarea || textarea.selectionStart === textarea.selectionEnd) return;
-      const rect = textarea.getBoundingClientRect();
-      showHighlightMenuAt(rect.left + rect.width / 2 - 90, rect.top + 8);
-    },
-    [contextMenuVisible, highlightMode, saveCaret, showHighlightMenuAt],
-  );
-
-  const handleAddHighlight = useCallback(() => {
-    if (!pendingSelection || !slideId) return;
-    const newHl = createDefaultHighlight(
-      pendingSelection.startLine,
-      pendingSelection.startChar,
-      pendingSelection.endLine,
-      pendingSelection.endChar,
-    );
-    const updated = [...currentHighlights, newHl];
-    settingsMutation.mutate({
-      slideId,
-      payload: { highlights: updated },
-    });
-    setPendingSelection(null);
-    setExpandedHighlightId(newHl.id);
-  }, [pendingSelection, slideId, currentHighlights, settingsMutation]);
-
-  const handleUpdateHighlight = useCallback(
-    (id: string, patch: Partial<Highlight>) => {
-      if (!slideId) return;
-      const updated = currentHighlights.map((hl) =>
-        hl.id === id ? { ...hl, ...patch } : hl,
-      );
-      settingsMutation.mutate(
-        {
-          slideId,
-          payload: { highlights: updated },
-        },
-        {
-          onSuccess: () => {
-            // Sync preview back to DB state after successful save
-            clearPreviewHighlightSetting(id);
-          },
-        },
-      );
-    },
-    [slideId, currentHighlights, settingsMutation, clearPreviewHighlightSetting],
-  );
-
-  const handleDeleteHighlight = useCallback(
-    (id: string) => {
-      if (!slideId) return;
-      const deletedIndex = currentHighlights.findIndex((hl) => hl.id === id);
-      const updated = currentHighlights.filter((hl) => hl.id !== id);
-      settingsMutation.mutate(
-        {
-          slideId,
-          payload: { highlights: updated },
-        },
-        {
-          onSuccess: () => clearPreviewHighlightSetting(id),
-        },
-      );
-      if (expandedHighlightId === id) {
-        setExpandedHighlightId(null);
-      }
-      if (deletedIndex >= 0) {
-        if (previewHighlightIndex === deletedIndex) {
-          setPreviewHighlightIndex(-1);
-        } else if (previewHighlightIndex > deletedIndex) {
-          setPreviewHighlightIndex(previewHighlightIndex - 1);
-        }
-      }
-    },
-    [
-      slideId,
-      currentHighlights,
-      settingsMutation,
-      expandedHighlightId,
-      previewHighlightIndex,
-      setPreviewHighlightIndex,
-      clearPreviewHighlightSetting,
-    ],
-  );
-
-  const handleMoveHighlight = useCallback(
-    (id: string, dir: -1 | 1) => {
-      if (!slideId) return;
-      const from = currentHighlights.findIndex((hl) => hl.id === id);
-      const to = from + dir;
-      if (from < 0 || to < 0 || to >= currentHighlights.length) return;
-      const updated = [...currentHighlights];
-      const [moved] = updated.splice(from, 1);
-      updated.splice(to, 0, moved);
-      settingsMutation.mutate({
-        slideId,
-        payload: { highlights: updated },
-      });
-      if (previewHighlightIndex === from) {
-        setPreviewHighlightIndex(to);
-      } else if (previewHighlightIndex === to) {
-        setPreviewHighlightIndex(from);
-      }
-    },
-    [
-      slideId,
-      currentHighlights,
-      settingsMutation,
-      previewHighlightIndex,
-      setPreviewHighlightIndex,
-    ],
-  );
-
-  const handleReorderHighlight = useCallback(
-    (ids: string[], rollback: () => void) => {
-      if (!slideId) return;
-      const previewId = previewHighlightIndex >= 0
-        ? currentHighlights[previewHighlightIndex]?.id
-        : undefined;
-      const byId = new Map(currentHighlights.map((hl) => [hl.id, hl]));
-      const updated = ids.map((id) => byId.get(id)).filter((hl): hl is Highlight => !!hl);
-      if (updated.length !== currentHighlights.length) {
-        rollback();
-        return;
-      }
-      settingsMutation.mutate(
-        { slideId, payload: { highlights: updated } },
-        { onError: rollback },
-      );
-      if (previewId) {
-        setPreviewHighlightIndex(updated.findIndex((hl) => hl.id === previewId));
-      }
-    },
-    [
-      slideId,
-      currentHighlights,
-      previewHighlightIndex,
-      settingsMutation,
-      setPreviewHighlightIndex,
-    ],
-  );
-
-  const handlePreviewHighlight = useCallback(
-    (index: number) => {
-      setPreviewHighlightIndex(
-        previewHighlightIndex === index ? -1 : index,
-      );
-    },
-    [previewHighlightIndex, setPreviewHighlightIndex],
-  );
-
-  useEffect(() => {
-    if (!highlightMode) setPreviewHighlightIndex(-1);
-  }, [highlightMode, setPreviewHighlightIndex]);
-
-  useEffect(() => {
-    setPreviewHighlightIndex(-1);
-    setExpandedHighlightId(null);
-  }, [slideId, setPreviewHighlightIndex]);
+  const crud = useHighlightCrud({ projectId: project.id, slideId, highlights: currentHighlights, code, highlightMode, textareaRef, saveCaret });
 
   if (!slide) {
     return (
@@ -585,12 +354,7 @@ export function CodeEditor({
               "relative h-7 w-7 shrink-0",
               highlightMode && "bg-primary/15 text-primary",
             )}
-            onClick={() =>
-              setHighlightMode((v) => {
-                if (v) setContextMenuVisible(false);
-                return !v;
-              })
-            }
+            onClick={() => setHighlightMode((v) => !v)}
             title={
               highlightMode
                 ? "Highlight mode ON — select text — toolbar or right-click to add highlights"
@@ -705,15 +469,12 @@ export function CodeEditor({
             defaultValue={code}
             onChange={(e) => handleChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            onKeyUp={handleKeyUp}
-            onSelect={handleSelect}
-            onMouseMove={(e) => {
-              pointerRef.current = { x: e.clientX, y: e.clientY };
-            }}
-            onMouseUp={handleMouseUp}
+            onKeyUp={crud.onKeyUp}
+            onSelect={crud.onSelect}
+            onMouseUp={crud.onMouseUp}
             onBlur={saveCaret}
             onScroll={syncScroll}
-            onContextMenu={handleContextMenu}
+            onContextMenu={crud.onContextMenu}
             spellCheck={false}
             autoCorrect="off"
             autoComplete="off"
@@ -745,10 +506,10 @@ export function CodeEditor({
       </div>
 
       <HighlightContextMenu
-        visible={contextMenuVisible}
-        position={contextMenuPosition}
-        onAddHighlight={handleAddHighlight}
-        onClose={() => setContextMenuVisible(false)}
+        visible={crud.contextMenu.visible}
+        position={crud.contextMenu.position}
+        onAddHighlight={crud.addPendingHighlight}
+        onClose={crud.closeContextMenu}
       />
 
       <SlideTimingSliders project={project} slide={slide} />
@@ -768,16 +529,14 @@ export function CodeEditor({
         <HighlightSettingsPanel
           highlights={currentHighlights}
           code={code}
-          expandedId={expandedHighlightId}
-          previewIndex={previewHighlightIndex}
-          onToggleExpand={(id) =>
-            setExpandedHighlightId((prev) => (prev === id ? null : id))
-          }
-          onUpdate={handleUpdateHighlight}
-          onDelete={handleDeleteHighlight}
-          onPreview={handlePreviewHighlight}
-          onMove={handleMoveHighlight}
-          onReorder={handleReorderHighlight}
+          expandedId={crud.expandedHighlightId}
+          previewIndex={crud.previewHighlightIndex}
+          onToggleExpand={crud.toggleExpanded}
+          onUpdate={crud.updateHighlight}
+          onDelete={crud.deleteHighlight}
+          onPreview={crud.previewHighlight}
+          onMove={crud.moveHighlight}
+          onReorder={crud.reorderHighlights}
         />
       )}
     </div>
