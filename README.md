@@ -53,19 +53,19 @@ Flow per step:
 ```
 User selects → context menu → new Highlight { startLine, startChar, endLine, endChar, dimAmount, sizeUp, transitions }
       ↓
-step change → getTokenLines (Rust Merustmar OR JS Shiki line tokens)
+step change → getTokenLines (Shiki line tokens, including Merustmar)
       ↓
 buildPlan (JS pure: src/lib/highlight-tokens.ts — per-line char ranges + token slicing + HTML-escaped clone + eraser color)
       ↓
 measureHighlight (JS: Range API → pixel rects)
       ↓
-Layer: dim overlay (opacity = dimAmount) + per-line eraser boxes (background = eraserColor, mixed in Rust) + scaled clone (framer-motion)
+Layer: dim overlay (opacity = dimAmount) + per-line eraser boxes (background = eraserColor, mixed client-side) + scaled clone (framer-motion)
 ```
 
 Why this design?
 - **Slicing happens on raw token strings**, HTML escaping at render — so `<`, `&`, `"` never cause half-entity cuts
 - **Empty middle lines** in multi-line selections are handled explicitly
-- **Eraser color** = dimmed card background, mixed in Rust to avoid flicker — box is invisible, only glyphs underneath disappear
+- **Eraser color** = dimmed card background, mixed client-side to avoid flicker — box is invisible, only glyphs underneath disappear
 - **Crossfade** — when stepping A→B, dim persists (animates to B's dim), A's eraser+clone exit while B's enter
 - **Outro honors real durations** — `useHighlightNav` waits for `AnimatePresence onExitComplete` before advancing slide; fail-safe timer capped at 3200ms if preview unmounts mid-outro
 - **Adjustable size-up**: 100% = no scale, 105-300% pop, default 125%, custom per-highlight intro/outro durations
@@ -87,9 +87,7 @@ CREATE INDEX idx_slides_project ON slides(project_id, order_index);
 ```
 
 ### Special Languages
-- **Merustmar** — custom Myanmar-inspired programming language. Two implementations:
-  - **Frontend frozen**: `src/lib/merustmar-language.ts` (Shiki grammar) + `src/lib/merustmar-highlight.ts` (JS fallback) — **DO NOT EDIT** per policy
-  - **Backend Rust port**: `src-tauri/src/merustmar.rs` — byte-exact port including quirks (UTF-16 indexing, unanchored regex emulation, surrogate handling), proven by parity fixtures `src-tauri/tests/fixtures/merustmar/parity.json`
+- **Merustmar** — custom Myanmar-inspired programming language highlighted through the same Shiki pipeline as every other language. Its custom grammar is registered in `src/lib/merustmar-language.ts` and used by the editor worker, slide preview, and highlight planner. If the grammar cannot load, the preview degrades to readable plain text instead of hanging.
 - Supported list: TypeScript, JavaScript, TSX, JSX, Python, Java, Go, Rust, PHP, CSS, HTML, JSON, YAML, SQL, Bash, Markdown, Merustmar
 
 ---
@@ -130,14 +128,12 @@ CREATE INDEX idx_slides_project ON slides(project_id, order_index);
 │       ├── main.rs
 │       ├── db.rs               # init_db, WAL pragmas, run_migrations (v1-v3)
 │       ├── models.rs           # Project, Slide, Highlight, Settings structs (camelCase serde)
-│       ├── merustmar.rs        # Byte-exact Rust port of frozen Merustmar highlighter (UTF-16, alt-match)
 │       └── commands/
 │           ├── mod.rs          # Re-exports
 │           ├── helpers.rs      # now_ms, DEFAULT_CODE, fetch_project, load/save settings
 │           ├── projects.rs     # get_projects, get_project, create/rename/delete, update_settings/theme
 │           ├── slides.rs       # create/delete/restore/update_code/update_settings/reorder/set_current
 │           ├── io.rs           # export_project_to_json / import_project_from_json (native dialogs + serde_json)
-│           ├── merustmar.rs    # merustmar_tokens command — token lines (content + color)
 │           └── quit.rs         # finish_quit — sets QUIT_FLUSHED atomic
 ├── src/
 │   ├── main.tsx                # QueryClient, installAppMenu, quit-request listener, flush on beforeunload, App
@@ -149,8 +145,7 @@ CREATE INDEX idx_slides_project ON slides(project_id, order_index);
 │   ├── lib/
 │   │   ├── tauri-api.ts        # invoke wrappers: typed Project/Slide/Highlight DTOs
 │   │   ├── shiki-instance.ts   # getHighlighter singleton, theme load
-│   │   ├── merustmar-language.ts # FROZEN Shiki LanguageRegistration for Merustmar
-│   │   ├── merustmar-highlight.ts # FROZEN JS fallback highlighter (client-side)
+│   │   ├── merustmar-language.ts # Shiki LanguageRegistration for Merustmar
 │   │   ├── highlight-tokens.ts # Pure JS token slicing: plainTokenLines, sliceSnippets, buildPlan, selectionToRange, TokenLine types
 │   │   ├── highlight-utils.ts  # measureHighlight (DOM Range → rects), createDefaultHighlight, char width cache
 │   │   ├── code-save-queue.ts  # Per-slide promise queue — serialized saves
@@ -174,7 +169,7 @@ CREATE INDEX idx_slides_project ON slides(project_id, order_index);
 │       ├── TitleBar.tsx        # Frameless window controls, draggable region
 │       ├── Dashboard.tsx       # Project grid, create, rename inline, delete with confirm, import
 │       ├── Editor.tsx          # Main workspace: TitleBar + present overlay + 2 PanelGroups (code/preview + slides), save badge, autoplay, fullscreen, menu handlers, slide name inline edit
-│       ├── CodeEditor.tsx      # Uncontrolled textarea + always-colored sync overlay (Shiki sync or Merustmar sync or plain escaped), highlight mode toggle, context menu → add highlight, line numbers, undo/redo events (openslides:undo)
+│       ├── CodeEditor.tsx      # Uncontrolled textarea + Shiki worker overlay, highlight mode toggle, context menu → add highlight, line numbers, undo/redo events (openslides:undo)
 │       ├── SlidePreview.tsx    # Shiki Magic Move render + HighlightLayer ref, theme bg, fontSize/lineHeight, codeAlign
 │       ├── HighlightLayer.tsx  # framer-motion AnimatePresence: dim + erasers + clone, ResizeObserver coalesced to rAF, measure on 280ms settle
 │       ├── BottomSlidesPanel.tsx # Virtualized strip, DndContext, inline rename, delete, duration
@@ -248,15 +243,15 @@ AutoPlay: setTimeout(duration min 500) → goNext(), if returns false (deck fini
 ## 🎨 Highlight Plan Internals (Indexed)
 
 - **Types** (`highlight-tokens.ts`):
-  - `HighlightTokenLine[]` = `MerustmarToken[][]` or Shiki `codeToTokensBase` equivalent
+  - `HighlightTokenLine[]` = Shiki `codeToTokensBase` token lines for every supported language
   - `SelectionRange { startLine, startChar, endLine, endChar }`
   - `HighlightPlan { lines: PlanLine[], eraserColor: string, ranges: ... }`
   - `PlanLine { lineIndex, startChar, endChar, html: escaped token slice }`
 
 - **buildPlan**: input raw `code + tokenLines + range + themeBg + dimAmount` → output plan
-  - Splits token strings by char offsets (UTF-16 aware? JS native, Rust merustmar mirrors)
+  - Splits token strings by JS UTF-16 char offsets (matching textarea selection indices)
   - Escapes HTML at render time
-  - Computes eraserColor = dimmed theme background (Rust mixing logic reused)
+  - Computes eraserColor = dimmed theme background with the shared client-side mixer
   - Handles empty middle lines: if selection spans lines, middle lines are fully included even if they are empty
 
 - **measureHighlight**: container + codeRoot + plan + fontSize/lineHeight → `HighlightMeasurement { segments: { line, rect {x,y,w,h} }[], union }`
@@ -264,7 +259,7 @@ AutoPlay: setTimeout(duration min 500) → goNext(), if returns false (deck fini
   - Retry loop 12 rAF if refs null (commit ordering)
   - ResizeObserver coalesced to 1 rAF
 
-- **Why never flash plain text**: `CodeEditor.tsx` computes `syncOverlay = shikiSync ?? merustmarSync` synchronously from already-loaded highlighter (or frozen JS highlighter). No async fallback to plain text. The async `useEffect runHighlight` then enhances, but colored overlay is always present from first paint. Previous version flashed `plainEscaped` before Shiki resolved.
+- **Why never flash stale plain text**: `CodeEditor.tsx` keeps the last worker-rendered Shiki markup while the next request is pending; the worker is the only editor tokenization path.
 
 ---
 
@@ -299,12 +294,9 @@ npm run test:highlight
 # Save-queue race regression
 npm run test:save-race
 
-# Rust unit + parity
+# Rust backend checks
 cd src-tauri
 cargo test
-
-# Or single file
-cargo test merustmar -- --nocapture
 ```
 
 ### Lint / Format
@@ -334,7 +326,7 @@ cargo test merustmar -- --nocapture
 - **Zustand selector**: `useShallow` to avoid re-rendering whole editor on keystroke.
 - **No TanStack virtual flicker**: slide strip virtualizer keyed by stable ids.
 - **Shiki Singleton**: `shiki-instance.ts` prevents duplicate WASM loads; hot-reload safe.
-- **Why Rust Merustmar?** Offloads tokenization off WebView main thread, IPC runtime, single source of truth shape for highlight plan.
+- **Why Shiki for Merustmar?** The custom grammar keeps editor, preview, and highlight planning on one tokenization pipeline with no highlighting IPC.
 - **Quit flush**: beforeunload + Tauri CloseRequested/ExitRequested both trigger flushPendingSave; Rust side guarantees exit in 4s even if frontend wedged.
 - **CodeEditor uncontrolled**: `defaultValue` + ref mirror avoids React controlled textarea caret reset in WKWebView.
 - **Theme background helper**: `themeBackground()` in types.ts maps theme name → solid hex for eraser color + preview card.
@@ -356,10 +348,8 @@ cargo test merustmar -- --nocapture
 
 1. Fork, clone, `npm install`
 2. Branch from `main` (`feat/...` / `fix/...`)
-3. Ensure `npm run test:highlight` + `cargo test` pass
+3. Ensure `npm run test:highlight` + `npm run build` + `cargo test` pass
 4. PR, describe highlight/slide model changes if any
-
-Mark Merustmar frozen files untouched.
 
 ---
 

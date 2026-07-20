@@ -4,7 +4,7 @@
  * FIXES:
  * - NSSpellServer timeout: aggressive spellcheck/autocorrect disabling
  * - Triple pipeline removed: previously shikiSync (blocking 2-5ms) + runHighlight (debounced) + plainEscaped (4 regex O(n) per keystroke)
- *   Now: single worker pipeline + cheap merustmar sync fallback (no regex), no plain flash.
+ *   Now: a single Shiki worker pipeline, with the previous rendered result retained while work is pending.
  * - Laggy DebouncedSlider: now uses instant preview Zustand overrides for live SlidePreview.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
