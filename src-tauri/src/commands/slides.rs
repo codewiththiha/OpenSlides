@@ -1,7 +1,7 @@
 //! Slide-level Tauri commands.
 
 use crate::commands::helpers::{
-    batch_reindex, default_slide_name, fetch_project, insert_slide_row, load_settings, now_ms,
+    batch_reindex, default_slide_name, fetch_project, insert_slide_row, load_settings,
     parse_highlights, save_settings, serialize_highlights, touch_project, NewSlide,
 };
 use crate::db::DbPool;
