@@ -1,7 +1,8 @@
 //! Import / export Tauri commands.
 
 use crate::commands::helpers::{
-    dialog_pick_path, fetch_project, now_ms, sanitize_filename, DialogMode,
+    default_slide_name, dialog_pick_path, fetch_project, now_ms, normalize_code_align,
+    normalize_language, sanitize_filename, DialogMode,
 };
 use crate::db::DbPool;
 use crate::models::{
@@ -123,29 +124,15 @@ pub async fn import_project_from_json(
         ));
     }
 
-    let language = value
-        .get("language")
-        .and_then(|v| v.as_str())
-        .or_else(|| {
-            slides_val
-                .first()
-                .and_then(|s| s.get("language"))
-                .and_then(|v| v.as_str())
-        })
-        .filter(|s| *s != "dynamic" && !s.is_empty())
-        .unwrap_or("typescript")
-        .to_string();
+    let language = normalize_language(
+        value.get("language").and_then(|v| v.as_str())
+            .or_else(|| slides_val.first().and_then(|s| s.get("language")).and_then(|v| v.as_str()))
+            .unwrap_or(""),
+    );
 
-    let code_align = value
-        .get("codeAlign")
-        .and_then(|v| v.as_str())
-        .unwrap_or("left")
-        .to_string();
-    let code_align = if code_align == "center" {
-        "center".to_string()
-    } else {
-        "left".to_string()
-    };
+    let code_align = normalize_code_align(
+        value.get("codeAlign").and_then(|v| v.as_str()).unwrap_or("left"),
+    );
 
     let mut settings = ProjectSettings {
         show_line_numbers: value
@@ -208,7 +195,7 @@ pub async fn import_project_from_json(
             .and_then(|v| v.as_str())
             .filter(|n| !n.trim().is_empty())
             .map(|n| n.to_string())
-            .unwrap_or_else(|| format!("Slide {}", i + 1));
+            .unwrap_or_else(|| default_slide_name(i as i64));
         let highlights_json = s
             .get("highlights")
             .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()))

@@ -1,8 +1,8 @@
 //! Slide-level Tauri commands.
 
 use crate::commands::helpers::{
-    batch_reindex, fetch_project, insert_slide_row, load_settings, now_ms, save_settings,
-    touch_project, NewSlide,
+    batch_reindex, default_slide_name, fetch_project, insert_slide_row, load_settings, now_ms,
+    parse_highlights, save_settings, serialize_highlights, touch_project, NewSlide,
 };
 use crate::db::DbPool;
 use crate::models::{
@@ -38,7 +38,7 @@ pub async fn create_slide(
     let slide_name = payload
         .name
         .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| format!("Slide {}", order_index + 1));
+        .unwrap_or_else(|| default_slide_name(order_index));
 
     insert_slide_row(
         pool.inner(),
@@ -281,12 +281,12 @@ pub async fn restore_slide(
     let settings = load_settings(pool.inner(), &project_id).await?;
 
     let restore_name = if slide.name.trim().is_empty() {
-        format!("Slide {}", order_index + 1)
+        default_slide_name(order_index)
     } else {
         slide.name.clone()
     };
 
-    let highlights_json = serde_json::to_string(&slide.highlights).map_err(|e| e.to_string())?;
+    let highlights_json = serialize_highlights(&slide.highlights)?;
 
     sqlx::query(
         r#"
@@ -391,10 +391,9 @@ pub async fn update_slide_settings(
 
     // Parse existing highlights or use payload
     let highlights_raw: String = row.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
-    let existing_highlights: Vec<crate::models::Highlight> =
-        serde_json::from_str(&highlights_raw).unwrap_or_default();
+    let existing_highlights = parse_highlights(&highlights_raw);
     let highlights = payload.highlights.unwrap_or(existing_highlights);
-    let highlights_json = serde_json::to_string(&highlights).map_err(|e| e.to_string())?;
+    let highlights_json = serialize_highlights(&highlights)?;
 
     sqlx::query(
         r#"
