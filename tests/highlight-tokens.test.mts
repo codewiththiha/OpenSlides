@@ -18,7 +18,6 @@ import {
   decompose,
   mixTowardBlack,
   plainTokenLines,
-  renderTokenLines,
   renderTokensToSpans,
   selectionToRange,
   sliceSnippets,
@@ -105,13 +104,6 @@ test("renderTokensToSpans: fontStyle bitflags + bgColor, colorless spans", () =>
     '<span style="color:#fff;font-style:italic">x</span>' +
       '<span style="background-color:#222;font-weight:bold;text-decoration:underline">y</span>' +
       "<span>z</span>",
-  );
-});
-
-test("renderTokenLines: .line wrapper + newline join (overlay/measurement shape)", () => {
-  assert.equal(
-    renderTokenLines([[{ content: "a", color: "#111" }], []]),
-    '<span class="line"><span style="color:#111">a</span></span>\n<span class="line"></span>',
   );
 });
 

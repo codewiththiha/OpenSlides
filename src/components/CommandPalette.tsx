@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUiStore } from "@/store/useUiStore";
-import { THEME_OPTIONS } from "@/types";
+import { THEME_OPTIONS, type ThemeName } from "@/types";
 import { cn } from "@/lib/utils";
 import { modKeyLabel } from "@/lib/platform";
 import { isModKey } from "@/lib/keyboard";
@@ -25,7 +25,7 @@ interface CommandPaletteProps {
   projectId?: string;
   onExport?: () => void;
   onAddSlide?: () => void;
-  onTheme?: (theme: string) => void;
+  onTheme?: (theme: ThemeName) => void;
 }
 
 export function CommandPalette({

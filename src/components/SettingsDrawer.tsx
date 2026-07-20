@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Switch } from "./ui/switch";
 import { DebouncedSlider } from "./ui/debounced-slider";
-import { THEME_OPTIONS, type Project } from "@/types";
+import { THEME_OPTIONS, type Project, type ThemeName } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
@@ -102,7 +102,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             <select
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={project.theme}
-              onChange={(e) => updateTheme.mutate(e.target.value)}
+              onChange={(e) => updateTheme.mutate(e.target.value as ThemeName)}
             >
               {THEME_OPTIONS.map((t) => (
                 <option key={t.value} value={t.value}>

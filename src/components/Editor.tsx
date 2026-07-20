@@ -13,7 +13,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useShallow } from "zustand/react/shallow";
+import { useEditorSlice } from "@/store/ui-selectors";
 import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TitleBar } from "./TitleBar";
@@ -57,20 +57,7 @@ export function Editor() {
     previewHighlightIndex,
     isAutoPlaying,
     setIsAutoPlaying,
-  } = useUiStore(
-    useShallow((s) => ({
-      currentSlideId: s.currentSlideId,
-      setCurrentSlideId: s.setCurrentSlideId,
-      isPresenting: s.isPresenting,
-      isZenMode: s.isZenMode,
-      isSettingsOpen: s.isSettingsOpen,
-      setIsSettingsOpen: s.setIsSettingsOpen,
-      resetEditorUi: s.resetEditorUi,
-      previewHighlightIndex: s.previewHighlightIndex,
-      isAutoPlaying: s.isAutoPlaying,
-      setIsAutoPlaying: s.setIsAutoPlaying,
-    }))
-  );
+  } = useEditorSlice();
 
   // Project data (TanStack) — owns slides / theme / settings
   const { data: project, isLoading, isError, error } = useProject(projectId);
