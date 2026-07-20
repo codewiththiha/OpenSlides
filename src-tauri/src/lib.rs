@@ -64,6 +64,7 @@ pub fn run() {
             set_current_slide,
             export_project_to_json,
             import_project_from_json,
+            search_slides,
             finish_quit,
         ])
         .on_window_event(|window, event| {

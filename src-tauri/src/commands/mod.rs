@@ -7,9 +7,11 @@ mod helpers;
 mod io;
 mod projects;
 mod quit;
+mod search;
 mod slides;
 
 pub use io::*;
 pub use projects::*;
 pub use quit::*;
+pub use search::*;
 pub use slides::*;
