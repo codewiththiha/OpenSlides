@@ -4,7 +4,7 @@
  * Fix: reads instant preview overrides from Zustand (previewProject / previewSlides / previewHighlights)
  * so fontSize / lineHeight / transitions update live during drag, not only on commit.
  */
-import { useEffect, useRef, useState, useMemo } from "react";
+import { memo, useEffect, useRef, useState, useMemo } from "react";
 import { ShikiMagicMove } from "shiki-magic-move/react";
 import type { Highlighter } from "shiki";
 import { getHighlighter } from "@/lib/shiki-instance";
@@ -24,6 +24,53 @@ interface SlidePreviewProps {
   activeHighlightIndex?: number;
   onHighlightExitComplete?: () => void;
 }
+
+const MagicMoveBlock = memo(function MagicMoveBlock({
+  codeContainerRef,
+  centerBlock,
+  lineHeight,
+  fontSize,
+  theme,
+  language,
+  highlighter,
+  code,
+  transition,
+  stagger,
+  showLineNumbers,
+}: {
+  codeContainerRef: React.RefObject<HTMLDivElement | null>;
+  centerBlock: boolean;
+  lineHeight: number;
+  fontSize: number;
+  theme: string;
+  language: string;
+  highlighter: Highlighter;
+  code: string;
+  transition: number;
+  stagger: number;
+  showLineNumbers: boolean;
+}) {
+  return (
+    <div
+      ref={codeContainerRef}
+      className={cn(centerBlock ? "w-max max-w-full" : "w-full")}
+      style={{
+        "--line-height": lineHeight.toString(),
+        "--font-size": `${fontSize.toFixed(1)}px`,
+      } as React.CSSProperties}
+    >
+      <ShikiMagicMove
+        key={`${theme}-${language}`}
+        lang={language}
+        theme={theme}
+        highlighter={highlighter}
+        code={code}
+        options={{ duration: transition, stagger, lineNumbers: showLineNumbers }}
+        className="shiki-magic-move-container font-mono font-medium tracking-wide"
+      />
+    </div>
+  );
+});
 
 export function SlidePreview({
   project,
@@ -184,30 +231,19 @@ export function SlidePreview({
         `,
           }}
         />
-        <div
-          ref={codeContainerRef}
-          className={cn(centerBlock ? "w-max max-w-full" : "w-full")}
-          style={
-            {
-              "--line-height": settings.lineHeight.toString(),
-              "--font-size": `${previewFontSize.toFixed(1)}px`,
-            } as React.CSSProperties
-          }
-        >
-          <ShikiMagicMove
-            key={`${theme}-${language}`}
-            lang={language}
-            theme={theme}
-            highlighter={highlighter}
-            code={code}
-            options={{
-              duration: effectiveSlideTransition,
-              stagger: effectiveSlideStagger,
-              lineNumbers: settings.showLineNumbers,
-            }}
-            className="shiki-magic-move-container font-mono font-medium tracking-wide"
-          />
-        </div>
+        <MagicMoveBlock
+          codeContainerRef={codeContainerRef}
+          centerBlock={centerBlock}
+          lineHeight={settings.lineHeight}
+          fontSize={previewFontSize}
+          theme={theme}
+          language={language}
+          highlighter={highlighter}
+          code={code}
+          transition={effectiveSlideTransition}
+          stagger={effectiveSlideStagger}
+          showLineNumbers={settings.showLineNumbers}
+        />
       </div>
 
       <HighlightLayer

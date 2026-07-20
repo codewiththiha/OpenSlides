@@ -56,7 +56,13 @@ export function createDefaultHighlight(
 /* Line text node collection — cached per codeRoot, MutationObserver invalidation */
 /* ------------------------------------------------------------------ */
 
-const nodesCache = new WeakMap<HTMLElement, Text[][]>();
+interface LineNodesCache {
+  lineSpans: Element[];
+  nodes: Text[][];
+  dirty: boolean;
+}
+
+const nodesCache = new WeakMap<HTMLElement, LineNodesCache>();
 
 function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
   const lineSpans = root.querySelectorAll("span.line");
@@ -107,16 +113,40 @@ function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
   return current;
 }
 
+function collectLineSpanTextNodes(span: Element): Text[] {
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    if ((node as Text).data) nodes.push(node as Text);
+    node = walker.nextNode();
+  }
+  return nodes;
+}
+
 function getLineTextNodes(root: HTMLElement): Text[][] {
   const cached = nodesCache.get(root);
-  if (cached) return cached;
+  if (cached && !cached.dirty) return cached.nodes;
+
+  const lineSpans = Array.from(root.querySelectorAll("span.line"));
+  if (lineSpans.length > 0 && cached && cached.lineSpans.length === lineSpans.length) {
+    const nodes = lineSpans.map((span, index) =>
+      span === cached.lineSpans[index]
+        ? cached.nodes[index]
+        : collectLineSpanTextNodes(span),
+    );
+    nodesCache.set(root, { lineSpans, nodes, dirty: false });
+    return nodes;
+  }
+
   const nodes = collectLineTextNodesUncached(root);
-  nodesCache.set(root, nodes);
+  nodesCache.set(root, { lineSpans, nodes, dirty: false });
   return nodes;
 }
 
 export function clearLineNodesCache(root: HTMLElement) {
-  nodesCache.delete(root);
+  const cached = nodesCache.get(root);
+  if (cached) cached.dirty = true;
 }
 
 /* ------------------------------------------------------------------ */

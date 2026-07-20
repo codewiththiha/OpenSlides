@@ -64,6 +64,7 @@ export function HighlightLayer({
   const [measurement, setMeasurement] = useState<HighlightMeasurement | null>(null);
   const rafRef = useRef<number>(0);
   const roRafRef = useRef<number>(0);
+  const cacheRafRef = useRef<number>(0);
   const roRef = useRef<ResizeObserver | null>(null);
   const moRef = useRef<MutationObserver | null>(null);
 
@@ -100,12 +101,12 @@ export function HighlightLayer({
       if (!moRef.current) {
         moRef.current = new MutationObserver(() => {
           if (disposed) return;
-          const cr = codeContainerRef.current;
-          if (cr) clearLineNodesCache(cr);
-          // Coalesce to rAF
-          if (roRafRef.current) return;
-          roRafRef.current = requestAnimationFrame(() => {
-            roRafRef.current = 0;
+          // Coalesce cache invalidation and the follow-up measure to one frame.
+          if (cacheRafRef.current) return;
+          cacheRafRef.current = requestAnimationFrame(() => {
+            cacheRafRef.current = 0;
+            const cr = codeContainerRef.current;
+            if (cr) clearLineNodesCache(cr);
             if (!disposed) measure();
           });
         });
@@ -142,6 +143,8 @@ export function HighlightLayer({
       disposed = true;
       cancelAnimationFrame(rafRef.current);
       cancelAnimationFrame(roRafRef.current);
+      cancelAnimationFrame(cacheRafRef.current);
+      cacheRafRef.current = 0;
       const settle = (roRef as any)._settleRaf;
       if (settle) cancelAnimationFrame(settle);
       roRafRef.current = 0;
