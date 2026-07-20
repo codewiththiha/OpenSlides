@@ -18,6 +18,7 @@ import { useSlideMaps } from "@/hooks/useSlideMaps";
 import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
+import { usePreviewHighlightsMap } from "@/hooks/usePreviewSettings";
 import { useSlideCode } from "@/hooks/useSlideCode";
 import { HighlightLayer } from "./HighlightLayer";
 
@@ -95,8 +96,7 @@ export function SlidePreview({
 
   // --- instant preview overrides ---
   const useEffective = useEffectiveSettings(project, slide?.id);
-  useUiStore((s) => s.previewHighlightsRevision);
-  const previewHighlightsMap = useUiStore.getState().previewHighlights;
+  const previewHighlightsMap = usePreviewHighlightsMap();
 
   const language = resolveProjectLanguage(project);
   const theme = project.theme;
