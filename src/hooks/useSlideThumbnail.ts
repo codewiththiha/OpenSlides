@@ -43,6 +43,7 @@ interface Args {
   maxChars?: number;
   enabled?: boolean;
   priority?: "high" | "low";
+  debounceMs?: number;
 }
 
 export function useSlideThumbnail({
@@ -55,6 +56,7 @@ export function useSlideThumbnail({
   maxChars = MAX_CHARS,
   enabled = true,
   priority = "low",
+  debounceMs = REQUEST_DEBOUNCE_MS,
 }: Args) {
   const truncatedCode = truncateCode(code, maxLines, maxChars);
   const key = `${slideId}\u0000${theme}\u0000${language}\u0000${truncatedCode}`;
@@ -99,7 +101,7 @@ export function useSlideThumbnail({
               // Keep the text fallback; thumbnails are progressive enhancement.
             }
           });
-      }, REQUEST_DEBOUNCE_MS);
+      }, debounceMs);
     };
 
     const element = elementRef.current;
@@ -120,7 +122,7 @@ export function useSlideThumbnail({
       if (timer !== null) window.clearTimeout(timer);
       observer?.disconnect();
     };
-  }, [key, language, theme, truncatedCode, initialHtml, slideId, code, enabled, priority]);
+  }, [key, language, theme, truncatedCode, initialHtml, slideId, code, enabled, priority, debounceMs]);
 
   return { html: entry?.html ?? null, ref: elementRef };
 }

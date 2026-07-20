@@ -154,7 +154,6 @@ export function CodeEditor({
     code,
     language,
     theme,
-    isDark: isDarkBg,
   });
 
   const debouncedSave = useDebouncedCallback(
