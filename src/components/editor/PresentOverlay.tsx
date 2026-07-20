@@ -12,6 +12,7 @@ import { usePresentationControls } from "@/store/ui-selectors";
 import type { Project, Slide } from "@/types";
 import { cn, formatClockSeconds } from "@/lib/utils";
 import { Kbd } from "../ui/kbd";
+import { Z_INDEX } from "../ui/overlay";
 
 function useRemainingSec(duration: number, resetKey: string) {
   const [remaining, setRemaining] = useState(() => Math.ceil(duration / 1000));
@@ -26,8 +27,8 @@ function useRemainingSec(duration: number, resetKey: string) {
   }, [duration, resetKey]);
   return remaining;
 }
-function PresentProgressBar({ duration, resetKey, className }: { duration: number; resetKey: string; className?: string }) {
-  return <div className={cn("overflow-hidden", className)}><div key={resetKey} className="openslides-progress-anim h-full w-full origin-left bg-primary" style={{ animation: `openslides-present-progress ${duration}ms linear forwards` }} /></div>;
+function PresentProgressBar({ duration, resetKey, className, style }: { duration: number; resetKey: string; className?: string; style?: React.CSSProperties }) {
+  return <div className={cn("overflow-hidden", className)} style={style}><div key={resetKey} className="openslides-progress-anim h-full w-full origin-left bg-primary" style={{ animation: `openslides-present-progress ${duration}ms linear forwards` }} /></div>;
 }
 function AutoplayTimerChip({ duration, resetKey }: { duration: number; resetKey: string }) {
   const remaining = useRemainingSec(duration, resetKey);
@@ -63,12 +64,13 @@ export const PresentOverlay = memo(function PresentOverlay({
   return (
     <div
       id="openslides-present-root"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black"
+      className="fixed inset-0 flex items-center justify-center bg-black"
+      style={{ zIndex: Z_INDEX.presentation }}
     >
       {/* Slide duration progress bar — TypeScript timer, not Rust, for smooth 60fps animation */}
-      {isAutoPlaying && <PresentProgressBar duration={duration} resetKey={resetKey} className="absolute left-0 top-0 z-[120] h-1 w-full bg-white/10" />}
+      {isAutoPlaying && <PresentProgressBar duration={duration} resetKey={resetKey} className="absolute left-0 top-0 h-1 w-full bg-white/10" style={{ zIndex: Z_INDEX.presentationProgress }} />}
 
-      <div className="absolute right-4 top-4 z-[110] flex items-center gap-2">
+      <div className="absolute right-4 top-4 flex items-center gap-2" style={{ zIndex: Z_INDEX.presentationControls }}>
         {isAutoPlaying && <AutoplayTimerChip duration={duration} resetKey={resetKey} />}
         <button
           type="button"

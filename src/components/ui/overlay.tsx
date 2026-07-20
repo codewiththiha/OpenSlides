@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export const OVERLAY_Z = {
+  editorExpanded: 90,
   drawerBackdrop: 40,
   drawer: 50,
   contextMenu: 100,

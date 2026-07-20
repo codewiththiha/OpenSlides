@@ -7,6 +7,7 @@ import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
 import { useSlideCode } from "@/hooks/useSlideCode";
 import { SearchSnippet } from "./SearchSnippet";
+import { Z_INDEX } from "../ui/overlay";
 
 export const ITEM_WIDTH = 152;
 
@@ -194,11 +195,12 @@ export const SlideCard = memo(function SlideCard({
       {showHoverPreview && hoverThumbnail.html && createPortal(
         <div
           ref={hoverThumbnail.ref}
-          className="pointer-events-none fixed z-[200] h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl"
+          className="pointer-events-none fixed h-[170px] w-[300px] overflow-hidden rounded-lg border border-border bg-card p-2 shadow-2xl"
           style={{
             left: hoverPosition.left,
             top: hoverPosition.top,
             backgroundColor: themeBackground(theme),
+            zIndex: Z_INDEX.hoverPreview,
           }}
           aria-hidden="true"
         >
