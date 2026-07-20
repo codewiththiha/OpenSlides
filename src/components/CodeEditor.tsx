@@ -40,6 +40,13 @@ import { Label } from "./ui/label";
 import { DebouncedSlider } from "./ui/debounced-slider";
 import { cn } from "@/lib/utils";
 import { selectionToRange } from "@/lib/highlight-tokens";
+import {
+  record as recordEditorHistory,
+  redo as redoEditorHistory,
+  undo as undoEditorHistory,
+  withoutRecording,
+  type Snapshot,
+} from "@/lib/editor-history";
 import { markSavePending, clearPendingSave } from "@/lib/code-save";
 import { HighlightContextMenu } from "./HighlightContextMenu";
 import { HighlightSettingsPanel } from "./HighlightSettingsPanel";
@@ -102,6 +109,7 @@ export function CodeEditor({
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
+  const editorSnapshotRef = useRef<Snapshot>({ code: "", caretStart: 0, caretEnd: 0 });
 
   // ── Uncontrolled textarea, by design ─────────────
   // Fix Caret Restoration Flash: useLayoutEffect fires synchronously after DOM mutation
@@ -134,6 +142,11 @@ export function CodeEditor({
         } catch {}
       }
     }
+    editorSnapshotRef.current = {
+      code: next,
+      caretStart: el.selectionStart,
+      caretEnd: el.selectionEnd,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slideId]);
 
@@ -142,6 +155,11 @@ export function CodeEditor({
     if (!el || !slideId) return;
     try {
       setCaretPosition(slideId, el.selectionStart, el.selectionEnd);
+      editorSnapshotRef.current = {
+        ...editorSnapshotRef.current,
+        caretStart: el.selectionStart,
+        caretEnd: el.selectionEnd,
+      };
     } catch {}
   }, [slideId, setCaretPosition]);
 
@@ -236,8 +254,14 @@ export function CodeEditor({
   }, [slideId, debouncedSave]);
 
   const applyCode = useCallback(
-    (value: string) => {
+    (value: string, beforeOverride?: Snapshot) => {
       if (!slideId) return;
+      const el = textareaRef.current;
+      const before = beforeOverride ?? editorSnapshotRef.current;
+      recordEditorHistory(slideId, before, value);
+      const caretStart = el?.selectionStart ?? value.length;
+      const caretEnd = el?.selectionEnd ?? caretStart;
+      editorSnapshotRef.current = { code: value, caretStart, caretEnd };
       setLocalCode(slideId, value);
       markSavePending(slideId, value);
       debouncedSave(slideId, value);
@@ -313,27 +337,59 @@ export function CodeEditor({
   }, [searchTerm, matches.length, isFindOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
+  const applyHistorySnapshot = useCallback(
+    (direction: "undo" | "redo") => {
+      const el = textareaRef.current;
+      if (!el || !slideId || document.activeElement !== el) return false;
+      const snapshot = direction === "undo"
+        ? undoEditorHistory(slideId)
+        : redoEditorHistory(slideId);
+      if (!snapshot) return false;
+      withoutRecording(() => {
+        el.value = snapshot.code;
+        try {
+          el.selectionStart = snapshot.caretStart;
+          el.selectionEnd = snapshot.caretEnd;
+        } catch {}
+        handleChange(snapshot.code);
+      });
+      saveCaret();
+      return true;
+    },
+    [slideId, handleChange, saveCaret],
+  );
+
   // Undo/redo bridge for native menu
   useEffect(() => {
-    const exec = (cmd: "undo" | "redo") => {
+    const exec = (direction: "undo" | "redo", cmd: "undo" | "redo") => {
       const el = textareaRef.current;
       if (!el || document.activeElement !== el) return;
-      if (typeof document.execCommand === "function") {
+      if (!applyHistorySnapshot(direction) && typeof document.execCommand === "function") {
         document.execCommand(cmd);
       }
     };
-    const onUndo = () => exec("undo");
-    const onRedo = () => exec("redo");
+    const onUndo = () => exec("undo", "undo");
+    const onRedo = () => exec("redo", "redo");
     window.addEventListener("openslides:undo", onUndo);
     window.addEventListener("openslides:redo", onRedo);
     return () => {
       window.removeEventListener("openslides:undo", onUndo);
       window.removeEventListener("openslides:redo", onRedo);
     };
-  }, []);
+  }, [applyHistorySnapshot]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (isMod && (key === "z" || key === "y")) {
+        e.preventDefault();
+        const direction = key === "y" || (key === "z" && e.shiftKey) ? "redo" : "undo";
+        if (!applyHistorySnapshot(direction)) {
+          document.execCommand(direction);
+        }
+        return;
+      }
       // Cmd+F → open find/replace (TypeScript, instant, no Rust IPC)
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f" && !e.shiftKey) {
         e.preventDefault();
@@ -360,6 +416,7 @@ export function CodeEditor({
       const start = el.selectionStart;
       const end = el.selectionEnd;
       const value = el.value;
+      const beforeSnapshot: Snapshot = { code: value, caretStart: start, caretEnd: end };
 
       if (e.shiftKey) {
         const lineStart = value.lastIndexOf("\n", start - 1) + 1;
@@ -380,7 +437,7 @@ export function CodeEditor({
         try {
           el.selectionStart = el.selectionEnd = pos;
         } catch {}
-        handleChange(next);
+        handleChange(next, beforeSnapshot);
         return;
       }
 
@@ -391,9 +448,9 @@ export function CodeEditor({
       try {
         el.selectionStart = el.selectionEnd = pos;
       } catch {}
-      handleChange(next);
+      handleChange(next, beforeSnapshot);
     },
-    [slideId, handleChange, isFindOpen],
+    [slideId, handleChange, isFindOpen, applyHistorySnapshot],
   );
 
   const syncScroll = () => {
