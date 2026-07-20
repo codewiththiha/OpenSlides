@@ -1,6 +1,8 @@
 //! Project-level Tauri commands.
 
-use crate::commands::helpers::{fetch_project, load_settings, now_ms, DEFAULT_CODE};
+use crate::commands::helpers::{
+    fetch_project, invalidate_project_thumbnails, load_settings, now_ms, DEFAULT_CODE,
+};
 use crate::db::DbPool;
 use crate::models::{
     merge_settings, settings_to_json, Project, ProjectSettings, ProjectSummary,
@@ -272,11 +274,7 @@ pub async fn update_project_theme(
         .await
         .map_err(|e| format!("Failed to update theme: {e}"))?;
 
-    sqlx::query("UPDATE slides SET thumbnail_html = '' WHERE project_id = ?")
-        .bind(&project_id)
-        .execute(pool.inner())
-        .await
-        .map_err(|e| format!("Failed to invalidate thumbnails: {e}"))?;
+    invalidate_project_thumbnails(pool.inner(), &project_id).await?;
 
     fetch_project(pool.inner(), &project_id).await
 }

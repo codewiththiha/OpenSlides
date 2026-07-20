@@ -13,6 +13,68 @@ function greet() {
   console.log("Hi, Mom!");
 }"#;
 
+pub const DEFAULT_LANGUAGE: &str = "typescript";
+
+pub fn normalize_language(input: &str) -> String {
+    let trimmed = input.trim();
+    if trimmed.is_empty() || trimmed == "dynamic" {
+        DEFAULT_LANGUAGE.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+pub fn normalize_code_align(input: &str) -> String {
+    match input {
+        "center" => "center".to_string(),
+        _ => "left".to_string(),
+    }
+}
+
+pub fn default_slide_name(order_index: i64) -> String {
+    format!("Slide {}", order_index + 1)
+}
+
+pub fn parse_highlights(raw: &str) -> Vec<crate::models::Highlight> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed == "[]" {
+        Vec::new()
+    } else {
+        serde_json::from_str(raw).unwrap_or_default()
+    }
+}
+
+pub fn serialize_highlights(
+    highlights: &[crate::models::Highlight],
+) -> Result<String, String> {
+    serde_json::to_string(highlights).map_err(|e| e.to_string())
+}
+
+pub async fn invalidate_project_thumbnails<'c, E>(
+    exec: E,
+    project_id: &str,
+) -> Result<(), String>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
+    sqlx::query("UPDATE slides SET thumbnail_html = '' WHERE project_id = ?")
+        .bind(project_id)
+        .execute(exec)
+        .await
+        .map_err(|e| format!("Failed to invalidate thumbnails: {e}"))?;
+    Ok(())
+}
+
+pub fn ensure_current_slide(settings: &mut ProjectSettings, slides: &[Slide]) {
+    let valid = settings
+        .current_slide_id
+        .as_ref()
+        .is_some_and(|id| slides.iter().any(|s| &s.id == id));
+    if !valid {
+        settings.current_slide_id = slides.first().map(|s| s.id.clone());
+    }
+}
+
 pub fn now_ms() -> i64 {
     chrono::Utc::now().timestamp_millis()
 }
@@ -73,13 +135,7 @@ pub async fn fetch_slides(
         .into_iter()
         .map(|r| {
             let highlights_raw: String = r.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
-            // Fast path: avoid JSON parse for empty highlights (common case) — 200 slides = 200 parses saved
-            let trimmed = highlights_raw.trim();
-            let highlights: Vec<crate::models::Highlight> = if trimmed.is_empty() || trimmed == "[]" {
-                Vec::new()
-            } else {
-                serde_json::from_str(&highlights_raw).unwrap_or_default()
-            };
+            let highlights = parse_highlights(&highlights_raw);
             Slide {
                 id: r.get("id"),
                 code: r.get("code"),
@@ -113,9 +169,7 @@ pub async fn fetch_project(pool: &DbPool, project_id: &str) -> Result<Project, S
     let mut settings = parse_settings(&settings_raw);
     let slides = fetch_slides(pool, project_id, &settings.language).await?;
 
-    if settings.current_slide_id.is_none() {
-        settings.current_slide_id = slides.first().map(|s| s.id.clone());
-    }
+    ensure_current_slide(&mut settings, &slides);
 
     Ok(Project {
         id: row.get("id"),

@@ -164,8 +164,8 @@ async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
 
                 let lang = lang_row
                     .map(|r| r.get::<String, _>("language"))
-                    .filter(|s| !s.is_empty() && s != "dynamic")
-                    .unwrap_or_else(|| "typescript".into());
+                    .map(|s| crate::commands::helpers::normalize_language(&s))
+                    .unwrap_or_else(|| crate::commands::helpers::DEFAULT_LANGUAGE.to_string());
 
                 if let Some(obj) = settings.as_object_mut() {
                     obj.insert("language".into(), serde_json::Value::String(lang.clone()));
