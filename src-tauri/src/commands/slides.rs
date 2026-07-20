@@ -52,7 +52,6 @@ pub async fn create_slide(
             project_id: &payload.project_id,
             order_index,
             code: &code,
-            language: &language,
             transition_duration: DEFAULT_SLIDE_TRANSITION_MS,
             stagger: DEFAULT_SLIDE_STAGGER,
             duration: DEFAULT_SLIDE_DURATION_MS,
@@ -100,7 +99,7 @@ pub async fn duplicate_slide(
 
     let orig = sqlx::query(
         r#"
-        SELECT id, code, language, transition_duration, stagger, duration, order_index, name, highlights, thumbnail_html
+        SELECT id, code, transition_duration, stagger, duration, order_index, name, highlights, thumbnail_html
         FROM slides WHERE id = ? AND project_id = ?
         "#,
     )
@@ -112,7 +111,6 @@ pub async fn duplicate_slide(
     .ok_or_else(|| format!("Slide not found: {slide_id}"))?;
 
     let orig_code: String = orig.get("code");
-    let orig_lang: String = orig.get("language");
     let orig_trans: i64 = orig.get("transition_duration");
     let orig_stagger: i64 = orig.get("stagger");
     let orig_duration: i64 = orig.get("duration");
@@ -148,7 +146,6 @@ pub async fn duplicate_slide(
             project_id: &project_id,
             order_index: new_order,
             code: &orig_code,
-            language: &orig_lang,
             transition_duration: orig_trans,
             stagger: orig_stagger,
             duration: orig_duration,
@@ -250,8 +247,6 @@ pub async fn restore_slide(
     .await
     .map_err(|e| e.to_string())?;
 
-    let settings = load_settings(&mut *tx, &project_id).await?;
-
     let restore_name = if slide.name.trim().is_empty() {
         default_slide_name(order_index)
     } else {
@@ -267,7 +262,6 @@ pub async fn restore_slide(
             project_id: &project_id,
             order_index,
             code: &slide.code,
-            language: &settings.language,
             transition_duration: slide.transition_duration,
             stagger: slide.stagger,
             duration: slide.duration,
@@ -340,7 +334,7 @@ pub async fn update_slide_settings(
 ) -> Result<Slide, String> {
     let row = sqlx::query(
         r#"
-        SELECT id, project_id, code, language, duration, transition_duration, stagger, order_index, name, highlights
+        SELECT id, project_id, code, duration, transition_duration, stagger, order_index, name, highlights
         FROM slides WHERE id = ?
         "#,
     )

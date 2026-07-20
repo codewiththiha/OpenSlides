@@ -241,15 +241,14 @@ pub async fn import_project_from_json(
         sqlx::query(
             r#"
             INSERT INTO slides
-              (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(id)
         .bind(&project_id)
         .bind(i as i64)
         .bind(code)
-        .bind(&language)
         .bind(transition)
         .bind(stagger)
         .bind(duration)

@@ -54,9 +54,8 @@ fn default_size_up_transition() -> i64 { 600 }
 pub struct Slide {
     pub id: String,
     pub code: String,
-    /// DEPRECATED legacy mirror of the project-wide language, kept only for
-    /// export/API compatibility. Never read this for display or logic —
-    /// project settings are the source of truth.
+    /// Derived from project settings on read — export / API compatibility only.
+    /// The per-slide DB column was dropped in migration v6; never stored again.
     #[serde(default = "default_language")]
     pub language: String,
     pub duration: i64,

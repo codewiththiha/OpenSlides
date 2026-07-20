@@ -91,8 +91,8 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> Result<Pro
     sqlx::query(
         r#"
         INSERT INTO slides
-          (id, project_id, order_index, code, language, transition_duration, stagger, duration, name)
-        VALUES (?, ?, 0, ?, 'typescript', 750, 5, 3000, 'Slide 1')
+          (id, project_id, order_index, code, transition_duration, stagger, duration, name)
+        VALUES (?, ?, 0, ?, 750, 5, 3000, 'Slide 1')
         "#,
     )
     .bind(&slide_id)
@@ -134,7 +134,7 @@ pub async fn duplicate_project(
     let settings_raw: String = project.get("settings");
     let mut settings = crate::models::parse_settings(&settings_raw);
     let slides = sqlx::query(
-        "SELECT id, order_index, code, language, transition_duration, stagger, duration, name, highlights, thumbnail_html FROM slides WHERE project_id = ? ORDER BY order_index",
+        "SELECT id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html FROM slides WHERE project_id = ? ORDER BY order_index",
     )
     .bind(&project_id)
     .fetch_all(&mut *tx)
@@ -167,12 +167,11 @@ pub async fn duplicate_project(
 
     for row in slides {
         let old_id: String = row.get("id");
-        sqlx::query("INSERT INTO slides (id, project_id, order_index, code, language, transition_duration, stagger, duration, name, highlights, thumbnail_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO slides (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(id_map.get(&old_id).unwrap())
             .bind(&new_project_id)
             .bind(row.get::<i64, _>("order_index"))
             .bind(row.get::<String, _>("code"))
-            .bind(row.get::<String, _>("language"))
             .bind(row.get::<i64, _>("transition_duration"))
             .bind(row.get::<i64, _>("stagger"))
             .bind(row.get::<i64, _>("duration"))
@@ -247,14 +246,10 @@ pub async fn update_project_settings(
         .await
         .map_err(|e| format!("Failed to update settings: {e}"))?;
 
-    // Keep slides.language column in sync for legacy/export convenience — only if changed
+    // Thumbnails encode language-specific highlighting — invalidate on change.
+    // (The slides.language mirror is gone; settings are the source of truth.)
     if merged.language != existing.language {
-        sqlx::query("UPDATE slides SET language = ?, thumbnail_html = '' WHERE project_id = ?")
-            .bind(&merged.language)
-            .bind(&project_id)
-            .execute(pool.inner())
-            .await
-            .map_err(|e| format!("Failed to sync language: {e}"))?;
+        invalidate_project_thumbnails(pool.inner(), &project_id).await?;
     }
 
     fetch_project(pool.inner(), &project_id).await
@@ -278,4 +273,3 @@ pub async fn update_project_theme(
 
     fetch_project(pool.inner(), &project_id).await
 }
-
