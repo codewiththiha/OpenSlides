@@ -131,18 +131,6 @@ export function usePreviewHighlightSlice() {
   return useUiStore((s) => s.previewHighlightIndex);
 }
 
-export function useEditorUiBase() {
-  return useUiStore(
-    useShallow((s) => ({
-      currentSlideId: s.currentSlideId,
-      setCurrentSlideId: s.setCurrentSlideId,
-      isPresenting: s.isPresenting,
-      setIsPresenting: s.setIsPresenting,
-      isZenMode: s.isZenMode,
-      resetEditorUi: s.resetEditorUi,
-    }))
-  );
-}
 
 export function useToolbarSlice() {
   return useUiStore(
