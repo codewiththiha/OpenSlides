@@ -2394,8 +2394,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "open-slides"
-version = "0.1.0"
+name = "openslides"
+version = "1.0.0-beta.1"
 dependencies = [
  "chrono",
  "serde",

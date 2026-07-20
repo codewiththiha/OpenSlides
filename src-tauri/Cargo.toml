@@ -1,12 +1,12 @@
 [package]
-name = "open-slides"
-version = "0.1.0"
+name = "openslides"
+version = "1.0.0-beta.1"
 description = "OpenSlides — offline-first code presentation desktop app"
 authors = ["codewiththiha"]
 edition = "2024"
 
 [lib]
-name = "open_slides_lib"
+name = "openslides_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
