@@ -23,7 +23,8 @@ import {
   type Project,
 } from "@/types";
 import { useUiStore } from "@/store/useUiStore";
-import { useLocalCodeAtom, getLocalCodeAtom } from "@/store/localCodeAtoms";
+import { getLocalCodeAtom } from "@/store/localCodeAtoms";
+import { useSlideCode } from "@/hooks/useSlideCode";
 import { getCaretPosition, setCaretPosition } from "@/store/caretPositions";
 import {
   useUpdateSettings,
@@ -75,8 +76,7 @@ export function CodeEditor({
     project.slides[0];
   const slideId = slide?.id;
 
-  const localCodeAtom = useLocalCodeAtom(slideId);
-  const code = localCodeAtom ?? slide?.code ?? "";
+  const code = useSlideCode(slideId, slide?.code ?? "");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);

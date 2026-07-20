@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { slideDisplayName, themeBackground, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
-import { useLocalCodeAtom } from "@/store/localCodeAtoms";
+import { useSlideCode } from "@/hooks/useSlideCode";
 import { SearchSnippet } from "./SearchSnippet";
 
 export const ITEM_WIDTH = 152;
@@ -61,13 +61,9 @@ export const SlideCard = memo(function SlideCard({
   enableHoverPreview = false,
   style,
 }: SlideCardProps) {
-  // Per-slide atom: only this card re-renders when its own local code changes
-  const codeOverride = useLocalCodeAtom(slide.id);
-  // Boolean selector: only 2 cards re-render on slide switch (prev/new)
   const isSelected = useUiStore((s) => s.currentSlideId === slide.id);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
-
-  const thumbnailCode = codeOverride ?? slide.code;
+  const thumbnailCode = useSlideCode(slide.id, slide.code);
   const preview = thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty";
   const [showHoverPreview, setShowHoverPreview] = useState(false);
   const [hoverPosition, setHoverPosition] = useState({ left: 8, top: 8 });

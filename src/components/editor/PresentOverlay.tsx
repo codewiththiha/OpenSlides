@@ -10,7 +10,7 @@ import { SlidePreview } from "../SlidePreview";
 import { HighlightStepIndicator } from "../HighlightStepIndicator";
 import { usePresentationControls } from "@/store/ui-selectors";
 import type { Project, Slide } from "@/types";
-import { cn } from "@/lib/utils";
+import { cn, formatClockSeconds } from "@/lib/utils";
 import { Kbd } from "../ui/kbd";
 
 function useRemainingSec(duration: number, resetKey: string) {
@@ -26,13 +26,12 @@ function useRemainingSec(duration: number, resetKey: string) {
   }, [duration, resetKey]);
   return remaining;
 }
-function formatSec(s: number) { return s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 function PresentProgressBar({ duration, resetKey, className }: { duration: number; resetKey: string; className?: string }) {
   return <div className={cn("overflow-hidden", className)}><div key={resetKey} className="openslides-progress-anim h-full w-full origin-left bg-primary" style={{ animation: `openslides-present-progress ${duration}ms linear forwards` }} /></div>;
 }
 function AutoplayTimerChip({ duration, resetKey }: { duration: number; resetKey: string }) {
   const remaining = useRemainingSec(duration, resetKey);
-  return <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs text-white/80 backdrop-blur"><Timer className="h-3 w-3" /><span className="font-mono tabular-nums">{formatSec(remaining)}</span><span className="text-white/40">/ {Math.ceil(duration / 1000)}s</span></div>;
+  return <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs text-white/80 backdrop-blur"><Timer className="h-3 w-3" /><span className="font-mono tabular-nums">{formatClockSeconds(remaining)}</span><span className="text-white/40">/ {Math.ceil(duration / 1000)}s</span></div>;
 }
 interface PresentOverlayProps {
   project: Project;

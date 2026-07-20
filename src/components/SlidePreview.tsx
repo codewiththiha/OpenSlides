@@ -18,7 +18,7 @@ import { useSlideMaps } from "@/hooks/useSlideMaps";
 import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/useUiStore";
-import { useLocalCodeAtom } from "@/store/localCodeAtoms";
+import { useSlideCode } from "@/hooks/useSlideCode";
 import { HighlightLayer } from "./HighlightLayer";
 
 interface SlidePreviewProps {
@@ -86,9 +86,7 @@ export function SlidePreview({
   // O(1) lookup via Map instead of O(n) find per render (200 slides = 200 scans)
   const { slideMap } = useSlideMaps(project.slides);
   const slide = (currentSlideId ? slideMap.get(currentSlideId) : undefined) ?? project.slides[0];
-  // Per-slide atom: only re-renders when THIS slide's override changes
-  const codeOverride = useLocalCodeAtom(slide?.id);
-  const code = codeOverride ?? slide?.code ?? "";
+  const code = useSlideCode(slide?.id, slide?.code ?? "");
   const [highlighter, setHighlighter] = useState<Highlighter | null>(null);
   const [readyKey, setReadyKey] = useState<string | null>(null);
   const [shikiLoadFailed, setShikiLoadFailed] = useState(false);

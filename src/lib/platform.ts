@@ -2,7 +2,7 @@
 
 export type AppPlatform = "macos" | "windows" | "linux" | "unknown";
 
-export function detectPlatform(): AppPlatform {
+function detectPlatform(): AppPlatform {
   const ua = navigator.userAgent.toLowerCase();
   const plat = (navigator.platform || "").toLowerCase();
 
