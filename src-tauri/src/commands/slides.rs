@@ -252,8 +252,6 @@ pub async fn restore_slide(
     .await
     .map_err(|e| e.to_string())?;
 
-    let settings = load_settings(&mut *tx, &project_id).await?;
-
     let restore_name = if slide.name.trim().is_empty() {
         default_slide_name(order_index)
     } else {
