@@ -15,6 +15,7 @@ import { StackSpread } from "./StackSpread";
 import { StackDeck } from "../ui/stack/StackDeck";
 import { chunkConsecutive, type GroupChunk } from "@/lib/grouping";
 import { useStackProjects, useUnstackProjects } from "@/hooks/queries/projects";
+import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 import type { ProjectSummary } from "@/types";
 
 function useProjectGridColumns() {
@@ -65,21 +66,12 @@ export function ProjectGridView({
   const stackProjectsMutation = useStackProjects();
   const unstackProjectsMutation = useUnstackProjects();
 
-  useEffect(() => {
-    const groupCounts = new Map<string, string[]>();
-    for (const p of projects) {
-      if (p.groupId && p.groupId.trim().length > 0) {
-        const gid = p.groupId.trim();
-        if (!groupCounts.has(gid)) groupCounts.set(gid, []);
-        groupCounts.get(gid)!.push(p.id);
-      }
-    }
-    for (const [, ids] of groupCounts.entries()) {
-      if (ids.length <= 1) {
-        unstackProjectsMutation.mutate(ids);
-      }
-    }
-  }, [projects, unstackProjectsMutation]);
+  useAutoDissolveStacks(
+    projects,
+    (p) => p.groupId,
+    (p) => p.id,
+    unstackProjectsMutation.mutate,
+  );
 
   const chunks = useMemo(() => chunkConsecutive(projects), [projects]);
 

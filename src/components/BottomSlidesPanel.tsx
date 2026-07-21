@@ -50,6 +50,7 @@ import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
 import { Button } from "./ui/button";
 import { useUiStore } from "@/store/useUiStore";
 import { chunkConsecutive } from "@/lib/grouping";
+import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -104,21 +105,12 @@ export function BottomSlidesPanel({
   const theme = project.theme;
   const language = resolveProjectLanguage(project);
 
-  useEffect(() => {
-    const groupCounts = new Map<string, string[]>();
-    for (const s of project.slides) {
-      if (s.sectionId && s.sectionId.trim().length > 0) {
-        const sid = s.sectionId.trim();
-        if (!groupCounts.has(sid)) groupCounts.set(sid, []);
-        groupCounts.get(sid)!.push(s.id);
-      }
-    }
-    for (const [, ids] of groupCounts.entries()) {
-      if (ids.length <= 1) {
-        unstackSlides.mutate(ids);
-      }
-    }
-  }, [project.slides, unstackSlides]);
+  useAutoDissolveStacks(
+    project.slides,
+    (s) => s.sectionId,
+    (s) => s.id,
+    unstackSlides.mutate,
+  );
 
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
 
