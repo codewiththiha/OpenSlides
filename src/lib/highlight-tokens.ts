@@ -65,6 +65,8 @@ export interface HighlightPlan {
   lines: HighlightPlanLine[];
   /** Dimmed-card color the eraser boxes must paint. */
   eraserColor: string;
+  /** Joined plain text of the selection across all lines. */
+  selectedText: string;
 }
 
 /** Per-line clamped selection span (output of `decompose`). */
@@ -254,6 +256,7 @@ export function buildPlan(
   return {
     lines,
     eraserColor: mixTowardBlack(themeBg, dimPercent),
+    selectedText: spans.map(s => codeLines[s.lineIndex].slice(s.start, s.end)).join("\n"),
   };
 }
 
