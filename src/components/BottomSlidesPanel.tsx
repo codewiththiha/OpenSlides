@@ -36,8 +36,6 @@ import {
 } from "@dnd-kit/sortable";
 import {
   ChevronUp,
-  Ungroup,
-  X,
 } from "lucide-react";
 import { resolveProjectLanguage, type Project, type Slide } from "@/types";
 import { useSlideStripSearch } from "@/hooks/useSlideStripSearch";
@@ -47,7 +45,7 @@ import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { SlidesPanelHeader } from "./slides/SlidesPanelHeader";
 import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
-import { Button } from "./ui/button";
+import { StackExpandedControls } from "./ui/stack/StackExpandedControls";
 import { useUiStore } from "@/store/useUiStore";
 import { chunkConsecutive } from "@/lib/grouping";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
@@ -322,30 +320,15 @@ export function BottomSlidesPanel({
                     key={chunk.groupId}
                     className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1 transition-all duration-200"
                   >
-                    <div className="flex flex-col gap-1 border-r border-border/60 pr-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 gap-1 px-2 text-[11px] font-semibold text-primary hover:bg-primary/20"
-                        onClick={() => {
-                          unstackSlides.mutate(chunk.items.map((s) => s.id));
-                          setExpandedSectionId(null);
-                        }}
-                        title="Ungroup slide section"
-                      >
-                        <Ungroup className="h-3 w-3" />
-                        Ungroup
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 self-center text-muted-foreground hover:text-foreground"
-                        onClick={() => setExpandedSectionId(null)}
-                        title="Collapse section fan"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    <StackExpandedControls
+                      count={chunk.items.length}
+                      variant="slide-strip"
+                      onUngroup={() => {
+                        unstackSlides.mutate(chunk.items.map((s) => s.id));
+                        setExpandedSectionId(null);
+                      }}
+                      onClose={() => setExpandedSectionId(null)}
+                    />
                     {chunk.items.map((slide) => {
                       const originalIndex = ordered.findIndex((s) => s.id === slide.id);
                       return (
