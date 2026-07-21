@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { Ungroup, X } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
-import { Button } from "../ui/button";
 import { type ProjectSummary } from "@/types";
 import { type GroupChunk } from "@/lib/grouping";
+import { computeFanLayout } from "@/lib/stacking";
+import { StackExpandedControls } from "../ui/stack/StackExpandedControls";
 import { ProjectCard } from "./ProjectCard";
 import { Z_INDEX } from "../ui/overlay";
 
@@ -83,10 +83,7 @@ function FannedItem({
     },
   });
 
-  const centerOffset = index - (total - 1) / 2;
-  const fanAngle = centerOffset * 9;
-  const fanX = centerOffset * 85;
-  const fanY = Math.abs(centerOffset) * 12 - 20;
+  const { rotate: fanAngle, x: fanX, y: fanY } = computeFanLayout(total, index);
 
   const cardWidth = 220;
   const cardHeight = 150;
@@ -278,27 +275,15 @@ export function StackSpread({
         animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? 15 : 0 }}
         transition={{ duration: 0.2 }}
       >
-        <Button
-          size="sm"
-          variant="secondary"
-          className="gap-2 rounded-full border border-border bg-card px-5 py-2 shadow-xl hover:bg-accent hover:text-accent-foreground"
-          onClick={() => {
+        <StackExpandedControls
+          count={total}
+          variant="dashboard"
+          onUngroup={() => {
             triggerClose();
             onUngroup(projects.map((p) => p.id));
           }}
-        >
-          <Ungroup className="h-4 w-4" />
-          Ungroup ({total})
-        </Button>
-        <Button
-          size="icon"
-          variant="outline"
-          className="h-9 w-9 rounded-full border border-border bg-card shadow-xl hover:bg-accent"
-          onClick={triggerClose}
-          aria-label="Close stack fan"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+          onClose={triggerClose}
+        />
       </motion.div>
     </div>,
     document.body
