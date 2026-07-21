@@ -11,7 +11,11 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 const g = globalThis as Record<string, unknown>;
 g.window = dom.window;
 g.document = dom.window.document;
-g.navigator = dom.window.navigator;
+Object.defineProperty(g, "navigator", {
+  value: dom.window.navigator,
+  writable: true,
+  configurable: true,
+});
 g.localStorage = dom.window.localStorage;
 g.HTMLElement = dom.window.HTMLElement;
 g.HTMLTextAreaElement = dom.window.HTMLTextAreaElement;

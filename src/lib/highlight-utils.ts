@@ -10,6 +10,7 @@
 import type { HighlightPlan, HighlightPlanLine } from "@/lib/highlight-tokens";
 import { getLineTextNodes } from "./line-nodes-cache";
 import { measureCharWidth } from "./char-width-cache";
+export { measureCharWidth } from "./char-width-cache";
 
 export interface HighlightLineRect {
   x: number;

@@ -107,6 +107,8 @@ export function CodeEditor({
     500,
   );
 
+  useEffect(() => () => debouncedSave.cancel(), [debouncedSave]);
+
   useEffect(() => {
     return () => {
       debouncedSave.flush();
