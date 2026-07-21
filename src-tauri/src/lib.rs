@@ -6,7 +6,7 @@ mod models;
 
 use commands::*;
 use db::init_db;
-use lifecycle::{request_flush_before_quit, FLUSH_REQUESTED, QUIT_FLUSHED};
+use lifecycle::{request_flush_before_quit, QUIT_FLUSHED};
 use std::sync::atomic::Ordering;
 use tauri::Manager;
 
