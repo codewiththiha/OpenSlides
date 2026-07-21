@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import { Ungroup, X } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { type ProjectSummary } from "@/types";
 import { type GroupChunk } from "@/lib/grouping";
 import { computeFanLayout } from "@/lib/stacking";
-import { StackExpandedControls } from "../ui/stack/StackExpandedControls";
 import { ProjectCard } from "./ProjectCard";
 import { Z_INDEX } from "../ui/overlay";
 
@@ -108,7 +108,7 @@ function FannedItem({
       initial={{
         left: originLeft,
         top: originTop,
-        scale: 0.8,
+        scale: 0.5,
         opacity: 0,
         rotate: 0,
       }}
@@ -117,7 +117,7 @@ function FannedItem({
           ? {
               left: originLeft,
               top: originTop,
-              scale: 0.8,
+              scale: 0.5,
               opacity: 0,
               rotate: 0,
             }
@@ -131,8 +131,10 @@ function FannedItem({
       }
       transition={{
         type: "spring",
-        stiffness: 320,
-        damping: 26,
+        stiffness: 260,
+        damping: 20,
+        mass: 0.8,
+        delay: Math.abs(index - (total - 1) / 2) * 0.05,
       }}
     >
       <div className="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
@@ -220,6 +222,11 @@ export function StackSpread({
     )
   );
 
+  const cardWidth = 220;
+  const cardHeight = 150;
+  const spreadWidth = cardWidth + (total - 1) * 85 + 80;
+  const spreadHeight = cardHeight + Math.abs((total - 1) / 2) * 12 + 80;
+
   return createPortal(
     <div
       className="fixed inset-0 select-none overflow-hidden"
@@ -233,6 +240,60 @@ export function StackSpread({
         transition={{ duration: 0.2 }}
         onClick={triggerClose}
       />
+
+      {/* Highlight wrapper around the spread */}
+      <motion.div
+        className="absolute rounded-2xl border-2 border-primary/25 bg-primary/[0.04] shadow-[0_0_40px_rgba(0,0,0,0.3)]"
+        style={{
+          left: fanCenterX - spreadWidth / 2,
+          top: fanCenterY - spreadHeight / 2,
+          width: spreadWidth,
+          height: spreadHeight,
+        }}
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={
+          isClosing
+            ? { opacity: 0, scale: 0.85 }
+            : { opacity: 1, scale: 1 }
+        }
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      />
+
+      {/* Mini floating controls — top-right of the highlight wrapper */}
+      <motion.div
+        className="absolute z-50 flex items-center gap-1.5"
+        style={{
+          left: fanCenterX + spreadWidth / 2 - 4,
+          top: fanCenterY - spreadHeight / 2 - 4,
+        }}
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={
+          isClosing
+            ? { opacity: 0, scale: 0.5 }
+            : { opacity: 1, scale: 1 }
+        }
+        transition={{ type: "spring", stiffness: 350, damping: 22, delay: 0.15 }}
+      >
+        <button
+          type="button"
+          title="Ungroup all"
+          onClick={() => {
+            triggerClose();
+            onUngroup(projects.map((p) => p.id));
+          }}
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-lg transition-colors hover:bg-destructive/10 hover:text-destructive"
+        >
+          <Ungroup className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          title="Close spread"
+          onClick={triggerClose}
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-lg transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </motion.div>
 
       {/* Fanned Cards */}
       <div className="absolute inset-0 pointer-events-none">
@@ -267,24 +328,6 @@ export function StackSpread({
           ))}
         </div>
       </div>
-
-      {/* Controls: Ungroup / Close */}
-      <motion.div
-        className="absolute left-1/2 -translate-x-1/2 bottom-12 z-50 flex items-center gap-3"
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: isClosing ? 0 : 1, y: isClosing ? 15 : 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        <StackExpandedControls
-          count={total}
-          variant="dashboard"
-          onUngroup={() => {
-            triggerClose();
-            onUngroup(projects.map((p) => p.id));
-          }}
-          onClose={triggerClose}
-        />
-      </motion.div>
     </div>,
     document.body
   );
