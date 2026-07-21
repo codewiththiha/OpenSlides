@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 
-export const EASE_DIM = [0.25, 0.1, 0.25, 1] as const;
+import { EASE_DIM } from "./easings";
+
 
 interface HighlightDimOverlayProps {
   dimAmount: number;
