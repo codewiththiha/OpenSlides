@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { TitleBar } from "./TitleBar";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelp } from "./ShortcutsHelp";
-import { CreateProjectCard } from "./dashboard/CreateProjectCard";
+import { CreateDeckTile } from "./dashboard/CreateDeckTile";
 import { DashboardStates } from "./dashboard/DashboardStates";
 import { ProjectGridView } from "./dashboard/ProjectGridView";
 import { ConfirmDialog } from "./ui/confirm-dialog";
@@ -18,6 +18,7 @@ import { isModKey, isTypingTarget } from "@/lib/keyboard";
 import { modKeyLabel } from "@/lib/platform";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { applyUiTheme, useUiStore } from "@/store/useUiStore";
+import { api } from "@/lib/tauri-api";
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -30,7 +31,9 @@ export function Dashboard() {
   const renameMutation = useRenameProject();
   const createRef = useRef(createMutation); const duplicateRef = useRef(duplicateMutation); const deleteRef = useRef(deleteMutation); const exportRef = useRef(exportMutation); const importRef = useRef(importMutation); const renameRef = useRef(renameMutation); const projectsRef = useRef(projects);
   createRef.current = createMutation; duplicateRef.current = duplicateMutation; deleteRef.current = deleteMutation; exportRef.current = exportMutation; importRef.current = importMutation; renameRef.current = renameMutation; projectsRef.current = projects;
-  const [creating, setCreating] = useState(false); const [newName, setNewName] = useState("Untitled Presentation");
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("Untitled Presentation");
+  const [selectedTheme, setSelectedTheme] = useState("dark-plus");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen); const isDarkUi = useUiStore((s) => s.isDarkUi);
   useWindowTitle("OpenSlides — Presentations");
@@ -44,7 +47,18 @@ export function Dashboard() {
     if (deleteTarget) { deleteRef.current.mutate(deleteTarget.id); setDeleteTarget(null); }
   }, [deleteTarget]);
   const rename = useInlineRename(useCallback(async (id: string, name: string) => { await renameRef.current.mutateAsync({ projectId: id, name: name || "Untitled Presentation" }); }, []));
-  const handleCreate = useCallback(async () => { try { const project = await createRef.current.mutateAsync(newName.trim() || "Untitled Presentation"); setCreating(false); setNewName("Untitled Presentation"); navigate(`/editor/${project.id}`); } catch {} }, [newName, navigate]);
+  const handleCreate = useCallback(async () => {
+    try {
+      const project = await createRef.current.mutateAsync(newName.trim() || "Untitled Presentation");
+      if (selectedTheme && selectedTheme !== "dark-plus" && selectedTheme !== project.theme) {
+        await api.updateProjectTheme(project.id, selectedTheme);
+      }
+      setCreating(false);
+      setNewName("Untitled Presentation");
+      setSelectedTheme("dark-plus");
+      navigate(`/editor/${project.id}`);
+    } catch {}
+  }, [newName, selectedTheme, navigate]);
   const handleImport = useCallback(async () => { try { const project = await importRef.current.mutateAsync(); navigate(`/editor/${project.id}`); } catch {} }, [navigate]);
   const menuHandlers = useBaseAppMenuHandlers({
     onNewProject: () => setCreating(true),
@@ -56,7 +70,21 @@ export function Dashboard() {
   useAppMenu(menuHandlers);
   const mod = modKeyLabel();
   return <div className="flex h-full flex-col bg-background"><TitleBar leading={<div className="flex items-center gap-2"><img src="/openslides-logo.svg" alt="OpenSlides" className="h-8 w-8 rounded-lg object-cover" /><span className="text-sm font-semibold">OpenSlides</span></div>} trailing={<><Button variant="ghost" size="icon" className="h-8 w-8" title={`Command palette (${mod}K)`} onClick={() => setIsCommandOpen(true)}><CommandIcon className="h-3.5 w-3.5" /></Button><Button variant="outline" size="sm" className="gap-1.5" onClick={() => void handleImport()} disabled={importMutation.isPending}><Upload className="h-4 w-4" />Import</Button><Button onClick={() => setCreating(true)} className="gap-2" size="sm"><Plus className="h-4 w-4" />New Presentation</Button></>} />
-  {creating && <CreateProjectCard name={newName} onNameChange={setNewName} onCreate={() => void handleCreate()} onCancel={() => setCreating(false)} isPending={createMutation.isPending} />}
+  {(creating || projects.length === 0) && !isLoading && !isError && (
+    <div className="mx-auto max-w-7xl px-6 pt-8">
+      <CreateDeckTile
+        isExpanded={creating || projects.length === 0}
+        onToggleExpand={(expanded) => setCreating(expanded)}
+        name={newName}
+        onNameChange={setNewName}
+        selectedTheme={selectedTheme}
+        onThemeChange={setSelectedTheme}
+        onCreate={() => void handleCreate()}
+        isPending={createMutation.isPending}
+        isStandalone={true}
+      />
+    </div>
+  )}
   <DashboardStates
     isLoading={isLoading}
     isError={isError}

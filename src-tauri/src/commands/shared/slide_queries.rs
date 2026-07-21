@@ -26,7 +26,7 @@ pub async fn fetch_slides(
 ) -> Result<Vec<Slide>, String> {
     let rows = sqlx::query(
         r#"
-        SELECT id, code, duration, transition_duration, stagger, order_index, name, highlights, thumbnail_html
+        SELECT id, code, duration, transition_duration, stagger, order_index, name, highlights, thumbnail_html, section_id
         FROM slides
         WHERE project_id = ?
         ORDER BY order_index ASC
@@ -53,6 +53,7 @@ pub async fn fetch_slides(
                 name: r.try_get("name").unwrap_or_default(),
                 highlights,
                 thumbnail_html: r.try_get("thumbnail_html").unwrap_or_default(),
+                section_id: r.try_get::<Option<String>, _>("section_id").unwrap_or(None),
             }
         })
         .collect())
