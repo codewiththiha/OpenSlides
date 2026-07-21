@@ -85,6 +85,7 @@ pub struct NewSlide<'a> {
     pub name: &'a str,
     pub highlights_json: &'a str,
     pub thumbnail_html: &'a str,
+    pub section_id: Option<&'a str>,
 }
 
 pub async fn insert_slide_row<'c, E>(exec: E, slide: &NewSlide<'_>) -> Result<(), String>
@@ -93,8 +94,8 @@ where
 {
     sqlx::query(
         r#"INSERT INTO slides
-           (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+           (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html, section_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
     )
     .bind(slide.id)
     .bind(slide.project_id)
@@ -106,6 +107,7 @@ where
     .bind(slide.name)
     .bind(slide.highlights_json)
     .bind(slide.thumbnail_html)
+    .bind(slide.section_id)
     .execute(exec)
     .await
     .map_err(|e| format!("Failed to insert slide: {e}"))?;

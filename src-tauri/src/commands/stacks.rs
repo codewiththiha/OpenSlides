@@ -1,6 +1,7 @@
 //! Stack management commands for both projects (dashboard stacks) and slides (slide sections).
 
-use crate::commands::helpers::{fetch_slides, get_projects, load_settings};
+use crate::commands::helpers::{fetch_slides, load_settings};
+use crate::commands::projects::get_projects;
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
 use crate::models::{ProjectSummary, Slide};
