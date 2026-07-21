@@ -59,6 +59,7 @@ pub async fn create_slide(
             name: &slide_name,
             highlights_json: "[]",
             thumbnail_html: "",
+            section_id: None,
         },
     )
     .await?;
@@ -100,7 +101,7 @@ pub async fn duplicate_slide(
 
     let orig = sqlx::query(
         r#"
-        SELECT id, code, transition_duration, stagger, duration, order_index, name, highlights, thumbnail_html
+        SELECT id, code, transition_duration, stagger, duration, order_index, name, highlights, thumbnail_html, section_id
         FROM slides WHERE id = ? AND project_id = ?
         "#,
     )
@@ -119,6 +120,7 @@ pub async fn duplicate_slide(
     let orig_name: String = orig.try_get("name").unwrap_or_default();
     let orig_highlights: String = orig.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
     let orig_thumbnail: String = orig.try_get("thumbnail_html").unwrap_or_default();
+    let orig_section: Option<String> = orig.try_get("section_id").unwrap_or(None);
 
     let new_order = orig_order + 1;
     let new_id = Uuid::new_v4().to_string();
@@ -153,6 +155,7 @@ pub async fn duplicate_slide(
             name: &new_name,
             highlights_json: &orig_highlights,
             thumbnail_html: &orig_thumbnail,
+            section_id: orig_section.as_deref(),
         },
     )
     .await?;

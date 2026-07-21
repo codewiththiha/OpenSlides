@@ -95,6 +95,8 @@ export interface Slide {
   highlights: Highlight[];
   /** Cached truncated Shiki HTML for the slide-strip thumbnail. */
   thumbnailHtml?: string;
+  /** Section/group ID if this slide is part of a slide stack. */
+  sectionId?: string | null;
 }
 
 export interface ProjectSettings {
@@ -149,6 +151,8 @@ export interface ProjectSummary {
   firstSlideId: string;
   firstSlideCode: string;
   firstSlideThumbnail: string;
+  groupId?: string | null;
+  groupOrder?: number;
 }
 
 export function slideDisplayName(slide: Slide, index: number): string {

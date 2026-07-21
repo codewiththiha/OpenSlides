@@ -122,6 +122,17 @@ export const api = {
   searchSlides: (projectId: string, query: string) =>
     call<string[]>("search_slides", { projectId, query }),
 
+  stackProjects: (sourceIds: string[], targetId: string) =>
+    call<ProjectSummary[]>("stack_projects", { sourceIds, targetId }),
+
+  unstackProjects: (projectIds: string[]) =>
+    call<ProjectSummary[]>("unstack_projects", { projectIds }),
+
+  stackSlides: (projectId: string, sourceIds: string[], targetId: string) =>
+    call<Slide[]>("stack_slides", { projectId, sourceIds, targetId }),
+
+  unstackSlides: (projectId: string, slideIds: string[]) =>
+    call<Slide[]>("unstack_slides", { projectId, slideIds }),
 };
 
 /* Highlight DTOs (SelectionRange, HighlightPlan, HighlightTokenLine …) now

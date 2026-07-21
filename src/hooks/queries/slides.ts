@@ -194,3 +194,32 @@ export function useReorderSlides(projectId: string) {
     },
   });
 }
+
+export function useStackSlides(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sourceIds, targetId }: { sourceIds: string[]; targetId: string }) =>
+      api.stackSlides(projectId, sourceIds, targetId),
+    onSuccess: (slides) => {
+      qc.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
+        old ? { ...old, slides } : old
+      );
+      void qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+    },
+    onError: (err: Error) => notify.error(`Couldn't stack slides: ${err.message}`),
+  });
+}
+
+export function useUnstackSlides(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slideIds: string[]) => api.unstackSlides(projectId, slideIds),
+    onSuccess: (slides) => {
+      qc.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
+        old ? { ...old, slides } : old
+      );
+      void qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+    },
+    onError: (err: Error) => notify.error(`Couldn't unstack slides: ${err.message}`),
+  });
+}
