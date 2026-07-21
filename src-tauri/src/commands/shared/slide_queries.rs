@@ -2,7 +2,7 @@
 
 use crate::db::DbPool;
 use crate::models::Slide;
-use sqlx::{Executor, Sqlite};
+use sqlx::{Executor, Row, Sqlite};
 
 pub fn parse_highlights(raw: &str) -> Vec<crate::models::Highlight> {
     let trimmed = raw.trim();
