@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { StackLayers } from "./StackLayers";
 import { StackBadge } from "./StackBadge";
@@ -35,14 +35,6 @@ export const StackDeck = React.forwardRef<HTMLDivElement, StackDeckProps>(functi
   forwardedRef
 ) {
   const [hovered, setHovered] = useState(false);
-  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearClickTimeout = useCallback(() => {
-    if (clickTimeoutRef.current !== null) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-    }
-  }, []);
 
   const isInteractiveTarget = (target: EventTarget | null) => {
     if (!target || !(target instanceof HTMLElement)) return false;
@@ -59,27 +51,16 @@ export const StackDeck = React.forwardRef<HTMLDivElement, StackDeckProps>(functi
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (count <= 1) return;
       if (isInteractiveTarget(e.target)) return;
-
-      // Stop propagation to child card (e.g. ProjectCard/SlideCard's own onClick)
       e.stopPropagation();
       e.preventDefault();
-
-      if (e.detail > 1) {
-        clearClickTimeout();
-        return;
+      if (e.detail > 1) return; // ignore — double-click handler takes over
+      if (onExpand) {
+        onExpand();
+      } else if (onClick) {
+        onClick(e);
       }
-
-      clearClickTimeout();
-      clickTimeoutRef.current = setTimeout(() => {
-        clickTimeoutRef.current = null;
-        if (onExpand) {
-          onExpand();
-        } else if (onClick) {
-          onClick(e);
-        }
-      }, 200);
     },
-    [count, onExpand, onClick, clearClickTimeout]
+    [count, onExpand, onClick],
   );
 
   const handleDoubleClickCapture = useCallback(
@@ -89,7 +70,6 @@ export const StackDeck = React.forwardRef<HTMLDivElement, StackDeckProps>(functi
 
       e.stopPropagation();
       e.preventDefault();
-      clearClickTimeout();
 
       if (onOpenTop) {
         onOpenTop();
@@ -97,7 +77,7 @@ export const StackDeck = React.forwardRef<HTMLDivElement, StackDeckProps>(functi
         onDoubleClick(e);
       }
     },
-    [count, onOpenTop, onDoubleClick, clearClickTimeout]
+    [count, onOpenTop, onDoubleClick],
   );
 
   const handleKeyDown = useCallback(
@@ -115,10 +95,7 @@ export const StackDeck = React.forwardRef<HTMLDivElement, StackDeckProps>(functi
       ref={forwardedRef}
       className={cn("relative isolate", count > 1 && "cursor-pointer", className)}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => {
-        setHovered(false);
-        clearClickTimeout();
-      }}
+      onMouseLeave={() => setHovered(false)}
       onClickCapture={handleClickCapture}
       onDoubleClickCapture={handleDoubleClickCapture}
       onClick={(e) => {
