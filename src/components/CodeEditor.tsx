@@ -324,7 +324,7 @@ export function CodeEditor({
             onChange={(e) => {
               projectSettingsMutation.mutate({ language: e.target.value });
             }}
-            title="Project language"
+            title="Code language"
           >
             {SUPPORTED_LANGUAGES.map((l) => (
               <option key={l.value} value={l.value}>
@@ -343,7 +343,7 @@ export function CodeEditor({
             onClick={() => setHighlightMode((v) => !v)}
             title={
               highlightMode
-                ? "Highlight mode ON — select text — toolbar or right-click to add highlights"
+                ? "Highlight mode is on — select code and right-click to add a highlight"
                 : "Toggle highlight mode"
             }
           >
@@ -361,7 +361,7 @@ export function CodeEditor({
               size="icon"
               className="h-7 w-7 shrink-0"
               onClick={onToggleExpand}
-              title={expanded ? "Exit expanded" : "Expand editor"}
+              title={expanded ? "Exit expanded view" : "Expand editor"}
             >
               {expanded ? (
                 <Minimize2 className="h-3.5 w-3.5" />
@@ -493,10 +493,11 @@ export function CodeEditor({
       {highlightMode && currentHighlights.length === 0 && (
         <div className="shrink-0 border-t border-border/50 bg-muted/20 px-3 py-2">
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Highlight mode is on — select code and a toolbar appears (or right-click) to choose{" "}
+            Highlight mode is on. Select code, then choose{" "}
             <span className="font-medium text-foreground/80">Add Highlight</span>.
-            Steps play in order with <Kbd className="bg-background px-1 text-[9px]">→</Kbd>{" "}
-            or a click before the next slide.
+            {" "}During the presentation, highlights play in order with{" "}
+            <Kbd className="bg-background px-1 text-[9px]">→</Kbd>{" "}
+            or a click.
           </p>
         </div>
       )}

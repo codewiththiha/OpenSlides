@@ -91,7 +91,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
         style={{ zIndex: Z_INDEX.drawer }}
       >
         <div className="flex h-12 items-center justify-between border-b px-4">
-          <h2 className="text-sm font-semibold">Project Settings</h2>
+              <h2 className="text-sm font-semibold">Presentation Settings</h2>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -120,8 +120,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               Code layout
             </Label>
             <p className="text-[11px] text-muted-foreground">
-              Positions the whole code block on the stage (not per-line text
-              alignment). Applies to every slide.
+              Where the code block sits on your slides. Applies to all slides.
             </p>
             <div className="grid grid-cols-2 gap-2">
               {(["left", "center"] as const).map((align) => {
@@ -142,7 +141,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
                     <div className="mt-0.5 text-[10px] text-muted-foreground">
                       {align === "left"
                         ? "Block starts at the left edge"
-                        : "Block centered like CodeSlides"}
+                        : "Centered on the slide"}
                     </div>
                   </button>
                 );
@@ -162,7 +161,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             />
             <ToggleField
               label="Code editor"
-              description="Gutter in the editor only"
+              description="Line numbers in the code editor"
               checked={editorShowLineNumbers}
               onChange={(next) => {
                 const before = editorShowLineNumbers;
@@ -176,7 +175,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             />
             <ToggleField
               label="Slide hover previews"
-              description="Show enlarged thumbnails when hovering slide cards"
+              description="Show a larger preview when you hover over a slide"
               checked={showSlideHoverPreview}
               onChange={setShowSlideHoverPreview}
             />
@@ -223,8 +222,10 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               Global Animations
             </h3>
             <p className="text-[11px] text-muted-foreground">
-              When enabled, per-slide transition / stagger sliders in the editor
-              are locked to these values.
+              When on, every slide uses these animation values and the per-slide sliders are locked.
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Stagger is the delay between each animated character.
             </p>
 
             <ToggleField label="Use global transition" checked={s.useGlobalTransition} onChange={(v) => patch({ useGlobalTransition: v })} />

@@ -8,7 +8,7 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
 pub const DEFAULT_CODE: &str = r#"// Welcome to OpenSlides
-// Feedbacks on @codewiththiha
+// Feedback: @codewiththiha
 function greet() {
   console.log("Hi, Mom!");
 }"#;
@@ -163,7 +163,7 @@ pub async fn fetch_project(pool: &DbPool, project_id: &str) -> Result<Project, S
     .fetch_optional(pool)
     .await
     .map_err(|e| format!("Failed to fetch project: {e}"))?
-    .ok_or_else(|| format!("Project not found: {project_id}"))?;
+    .ok_or_else(|| format!("Presentation not found: {project_id}"))?;
 
     let settings_raw: String = row.get("settings");
     let mut settings = parse_settings(&settings_raw);
@@ -192,7 +192,7 @@ where
         .fetch_optional(exec)
         .await
         .map_err(|e| format!("Failed to load project settings: {e}"))?
-        .ok_or_else(|| format!("Project not found: {project_id}"))?;
+        .ok_or_else(|| format!("Presentation not found: {project_id}"))?;
     let raw: String = row.get("settings");
     Ok(parse_settings(&raw))
 }
