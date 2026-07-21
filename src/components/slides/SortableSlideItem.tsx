@@ -115,13 +115,13 @@ export function SortableSlideItem({
         isReorderHover && "border-l-2 border-primary pl-1"
       )}
     >
-      {/* Center 50% stack drop zone */}
+      {/* Full-card stack drop zone */}
       <div
         ref={setStackTargetRef}
         className={cn(
-          "absolute inset-y-1 left-1/4 right-1/4 z-30 transition-all duration-150",
+          "absolute inset-0 z-30 rounded-md transition-all duration-150",
           isOverStackTarget
-            ? "rounded-lg ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary/20 scale-95 shadow-md pointer-events-auto"
+            ? "ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary/10 shadow-md pointer-events-auto"
             : "pointer-events-none"
         )}
         style={{ pointerEvents: isDraggingId && isDraggingId !== slide.id ? "auto" : "none" }}
