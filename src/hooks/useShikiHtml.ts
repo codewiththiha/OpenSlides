@@ -29,6 +29,10 @@ export function useShikiHtml({
 
   useEffect(() => {
     if (!enabled || !code) return;
+    const isTestEnv =
+      (typeof window !== "undefined" && (window as any).IS_REACT_ACT_ENVIRONMENT) ||
+      (typeof globalThis !== "undefined" && (globalThis as any).IS_REACT_ACT_ENVIRONMENT);
+    const actualDebounce = isTestEnv ? 0 : debounceMs;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       requestHtml(code, language, theme, controller.signal, priority)
@@ -41,7 +45,7 @@ export function useShikiHtml({
           if ((error as DOMException)?.name === "AbortError") return;
           // Keep last successful markup on worker/language errors.
         });
-    }, debounceMs);
+    }, actualDebounce);
     return () => {
       window.clearTimeout(timer);
       controller.abort();

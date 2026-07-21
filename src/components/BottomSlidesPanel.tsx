@@ -45,7 +45,11 @@ import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { SlidesPanelHeader } from "./slides/SlidesPanelHeader";
 import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
+import { StackExpandedControls } from "./ui/stack/StackExpandedControls";
 import { useUiStore } from "@/store/useUiStore";
+import { chunkConsecutive } from "@/lib/grouping";
+import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
+import { useStackDragEnd } from "@/hooks/useStackDragEnd";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -67,6 +71,8 @@ import {
   useReorderSlides,
   useRestoreSlide,
   useUpdateSlideSettings,
+  useStackSlides,
+  useUnstackSlides,
 } from "@/hooks/queries";
 
 export function BottomSlidesPanel({
@@ -93,8 +99,30 @@ export function BottomSlidesPanel({
   const restoreSlide = useRestoreSlide(project.id);
   const reorder = useReorderSlides(project.id);
   const updateSettings = useUpdateSlideSettings(project.id);
+  const stackSlides = useStackSlides(project.id);
+  const unstackSlides = useUnstackSlides(project.id);
   const theme = project.theme;
   const language = resolveProjectLanguage(project);
+
+  const { handleStackDrop } = useStackDragEnd({
+    stackTargetKind: "slide-stack-target",
+    resolveSourceIds: (activeData: any) =>
+      activeData?.id ? [String(activeData.id)] : [],
+    resolveTargetId: (overData: any) =>
+      overData?.targetId ? String(overData.targetId) : null,
+    onStack: (sourceIds, targetId) => {
+      stackSlides.mutate({ sourceIds, targetId });
+    },
+  });
+
+  useAutoDissolveStacks(
+    project.slides,
+    (s) => s.sectionId,
+    (s) => s.id,
+    unstackSlides.mutate,
+  );
+
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
 
   const [ordered, setOrdered] = useState<Slide[]>(project.slides);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
@@ -178,6 +206,7 @@ export function BottomSlidesPanel({
     }),
   );
 
+  const slideChunks = useMemo(() => chunkConsecutive(filteredOrdered), [filteredOrdered]);
   const ids = useMemo(() => filteredOrdered.map((s) => s.id), [filteredOrdered]);
   const tabStopId = filteredOrdered.find((s) => s.id === currentSlideId)?.id ?? filteredOrdered[0]?.id;
 
@@ -193,21 +222,27 @@ export function BottomSlidesPanel({
       if (searchQuery.trim()) return; // disable reorder when filtering
       if (!over || active.id === over.id) return;
 
-      const oldIndex = ordered.findIndex((s) => s.id === active.id);
-      const newIndex = ordered.findIndex((s) => s.id === over.id);
-      if (oldIndex < 0 || newIndex < 0) return;
+      if (handleStackDrop(active, over)) {
+        return;
+      }
+
+      const oldChunkIndex = slideChunks.findIndex((c) => c.items.some((s) => s.id === active.id));
+      const newChunkIndex = slideChunks.findIndex((c) => c.items.some((s) => s.id === over.id));
+      if (oldChunkIndex < 0 || newChunkIndex < 0) return;
 
       const previous = ordered;
-      const next = arrayMove(ordered, oldIndex, newIndex);
-      setOrdered(next);
-      reorder.mutate(
-        next.map((s) => s.id),
-        {
-          onError: () => setOrdered(previous),
-        },
-      );
+      const nextChunks = arrayMove(slideChunks, oldChunkIndex, newChunkIndex);
+      const nextIds = nextChunks.flatMap((c) => c.items.map((s) => s.id));
+      const nextOrdered = nextIds
+        .map((id) => ordered.find((s) => s.id === id)!)
+        .filter(Boolean);
+
+      setOrdered(nextOrdered);
+      reorder.mutate(nextIds, {
+        onError: () => setOrdered(previous),
+      });
     },
-    [ordered, reorder, searchQuery],
+    [ordered, slideChunks, handleStackDrop, reorder, searchQuery],
   );
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
@@ -275,18 +310,69 @@ export function BottomSlidesPanel({
             role="listbox"
             aria-label="Slides"
           >
-            {filteredOrdered.map((slide, index) => {
-              const originalIndex = ordered.findIndex((s) => s.id === slide.id);
+            {slideChunks.map((chunk) => {
+              const isStack = chunk.kind === "stack" && chunk.items.length > 1;
+              const isExpanded = isStack && chunk.groupId === expandedSectionId;
+
+              if (isExpanded) {
+                return (
+                  <div
+                    key={chunk.groupId}
+                    className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1 transition-all duration-200"
+                  >
+                    <StackExpandedControls
+                      count={chunk.items.length}
+                      variant="slide-strip"
+                      onUngroup={() => {
+                        unstackSlides.mutate(chunk.items.map((s) => s.id));
+                        setExpandedSectionId(null);
+                      }}
+                      onClose={() => setExpandedSectionId(null)}
+                    />
+                    {chunk.items.map((slide) => {
+                      const originalIndex = ordered.findIndex((s) => s.id === slide.id);
+                      return (
+                        <SortableSlideItem
+                          key={slide.id}
+                          slide={slide}
+                          index={originalIndex >= 0 ? originalIndex : 0}
+                          onRemove={handleRemove}
+                          onDuplicate={handleDuplicate}
+                          isDraggingId={activeId}
+                          isRenaming={rename.renamingId === slide.id}
+                          renameValue={rename.renamingId === slide.id ? rename.value : ""}
+                          highlightProgress={activeHighlightIndex}
+                          onRenameValueChange={rename.setValue}
+                          onCommitRename={() => void rename.commit()}
+                          onCancelRename={rename.cancel}
+                          onRename={rename.start}
+                          registerCardRef={registerCardRef}
+                          navigationIds={ids}
+                          cardRefs={cardRefs}
+                          isTabStop={slide.id === tabStopId}
+                          theme={theme}
+                          language={language}
+                          searchQuery={searchQuery}
+                          enableHoverPreview={showSlideHoverPreview}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              }
+
+              const topSlide = chunk.items[0];
+              const originalIndex = ordered.findIndex((s) => s.id === topSlide.id);
               return (
                 <SortableSlideItem
-                  key={slide.id}
-                  slide={slide}
-                  index={originalIndex >= 0 ? originalIndex : index}
+                  key={isStack ? chunk.groupId : topSlide.id}
+                  slide={topSlide}
+                  index={originalIndex >= 0 ? originalIndex : 0}
                   onRemove={handleRemove}
                   onDuplicate={handleDuplicate}
                   isDraggingId={activeId}
-                  isRenaming={rename.renamingId === slide.id}
-                  renameValue={rename.renamingId === slide.id ? rename.value : ""}
+                  isRenaming={rename.renamingId === topSlide.id}
+                  renameValue={rename.renamingId === topSlide.id ? rename.value : ""}
                   highlightProgress={activeHighlightIndex}
                   onRenameValueChange={rename.setValue}
                   onCommitRename={() => void rename.commit()}
@@ -295,11 +381,15 @@ export function BottomSlidesPanel({
                   registerCardRef={registerCardRef}
                   navigationIds={ids}
                   cardRefs={cardRefs}
-                  isTabStop={slide.id === tabStopId}
+                  isTabStop={topSlide.id === tabStopId}
                   theme={theme}
                   language={language}
                   searchQuery={searchQuery}
                   enableHoverPreview={showSlideHoverPreview}
+                  isStack={isStack}
+                  count={chunk.items.length}
+                  onExpand={() => setExpandedSectionId(chunk.groupId!)}
+                  onOpenTop={() => setCurrentSlideId(topSlide.id)}
                 />
               );
             })}

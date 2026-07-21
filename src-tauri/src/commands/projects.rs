@@ -17,14 +17,17 @@ use uuid::Uuid;
 pub async fn get_projects(pool: State<'_, DbPool>) -> CommandResult<Vec<ProjectSummary>> {
     let rows = sqlx::query(
         r#"
-        SELECT p.id, p.name, p.theme, p.created_at, p.updated_at,
+        SELECT p.id, p.name, p.theme, p.created_at, p.updated_at, p.group_id, p.group_order,
                (SELECT COUNT(*) FROM slides s WHERE s.project_id = p.id) AS slide_count,
                COALESCE(json_extract(p.settings, '$.language'), 'typescript') AS language,
                (SELECT s.id FROM slides s WHERE s.project_id = p.id ORDER BY s.order_index ASC LIMIT 1) AS first_slide_id,
                COALESCE((SELECT substr(s.code, 1, 400) FROM slides s WHERE s.project_id = p.id ORDER BY s.order_index ASC LIMIT 1), '') AS first_slide_code,
                COALESCE((SELECT s.thumbnail_html FROM slides s WHERE s.project_id = p.id ORDER BY s.order_index ASC LIMIT 1), '') AS first_slide_thumbnail
         FROM projects p
-        ORDER BY p.updated_at DESC
+        ORDER BY
+            COALESCE((SELECT MAX(p2.updated_at) FROM projects p2 WHERE p2.group_id IS NOT NULL AND p2.group_id != '' AND p2.group_id = p.group_id), p.updated_at) DESC,
+            COALESCE(p.group_id, p.id) ASC,
+            p.group_order ASC
         "#,
     )
     .fetch_all(pool.inner())
@@ -44,6 +47,8 @@ pub async fn get_projects(pool: State<'_, DbPool>) -> CommandResult<Vec<ProjectS
             first_slide_id: r.try_get("first_slide_id").unwrap_or_default(),
             first_slide_code: r.try_get("first_slide_code").unwrap_or_default(),
             first_slide_thumbnail: r.try_get("first_slide_thumbnail").unwrap_or_default(),
+            group_id: r.try_get::<Option<String>, _>("group_id").unwrap_or(None),
+            group_order: r.try_get::<i64, _>("group_order").unwrap_or(0),
         })
         .collect())
 }
@@ -139,7 +144,7 @@ pub async fn duplicate_project(
     let settings_raw: String = project.get("settings");
     let mut settings = crate::models::parse_settings(&settings_raw);
     let slides = sqlx::query(
-        "SELECT id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html FROM slides WHERE project_id = ? ORDER BY order_index",
+        "SELECT id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html, section_id FROM slides WHERE project_id = ? ORDER BY order_index",
     )
     .bind(&project_id)
     .fetch_all(&mut *tx)
@@ -148,8 +153,12 @@ pub async fn duplicate_project(
 
     let new_project_id = Uuid::new_v4().to_string();
     let mut id_map = std::collections::HashMap::new();
+    let mut section_map = std::collections::HashMap::new();
     for row in &slides {
         id_map.insert(row.get::<String, _>("id"), Uuid::new_v4().to_string());
+        if let Some(sec) = row.try_get::<Option<String>, _>("section_id").unwrap_or(None) {
+            section_map.entry(sec).or_insert_with(|| Uuid::new_v4().to_string());
+        }
     }
     settings.current_slide_id = settings
         .current_slide_id
@@ -172,7 +181,9 @@ pub async fn duplicate_project(
 
     for row in slides {
         let old_id: String = row.get("id");
-        sqlx::query("INSERT INTO slides (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        let old_sec = row.try_get::<Option<String>, _>("section_id").unwrap_or(None);
+        let new_sec = old_sec.and_then(|sec| section_map.get(&sec).cloned());
+        sqlx::query("INSERT INTO slides (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(id_map.get(&old_id).unwrap())
             .bind(&new_project_id)
             .bind(row.get::<i64, _>("order_index"))
@@ -183,6 +194,7 @@ pub async fn duplicate_project(
             .bind(row.try_get::<String, _>("name").unwrap_or_default())
             .bind(row.try_get::<String, _>("highlights").unwrap_or_else(|_| "[]".to_string()))
             .bind(row.try_get::<String, _>("thumbnail_html").unwrap_or_default())
+            .bind(new_sec)
             .execute(&mut *tx)
             .await
             .map_err(|e| format!("Failed to duplicate slide: {e}"))?;

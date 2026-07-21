@@ -72,6 +72,9 @@ pub struct Slide {
     /// Cached, truncated Shiki HTML for the slide-strip thumbnail.
     #[serde(default)]
     pub thumbnail_html: String,
+    /// Section/group ID if this slide is part of a slide stack.
+    #[serde(default)]
+    pub section_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -177,6 +180,10 @@ pub struct ProjectSummary {
     pub first_slide_code: String,
     #[serde(default)]
     pub first_slide_thumbnail: String,
+    #[serde(default)]
+    pub group_id: Option<String>,
+    #[serde(default)]
+    pub group_order: i64,
 }
 
 #[derive(Debug, Deserialize)]

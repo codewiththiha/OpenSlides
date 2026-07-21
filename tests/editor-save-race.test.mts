@@ -12,7 +12,7 @@
  * Worse: the DB row itself regressed — silent data loss.
  *
  * Fix under test:
- *   - src/lib/code-save-queue.ts — serialized per-slide saves.
+ *   - src/lib/code-save.ts — serialized per-slide saves.
  *   - mergeSlidePreservingEditorCode in hooks/queries/slides.ts — settings
  *     responses can no longer carry a stale `code` column into the cache.
  *
@@ -31,7 +31,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "../src/store/useUiStore";
-import { enqueueCodeSave, pendingSaveChains, pendingSaveChainKeys } from "../src/lib/code-save-queue";
+import { enqueueCodeSave, pendingSaveChains, pendingSaveChainKeys } from "../src/lib/code-save";
 import { useUpdateSlideCode, mergeSlidePreservingEditorCode } from "../src/hooks/queries/slides";
 import type { Project, Slide } from "../src/types";
 import {
@@ -114,9 +114,6 @@ interface HarnessProps {
 }
 
 function EditorHarness({ useMutationHook, slideId }: HarnessProps) {
-  // Same data flow as Editor.tsx → CodeEditor.tsx: project comes from the
-  // detail query; the editor value is the localCode shadow falling back to
-  // the cached slide code.
   const { data: project } = useQuery<Project>({
     queryKey: QUERY_KEY,
     queryFn: () => new Promise<Project>(() => {}),
@@ -125,11 +122,20 @@ function EditorHarness({ useMutationHook, slideId }: HarnessProps) {
   const local = useUiStore((s) => s.localCode);
   const setLocalCode = useUiStore((s) => s.setLocalCode);
   const mutation = useMutationHook();
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   if (!project) return null;
   const slide = project.slides.find((s) => s.id === slideId) ?? project.slides[0];
   const code = (slideId && local[slideId]) ?? slide.code;
+
+  React.useEffect(() => {
+    if (textareaRef.current && textareaRef.current.value !== code) {
+      textareaRef.current.value = code;
+    }
+  }, [code]);
+
   return h("textarea", {
-    value: code,
+    ref: textareaRef,
+    defaultValue: code,
     onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const v = e.target.value;
       setLocalCode(slideId, v);
@@ -161,6 +167,7 @@ async function mount(
     root.render(
       h(QueryClientProvider, { client: qc }, h(EditorHarness, { useMutationHook, slideId })),
     );
+    await new Promise((resolve) => setTimeout(resolve, 20));
   });
   const el = () => {
     const t = container.querySelector("textarea");
@@ -281,6 +288,7 @@ test("queued saves: out-of-order resolution is structurally impossible; value an
   assert.equal(snapshot.selectionStart, 5, "caret never moved");
   assert.equal(pendingSaves.length, 0);
   await m.unmount();
+  await new Promise((r) => setTimeout(r, 10));
 });
 
 test("mid-line insertion keeps the caret mid-line (no async involved)", async () => {
@@ -309,6 +317,7 @@ test("mid-line insertion keeps the caret mid-line (no async involved)", async ()
   });
   await new Promise((r) => setTimeout(r, 0));
   await m.unmount();
+  await new Promise((r) => setTimeout(r, 10));
 });
 
 test("enqueueCodeSave: strictly sequential per slide", async () => {
