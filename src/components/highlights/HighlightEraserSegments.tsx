@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
 import type { HighlightMeasurement } from "@/lib/highlight-utils";
 import type { HighlightPlan } from "@/lib/highlight-tokens";
+import { EASE_DIM } from "./easings";
 
-export const EASE_DIM = [0.25, 0.1, 0.25, 1] as const;
+
 
 interface HighlightEraserSegmentsProps {
   highlightId: string;

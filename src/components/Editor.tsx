@@ -15,10 +15,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEditorSlice } from "@/store/ui-selectors";
 import { useCurrentSlide } from "@/hooks/useCurrentSlide";
-import { Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { TitleBar } from "./TitleBar";
 import { SettingsDrawer } from "./SettingsDrawer";
+import { AsyncState } from "./states/async-state";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { GoToSlideDialog } from "./GoToSlideDialog";
@@ -216,10 +216,7 @@ export function Editor() {
     return (
       <div className="flex h-full flex-col">
         <TitleBar title="OpenSlides" />
-        <div className="flex flex-1 items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading project…
-        </div>
+        <AsyncState isLoading isError={false} loadingLabel="Loading project…" />
       </div>
     );
   }
@@ -228,12 +225,14 @@ export function Editor() {
     return (
       <div className="flex h-full flex-col">
         <TitleBar title="OpenSlides" />
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          <p className="text-destructive">
-            {(error as Error)?.message ?? "Presentation not found"}
-          </p>
-          <Button onClick={() => navigate("/")}>Back to Dashboard</Button>
-        </div>
+        <AsyncState
+          isLoading={false}
+          isError
+          error={error as Error | null}
+          errorAction={
+            <Button onClick={() => navigate("/")}>Back to Dashboard</Button>
+          }
+        />
       </div>
     );
   }

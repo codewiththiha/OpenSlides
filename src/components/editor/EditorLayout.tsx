@@ -11,7 +11,7 @@ import {
   PanelResizeHandle,
   type ImperativePanelHandle,
 } from "react-resizable-panels";
-import { Code2 } from "lucide-react";
+import { ChevronLeft, Code2 } from "lucide-react";
 import { CodeEditor } from "../CodeEditor";
 import { BottomSlidesPanel } from "../BottomSlidesPanel";
 import { RenderErrorBoundary } from "../RenderErrorBoundary";
@@ -165,13 +165,28 @@ export const EditorLayout = memo(function EditorLayout({
                     onExpand={() => setIsCodePanelCollapsed(false)}
                   >
                     {isCodePanelCollapsed ? (
-                      <CollapsedPanelButton
-                        orientation="vertical"
-                        icon={Code2}
-                        label="Code"
+                      <div
+                        className="flex h-full w-full min-w-[28px] cursor-pointer flex-col items-center justify-center gap-2 border-l border-border/50 bg-card/60 hover:bg-muted/40"
                         onClick={expandCodePanel}
                         title="Expand code editor (or drag the handle)"
-                      />
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            expandCodePanel();
+                          }
+                        }}
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                        <CollapsedPanelButton
+                          orientation="vertical"
+                          icon={Code2}
+                          label="Code"
+                          onClick={expandCodePanel}
+                          className="h-auto w-auto min-w-0 border-0 bg-transparent hover:bg-transparent"
+                        />
+                      </div>
                     ) : (
                       <RenderErrorBoundary key={`editor-${project.id}`}>
                         <CodeEditor
