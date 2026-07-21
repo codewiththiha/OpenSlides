@@ -94,6 +94,7 @@ export function ProjectGridView({
   );
 
   const [activeDragItem, setActiveDragItem] = useState<any>(null);
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
   const [expandedChunkInfo, setExpandedChunkInfo] = useState<{
     chunk: GroupChunk<ProjectSummary>;
     el: HTMLElement | null;
@@ -139,6 +140,8 @@ export function ProjectGridView({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveDragItem(event.active.data.current || null);
+    const rect = event.active.rect.current.initial || event.active.rect.current.translated;
+    if (rect) setDragWidth(rect.width);
   }, []);
 
   const handleDragEnd = useCallback(
@@ -270,7 +273,10 @@ export function ProjectGridView({
       <DragOverlay>
         {activeDragItem ? (
           activeDragItem.kind === "fan-item" ? (
-            <div className="w-[220px] opacity-90 shadow-2xl scale-105 rotate-2 cursor-grabbing pointer-events-none">
+            <div
+              className="opacity-90 shadow-2xl rotate-2 cursor-grabbing pointer-events-none"
+              style={{ width: dragWidth ?? undefined }}
+            >
               <ProjectCard
                 project={activeDragItem.project}
                 isRenaming={false}
@@ -290,7 +296,8 @@ export function ProjectGridView({
           ) : activeDragItem.chunk?.kind === "stack" ? (
             <StackDeck
               count={activeDragItem.chunk.items.length}
-              className="w-[220px] opacity-90 shadow-2xl scale-105 rotate-2 cursor-grabbing pointer-events-none"
+              className="opacity-90 shadow-2xl rotate-2 cursor-grabbing pointer-events-none"
+              style={{ width: dragWidth ?? undefined }}
             >
               <ProjectCard
                 project={activeDragItem.chunk.items[0]}
@@ -309,7 +316,10 @@ export function ProjectGridView({
               />
             </StackDeck>
           ) : activeDragItem.chunk?.items?.[0] ? (
-            <div className="w-[220px] opacity-90 shadow-2xl scale-105 rotate-2 cursor-grabbing pointer-events-none">
+            <div
+              className="opacity-90 shadow-2xl rotate-2 cursor-grabbing pointer-events-none"
+              style={{ width: dragWidth ?? undefined }}
+            >
               <ProjectCard
                 project={activeDragItem.chunk.items[0]}
                 isRenaming={false}
