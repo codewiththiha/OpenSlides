@@ -1,36 +1,14 @@
 mod commands;
 mod db;
 mod error;
+mod lifecycle;
 mod models;
 
 use commands::*;
 use db::init_db;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{Emitter, Manager};
-
-/// Set by `finish_quit` once the frontend flushed the pending debounced
-/// slide-code save — the *second* close/exit request is then let through
-/// instead of being intercepted again.
-pub(crate) static QUIT_FLUSHED: AtomicBool = AtomicBool::new(false);
-
-/// Set when the quit handshake has been initiated so duplicate native close
-/// events cannot emit duplicate flush requests or spawn duplicate watchdogs.
-pub(crate) static FLUSH_REQUESTED: AtomicBool = AtomicBool::new(false);
-
-/// Ask the webview to flush pending saves before terminating, and arm a
-/// hard-exit fallback so a wedged frontend can never trap the OS-level
-/// quit (the app force-exits a few seconds later regardless).
-/// Works for both `Window` (CloseRequested) and `AppHandle` (ExitRequested).
-fn request_flush_before_quit<R: tauri::Runtime, E: Emitter<R> + ?Sized>(emitter: &E) {
-    if FLUSH_REQUESTED.swap(true, Ordering::SeqCst) {
-        return;
-    }
-    let _ = emitter.emit("app://quit-request", ());
-    std::thread::spawn(|| {
-        std::thread::sleep(std::time::Duration::from_secs(4));
-        std::process::exit(0);
-    });
-}
+use lifecycle::{request_flush_before_quit, FLUSH_REQUESTED, QUIT_FLUSHED};
+use std::sync::atomic::Ordering;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

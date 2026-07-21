@@ -4,6 +4,7 @@
 //! `lib.rs` can register a single flat handler list.
 
 pub mod helpers;
+pub mod shared;
 mod io;
 mod projects;
 mod quit;
