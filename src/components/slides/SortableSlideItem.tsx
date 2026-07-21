@@ -1,5 +1,5 @@
 import { useSortable } from "@dnd-kit/sortable";
-import { useDroppable } from "@dnd-kit/core";
+import { useStackDropTarget } from "@/hooks/useStackDropTarget";
 import { CSS } from "@dnd-kit/utilities";
 import { SlideCard } from "./SlideCard";
 import { StackDeck } from "../ui/stack/StackDeck";
@@ -74,14 +74,14 @@ export function SortableSlideItem({
   const {
     setNodeRef: setStackTargetRef,
     isOver: isOverStackTarget,
-  } = useDroppable({
-    id: `stack-target-${slide.id}`,
-    data: {
+  } = useStackDropTarget(
+    `stack-target-${slide.id}`,
+    {
       kind: "slide-stack-target",
       targetId: slide.id,
     },
-    disabled: Boolean(isDraggingId === slide.id || isRenaming || searchQuery.trim().length > 0),
-  });
+    Boolean(isDraggingId === slide.id || isRenaming || searchQuery.trim().length > 0),
+  );
 
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
