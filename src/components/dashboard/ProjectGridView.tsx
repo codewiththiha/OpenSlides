@@ -14,7 +14,7 @@ import { ProjectCard } from "./ProjectCard";
 import { StackSpread } from "./StackSpread";
 import { StackDeck } from "../ui/stack/StackDeck";
 import { chunkConsecutive, type GroupChunk } from "@/lib/grouping";
-import { useStackProjects, useUnstackProjects } from "@/hooks/queries/projects";
+import { useStackProjects, useUnstackProjects } from "@/hooks/queries/stacks";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 import type { ProjectSummary } from "@/types";
 
