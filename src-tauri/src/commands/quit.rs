@@ -10,6 +10,6 @@ use tauri::AppHandle;
 /// CloseRequested/ExitRequested pass through instead of being intercepted.
 #[tauri::command]
 pub async fn finish_quit(app: AppHandle) {
-    crate::QUIT_FLUSHED.store(true, Ordering::SeqCst);
+    crate::lifecycle::QUIT_FLUSHED.store(true, Ordering::SeqCst);
     app.exit(0);
 }
