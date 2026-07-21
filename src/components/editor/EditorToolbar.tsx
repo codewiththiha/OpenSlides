@@ -175,7 +175,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             title={
               isAutoPlaying
                 ? "Pause autoplay"
-                : "Play slides (uses each slide’s duration)"
+                : "Play (auto-advance by slide duration)"
             }
             onClick={() => toggleAutoPlaying()}
           >
@@ -200,7 +200,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title="Toggle UI theme"
+            title="Toggle light/dark mode"
             onClick={toggleTheme}
           >
             {isDarkUi ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -210,7 +210,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title={`Zen mode (${mod}B)`}
+            title={`Focus mode (${mod}B)`}
             onClick={toggleZenMode}
           >
             <Focus className="h-4 w-4" />
@@ -220,7 +220,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title="Export JSON"
+            title="Export"
             onClick={() => exportMutation.mutate(project.id)}
           >
             <Download className="h-4 w-4" />

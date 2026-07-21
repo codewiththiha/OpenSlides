@@ -183,7 +183,7 @@ export function SlidePreview({
         </div>
       );
     }
-    return <div className="flex h-full w-full items-center justify-center text-muted-foreground">Loading highlighter…</div>;
+    return <div className="flex h-full w-full items-center justify-center text-muted-foreground">Loading preview…</div>;
   }
 
   return (

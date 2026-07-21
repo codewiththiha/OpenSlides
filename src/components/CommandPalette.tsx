@@ -103,7 +103,7 @@ export function CommandPalette({
             />
             <Item
               icon={<Focus className="h-4 w-4" />}
-              label="Toggle Zen Mode"
+              label="Toggle focus mode"
               onSelect={() => run(() => toggleZenMode())}
             />
             <Item
@@ -113,14 +113,14 @@ export function CommandPalette({
             />
             <Item
               icon={<Download className="h-4 w-4" />}
-              label="Export Project JSON"
+              label="Export presentation"
               onSelect={() => run(() => onExport?.())}
             />
           </>
         )}
         <Item
           icon={isDarkUi ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          label={isDarkUi ? "Switch to Light UI" : "Switch to Dark UI"}
+          label={isDarkUi ? "Switch to light mode" : "Switch to dark mode"}
           onSelect={() => run(() => toggleTheme())}
         />
         <Item
