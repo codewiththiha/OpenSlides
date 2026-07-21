@@ -18,8 +18,6 @@ CREATE TABLE IF NOT EXISTS projects (
     group_order INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS idx_projects_group ON projects(group_id, group_order);
-
 CREATE TABLE IF NOT EXISTS slides (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL,
@@ -36,5 +34,4 @@ CREATE TABLE IF NOT EXISTS slides (
 );
 
 CREATE INDEX IF NOT EXISTS idx_slides_project ON slides(project_id, order_index);
-CREATE INDEX IF NOT EXISTS idx_slides_section ON slides(project_id, section_id, order_index);
 "#;
