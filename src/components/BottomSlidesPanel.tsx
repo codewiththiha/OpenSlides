@@ -51,6 +51,7 @@ import { Button } from "./ui/button";
 import { useUiStore } from "@/store/useUiStore";
 import { chunkConsecutive } from "@/lib/grouping";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
+import { useStackDragEnd } from "@/hooks/useStackDragEnd";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -104,6 +105,17 @@ export function BottomSlidesPanel({
   const unstackSlides = useUnstackSlides(project.id);
   const theme = project.theme;
   const language = resolveProjectLanguage(project);
+
+  const { handleStackDrop } = useStackDragEnd({
+    stackTargetKind: "slide-stack-target",
+    resolveSourceIds: (activeData: any) =>
+      activeData?.id ? [String(activeData.id)] : [],
+    resolveTargetId: (overData: any) =>
+      overData?.targetId ? String(overData.targetId) : null,
+    onStack: (sourceIds, targetId) => {
+      stackSlides.mutate({ sourceIds, targetId });
+    },
+  });
 
   useAutoDissolveStacks(
     project.slides,
@@ -212,12 +224,7 @@ export function BottomSlidesPanel({
       if (searchQuery.trim()) return; // disable reorder when filtering
       if (!over || active.id === over.id) return;
 
-      const overData = over.data?.current;
-      if (overData?.kind === "slide-stack-target") {
-        const targetId = String(overData.targetId);
-        if (String(active.id) !== targetId) {
-          stackSlides.mutate({ sourceIds: [String(active.id)], targetId });
-        }
+      if (handleStackDrop(active, over)) {
         return;
       }
 
@@ -237,7 +244,7 @@ export function BottomSlidesPanel({
         onError: () => setOrdered(previous),
       });
     },
-    [ordered, slideChunks, stackSlides, reorder, searchQuery],
+    [ordered, slideChunks, handleStackDrop, reorder, searchQuery],
   );
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
