@@ -1,6 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
+import { useStackDropTarget } from "@/hooks/useStackDropTarget";
 import { CSS } from "@dnd-kit/utilities";
 import { SlideCard } from "./SlideCard";
+import { StackDeck } from "../ui/stack/StackDeck";
+import { cn } from "@/lib/utils";
 import type { Slide } from "@/types";
 
 export function SortableSlideItem({
@@ -24,6 +27,10 @@ export function SortableSlideItem({
   language,
   searchQuery,
   enableHoverPreview,
+  isStack,
+  count = 1,
+  onExpand,
+  onOpenTop,
 }: {
   slide: Slide;
   index: number;
@@ -45,55 +52,136 @@ export function SortableSlideItem({
   language: string;
   searchQuery: string;
   enableHoverPreview: boolean;
+  isStack?: boolean;
+  count?: number;
+  onExpand?: () => void;
+  onOpenTop?: () => void;
 }) {
   const {
     attributes,
     listeners,
-    setNodeRef,
+    setNodeRef: setSortableRef,
     transform,
     transition,
     isDragging,
+    isOver: isOverSortable,
   } = useSortable({
     id: slide.id,
+    data: {
+      kind: "slide-item",
+      id: slide.id,
+      slide,
+    },
     animateLayoutChanges: () => false,
     disabled: isRenaming,
   });
+
+  const {
+    setNodeRef: setStackTargetRef,
+    isOver: isOverStackTarget,
+  } = useStackDropTarget(
+    `stack-target-${slide.id}`,
+    {
+      kind: "slide-stack-target",
+      targetId: slide.id,
+    },
+    Boolean(isDraggingId === slide.id || isRenaming || searchQuery.trim().length > 0),
+  );
 
   const style: React.CSSProperties = {
     transform: CSS.Translate.toString(transform),
     transition: isDragging ? undefined : transition,
     zIndex: isDragging ? 5 : 1,
   };
+
   const combinedRef = (node: HTMLElement | null) => {
-    setNodeRef(node);
+    setSortableRef(node);
+  };
+
+  const combinedCardRef = (node: HTMLElement | null) => {
     registerCardRef(slide.id, node as HTMLDivElement | null);
   };
 
+  const isReorderHover = isOverSortable && !isOverStackTarget && isDraggingId && isDraggingId !== slide.id;
+
   return (
-    <SlideCard
-      slide={slide}
-      index={index}
-      isActive={isDraggingId === slide.id}
-      isRenaming={isRenaming}
-      renameValue={renameValue}
-      highlightProgress={highlightProgress}
-      onRenameValueChange={onRenameValueChange}
-      onCommitRename={onCommitRename}
-      onCancelRename={onCancelRename}
-      onRemove={onRemove}
-      onRename={onRename}
-      onDuplicate={onDuplicate}
-      setNodeRef={combinedRef}
-      navigationIds={navigationIds}
-      cardRefs={cardRefs}
-      isTabStop={isTabStop}
-      theme={theme}
-      language={language}
-      searchQuery={searchQuery}
-      enableHoverPreview={enableHoverPreview}
+    <div
+      ref={combinedRef}
       style={style}
-      dragHandleProps={{ ...attributes, ...listeners }}
-    />
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "relative select-none transition-all duration-150",
+        isReorderHover && "border-l-2 border-primary pl-1"
+      )}
+    >
+      {/* Full-card stack drop zone */}
+      <div
+        ref={setStackTargetRef}
+        className={cn(
+          "absolute inset-0 z-30 rounded-md transition-all duration-150",
+          isOverStackTarget
+            ? "ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary/10 shadow-md pointer-events-auto"
+            : "pointer-events-none"
+        )}
+        style={{ pointerEvents: isDraggingId && isDraggingId !== slide.id ? "auto" : "none" }}
+      />
+
+      {isStack && count > 1 ? (
+        <StackDeck
+          count={count}
+          variant="slide"
+          onExpand={onExpand}
+          onOpenTop={onOpenTop}
+        >
+          <SlideCard
+            slide={slide}
+            index={index}
+            isActive={isDraggingId === slide.id}
+            isRenaming={isRenaming}
+            renameValue={renameValue}
+            highlightProgress={highlightProgress}
+            onRenameValueChange={onRenameValueChange}
+            onCommitRename={onCommitRename}
+            onCancelRename={onCancelRename}
+            onRemove={onRemove}
+            onRename={onRename}
+            onDuplicate={onDuplicate}
+            setNodeRef={combinedCardRef}
+            navigationIds={navigationIds}
+            cardRefs={cardRefs}
+            isTabStop={isTabStop}
+            theme={theme}
+            language={language}
+            searchQuery={searchQuery}
+            enableHoverPreview={enableHoverPreview}
+          />
+        </StackDeck>
+      ) : (
+        <SlideCard
+          slide={slide}
+          index={index}
+          isActive={isDraggingId === slide.id}
+          isRenaming={isRenaming}
+          renameValue={renameValue}
+          highlightProgress={highlightProgress}
+          onRenameValueChange={onRenameValueChange}
+          onCommitRename={onCommitRename}
+          onCancelRename={onCancelRename}
+          onRemove={onRemove}
+          onRename={onRename}
+          onDuplicate={onDuplicate}
+          setNodeRef={combinedCardRef}
+          navigationIds={navigationIds}
+          cardRefs={cardRefs}
+          isTabStop={isTabStop}
+          theme={theme}
+          language={language}
+          searchQuery={searchQuery}
+          enableHoverPreview={enableHoverPreview}
+        />
+      )}
+    </div>
   );
 }
 

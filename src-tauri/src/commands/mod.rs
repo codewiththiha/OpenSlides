@@ -10,9 +10,11 @@ mod projects;
 mod quit;
 mod search;
 mod slides;
+mod stacks;
 
 pub use io::*;
 pub use projects::*;
 pub use quit::*;
 pub use search::*;
 pub use slides::*;
+pub use stacks::*;

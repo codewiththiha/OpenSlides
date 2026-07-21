@@ -2,7 +2,7 @@
 
 use sqlx::{Row, SqlitePool};
 
-pub const TARGET_VERSION: i64 = 6;
+pub const TARGET_VERSION: i64 = 8;
 
 pub async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
     let mut version = current_version(pool).await?;
@@ -199,6 +199,44 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), String> {
                 .map_err(|e| format!("Failed to drop slides.language: {e}"))?;
         }
         version = 6;
+        set_version(pool, version).await?;
+    }
+
+    // v7: add group_id / group_order to projects for dashboard stacks
+    if version < 7 {
+        if !column_exists(pool, "projects", "group_id").await? {
+            sqlx::query("ALTER TABLE projects ADD COLUMN group_id TEXT DEFAULT NULL")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to add projects.group_id: {e}"))?;
+        }
+        if !column_exists(pool, "projects", "group_order").await? {
+            sqlx::query("ALTER TABLE projects ADD COLUMN group_order INTEGER NOT NULL DEFAULT 0")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to add projects.group_order: {e}"))?;
+        }
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_projects_group ON projects(group_id, group_order)")
+            .execute(pool)
+            .await
+            .map_err(|e| format!("Failed to create projects group index: {e}"))?;
+        version = 7;
+        set_version(pool, version).await?;
+    }
+
+    // v8: add section_id to slides for slide strip stacks (sections)
+    if version < 8 {
+        if !column_exists(pool, "slides", "section_id").await? {
+            sqlx::query("ALTER TABLE slides ADD COLUMN section_id TEXT DEFAULT NULL")
+                .execute(pool)
+                .await
+                .map_err(|e| format!("Failed to add slides.section_id: {e}"))?;
+        }
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_slides_section ON slides(project_id, section_id, order_index)")
+            .execute(pool)
+            .await
+            .map_err(|e| format!("Failed to create slides section index: {e}"))?;
+        version = 8;
         set_version(pool, version).await?;
     }
 

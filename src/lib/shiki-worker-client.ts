@@ -5,6 +5,7 @@
  * are correlated by id; aborting a request only drops that request, leaving
  * the worker alive for the rest of the app.
  */
+import { getHighlighter } from "@/lib/shiki-instance";
 import type {
   WorkerRequest,
   WorkerResponse,
@@ -78,12 +79,24 @@ function send(
   });
 }
 
-export function requestHtml(
+export async function requestHtml(
   code: string,
   language: string,
   theme: string,
   signal?: AbortSignal,
   priority: "high" | "low" = "high",
 ): Promise<WorkerResponse> {
+  if (
+    typeof Worker === "undefined" ||
+    (typeof window !== "undefined" && (window as any).IS_REACT_ACT_ENVIRONMENT) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).IS_REACT_ACT_ENVIRONMENT)
+  ) {
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    const h = await getHighlighter(theme, language);
+    return {
+      id: -1,
+      html: h.codeToHtml(code, { lang: language, theme }),
+    };
+  }
   return send({ code, lang: language, theme, priority }, signal);
 }

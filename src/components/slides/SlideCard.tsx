@@ -228,6 +228,7 @@ export const SlideCard = memo(function SlideCard({
   if (prev.slide.id !== next.slide.id) return false;
   if (prev.slide.code !== next.slide.code) return false;
   if (prev.slide.name !== next.slide.name) return false;
+  if (prev.slide.sectionId !== next.slide.sectionId) return false;
   if ((prev.slide.highlights?.length ?? 0) !== (next.slide.highlights?.length ?? 0))
     return false;
   if (prev.index !== next.index) return false;
