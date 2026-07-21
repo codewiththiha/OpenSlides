@@ -7,15 +7,18 @@
  */
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
-import { Label } from "./ui/label";
 import { THEME_OPTIONS, type Project, type ThemeName } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
 import { showUndoToast } from "@/lib/settings-undo";
 import { Z_INDEX } from "./ui/overlay";
+import { SelectField } from "./ui/select-field";
+import { SettingsSection } from "./ui/settings-section";
 import { SliderField } from "./ui/slider-field";
 import { ToggleField } from "./ui/toggle-field";
+import { CodeAlignPicker } from "./settings/CodeAlignPicker";
+import { GlobalAnimationSection } from "./settings/GlobalAnimationSection";
 
 interface SettingsDrawerProps {
   project: Project;
@@ -91,69 +94,33 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
         style={{ zIndex: Z_INDEX.drawer }}
       >
         <div className="flex h-12 items-center justify-between border-b px-4">
-          <h2 className="text-sm font-semibold">Project Settings</h2>
+          <h2 className="text-sm font-semibold">Presentation Settings</h2>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
-          <section className="space-y-2">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Theme
-            </Label>
-            <select
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+          <SettingsSection title="Theme">
+            <SelectField
+              selectSize="md"
+              options={THEME_OPTIONS}
               value={project.theme}
               onChange={(e) => updateTheme.mutate(e.target.value as ThemeName)}
-            >
-              {THEME_OPTIONS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </section>
+            />
+          </SettingsSection>
 
-          <section className="space-y-2">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Code layout
-            </Label>
-            <p className="text-[11px] text-muted-foreground">
-              Positions the whole code block on the stage (not per-line text
-              alignment). Applies to every slide.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {(["left", "center"] as const).map((align) => {
-                const active = (s.codeAlign ?? "left") === align;
-                return (
-                  <button
-                    key={align}
-                    type="button"
-                    onClick={() => patch({ codeAlign: align })}
-                    className={cn(
-                      "rounded-md border px-3 py-2 text-left text-sm transition-colors",
-                      active
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border bg-background hover:bg-muted/50",
-                    )}
-                  >
-                    <div className="font-medium capitalize">{align}</div>
-                    <div className="mt-0.5 text-[10px] text-muted-foreground">
-                      {align === "left"
-                        ? "Block starts at the left edge"
-                        : "Block centered like CodeSlides"}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          <SettingsSection
+            title="Code layout"
+            description="Where the code block sits on your slides. Applies to all slides."
+          >
+            <CodeAlignPicker
+              value={s.codeAlign ?? "left"}
+              onChange={(align) => patch({ codeAlign: align })}
+            />
+          </SettingsSection>
 
-          <section className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Line numbers
-            </h3>
+          <SettingsSection title="Line numbers">
             <ToggleField
               label="Slide preview"
               description="Shown during preview / presentation"
@@ -162,7 +129,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             />
             <ToggleField
               label="Code editor"
-              description="Gutter in the editor only"
+              description="Line numbers in the code editor"
               checked={editorShowLineNumbers}
               onChange={(next) => {
                 const before = editorShowLineNumbers;
@@ -176,7 +143,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             />
             <ToggleField
               label="Slide hover previews"
-              description="Show enlarged thumbnails when hovering slide cards"
+              description="Show a larger preview when you hover over a slide"
               checked={showSlideHoverPreview}
               onChange={setShowSlideHoverPreview}
             />
@@ -216,46 +183,24 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
                 onCommit={(v) => patch({ editorFontSize: v })}
               />
             </div>
-          </section>
+          </SettingsSection>
 
-          <section className="space-y-3 border-t pt-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Global Animations
-            </h3>
+          <SettingsSection
+            title="Global Animations"
+            description="When on, every slide uses these animation values and the per-slide sliders are locked."
+            borderTop
+          >
             <p className="text-[11px] text-muted-foreground">
-              When enabled, per-slide transition / stagger sliders in the editor
-              are locked to these values.
+              Stagger is the delay between each animated character.
             </p>
-
-            <ToggleField label="Use global transition" checked={s.useGlobalTransition} onChange={(v) => patch({ useGlobalTransition: v })} />
-            {s.useGlobalTransition && (
-              <div>
-                <SliderField
-                  label="Transition"
-                  labelClassName="text-xs text-muted-foreground"
-                  value={effGlobalTransition}
-                  min={100} max={2000} step={50}
-                  format={(v) => `${v}ms`}
-                  onPreview={(v) => setPreviewProjectSetting("globalTransitionDuration", v)}
-                  onCommit={(v) => patch({ globalTransitionDuration: v })}
-                />
-              </div>
-            )}
-
-            <ToggleField label="Use global stagger" checked={s.useGlobalStagger} onChange={(v) => patch({ useGlobalStagger: v })} />
-            {s.useGlobalStagger && (
-              <div>
-                <SliderField
-                  label="Stagger"
-                  labelClassName="text-xs text-muted-foreground"
-                  value={effGlobalStagger}
-                  min={0} max={50} step={1}
-                  onPreview={(v) => setPreviewProjectSetting("globalStagger", v)}
-                  onCommit={(v) => patch({ globalStagger: v })}
-                />
-              </div>
-            )}
-          </section>
+            <GlobalAnimationSection
+              settings={s}
+              effTransition={effGlobalTransition}
+              effStagger={effGlobalStagger}
+              onPreview={setPreviewProjectSetting}
+              onCommit={patch}
+            />
+          </SettingsSection>
         </div>
       </aside>
     </>

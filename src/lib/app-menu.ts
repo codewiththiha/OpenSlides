@@ -40,10 +40,10 @@ async function item(
 export async function installAppMenu(): Promise<void> {
   try {
     const fileItems = [
-      await item("menu://new-project", "New Project", shortcutAccelerator(SHORTCUTS.newProject)),
+      await item("menu://new-project", "New Presentation", shortcutAccelerator(SHORTCUTS.newProject)),
       await item("menu://open-dashboard", "Go to Dashboard", shortcutAccelerator(SHORTCUTS.openDashboard)),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await item("menu://export", "Export Project as JSON…", shortcutAccelerator(SHORTCUTS.export)),
+      await item("menu://export", "Export…", shortcutAccelerator(SHORTCUTS.export)),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "CloseWindow", text: "Close" }),
     ];
@@ -69,10 +69,10 @@ export async function installAppMenu(): Promise<void> {
 
     const viewItems = [
       await item("menu://present", "Start Presentation", shortcutAccelerator(SHORTCUTS.present)),
-      await item("menu://zen", "Toggle Zen Mode", shortcutAccelerator(SHORTCUTS.zen)),
+      await item("menu://zen", "Toggle Focus Mode", shortcutAccelerator(SHORTCUTS.zen)),
       await item("menu://command-palette", "Command Palette", shortcutAccelerator(SHORTCUTS.commandPalette)),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await item("menu://toggle-theme", "Toggle Light/Dark UI"),
+      await item("menu://toggle-theme", "Toggle Light/Dark Mode"),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "Fullscreen" }),
     ];
@@ -80,7 +80,7 @@ export async function installAppMenu(): Promise<void> {
     const slideItems = [
       await item("menu://add-slide", "Add Slide", shortcutAccelerator(SHORTCUTS.addSlide)),
       await item("menu://duplicate-slide", "Duplicate Slide", shortcutAccelerator(SHORTCUTS.duplicateSlide)),
-      await item("menu://settings", "Project Settings…", shortcutAccelerator(SHORTCUTS.settings)),
+      await item("menu://settings", "Presentation Settings…", shortcutAccelerator(SHORTCUTS.settings)),
     ];
 
     // Help: only Keyboard Shortcuts (no About — same modal was confusing)

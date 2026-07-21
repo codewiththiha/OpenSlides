@@ -1,15 +1,15 @@
 /** Project dashboard orchestrator with virtualized project rows. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Command as CommandIcon, FolderOpen, Loader2, Plus, Upload } from "lucide-react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { Command as CommandIcon, Plus, Upload } from "lucide-react";
 import { Button } from "./ui/button";
-import { EmptyState } from "./ui/empty-state";
 import { TitleBar } from "./TitleBar";
 import { CommandPalette } from "./CommandPalette";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { CreateProjectCard } from "./dashboard/CreateProjectCard";
-import { ProjectCard } from "./dashboard/ProjectCard";
+import { DashboardStates } from "./dashboard/DashboardStates";
+import { ProjectGridView } from "./dashboard/ProjectGridView";
+import { ConfirmDialog } from "./ui/confirm-dialog";
 import { useProjects, useCreateProject, useDuplicateProject, useDeleteProject, useExportProject, useImportProject, useRenameProject } from "@/hooks/queries";
 import { useInlineRename } from "@/hooks/useInlineRename";
 import { useWindowTitle } from "@/hooks/useWindowTitle";
@@ -30,17 +30,21 @@ export function Dashboard() {
   const renameMutation = useRenameProject();
   const createRef = useRef(createMutation); const duplicateRef = useRef(duplicateMutation); const deleteRef = useRef(deleteMutation); const exportRef = useRef(exportMutation); const importRef = useRef(importMutation); const renameRef = useRef(renameMutation); const projectsRef = useRef(projects);
   createRef.current = createMutation; duplicateRef.current = duplicateMutation; deleteRef.current = deleteMutation; exportRef.current = exportMutation; importRef.current = importMutation; renameRef.current = renameMutation; projectsRef.current = projects;
-  const [creating, setCreating] = useState(false); const [newName, setNewName] = useState("Untitled Deck");
+  const [creating, setCreating] = useState(false); const [newName, setNewName] = useState("Untitled Presentation");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const setIsCommandOpen = useUiStore((s) => s.setIsCommandOpen); const isDarkUi = useUiStore((s) => s.isDarkUi);
-  useWindowTitle("OpenSlides — Projects");
+  useWindowTitle("OpenSlides — Presentations");
   useEffect(() => { applyUiTheme(isDarkUi); }, [isDarkUi]);
   useEffect(() => { const onKey = (e: KeyboardEvent) => { if (e.key === "?" && !isTypingTarget(e.target) && !isModKey(e)) { e.preventDefault(); useUiStore.getState().setIsShortcutsOpen(true); } }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, []);
   const handleOpen = useCallback((id: string) => navigate(`/editor/${id}`), [navigate]);
   const handleDuplicate = useCallback((id: string) => duplicateRef.current.mutate(id), []);
   const handleExport = useCallback((id: string) => exportRef.current.mutate(id), []);
-  const handleDelete = useCallback((id: string, name: string) => { if (confirm(`Delete “${name}”? This cannot be undone.`)) deleteRef.current.mutate(id); }, []);
-  const rename = useInlineRename(useCallback(async (id: string, name: string) => { await renameRef.current.mutateAsync({ projectId: id, name: name || "Untitled Deck" }); }, []));
-  const handleCreate = useCallback(async () => { try { const project = await createRef.current.mutateAsync(newName.trim() || "Untitled Deck"); setCreating(false); setNewName("Untitled Deck"); navigate(`/editor/${project.id}`); } catch {} }, [newName, navigate]);
+  const handleDelete = useCallback((id: string, name: string) => { setDeleteTarget({ id, name }); }, []);
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteTarget) { deleteRef.current.mutate(deleteTarget.id); setDeleteTarget(null); }
+  }, [deleteTarget]);
+  const rename = useInlineRename(useCallback(async (id: string, name: string) => { await renameRef.current.mutateAsync({ projectId: id, name: name || "Untitled Presentation" }); }, []));
+  const handleCreate = useCallback(async () => { try { const project = await createRef.current.mutateAsync(newName.trim() || "Untitled Presentation"); setCreating(false); setNewName("Untitled Presentation"); navigate(`/editor/${project.id}`); } catch {} }, [newName, navigate]);
   const handleImport = useCallback(async () => { try { const project = await importRef.current.mutateAsync(); navigate(`/editor/${project.id}`); } catch {} }, [navigate]);
   const menuHandlers = useBaseAppMenuHandlers({
     onNewProject: () => setCreating(true),
@@ -50,9 +54,47 @@ export function Dashboard() {
     },
   });
   useAppMenu(menuHandlers);
-  const parentRef = useRef<HTMLDivElement>(null); const [columnCount, setColumnCount] = useState(3);
-  useEffect(() => { const update = () => setColumnCount(window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3); update(); window.addEventListener("resize", update); return () => window.removeEventListener("resize", update); }, []);
-  const rowVirtualizer = useVirtualizer({ count: Math.ceil(projects.length / columnCount), getScrollElement: () => parentRef.current, estimateSize: () => 220, measureElement: (el) => el.getBoundingClientRect().height, overscan: 5 });
-  const virtualRows = rowVirtualizer.getVirtualItems(); const mod = modKeyLabel();
-  return <div className="flex h-full flex-col bg-background"><TitleBar leading={<div className="flex items-center gap-2"><img src="/openslides-logo.svg" alt="OpenSlides" className="h-8 w-8 rounded-lg object-cover" /><span className="text-sm font-semibold">OpenSlides</span></div>} trailing={<><Button variant="ghost" size="icon" className="h-8 w-8" title={`Command palette (${mod}K)`} onClick={() => setIsCommandOpen(true)}><CommandIcon className="h-3.5 w-3.5" /></Button><Button variant="outline" size="sm" className="gap-1.5" onClick={() => void handleImport()} disabled={importMutation.isPending}><Upload className="h-4 w-4" />Import</Button><Button onClick={() => setCreating(true)} className="gap-2" size="sm"><Plus className="h-4 w-4" />New Project</Button></>} /><div ref={parentRef} className="flex-1 overflow-auto"><div className="mx-auto max-w-7xl px-6 py-8 pb-12"><div className="mb-8"><h1 className="text-3xl font-bold tracking-tight">Your Decks</h1><p className="mt-1 text-sm text-muted-foreground">Offline-first code presentations · stored in SQLite · virtualized</p></div>{creating && <CreateProjectCard name={newName} onNameChange={setNewName} onCreate={() => void handleCreate()} onCancel={() => setCreating(false)} isPending={createMutation.isPending} />}{isLoading && <div className="flex items-center justify-center py-24 text-muted-foreground"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading projects…</div>}{isError && <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">Failed to load projects: {(error as Error).message}</div>}{!isLoading && !isError && projects.length === 0 && <EmptyState icon={FolderOpen} title="No projects yet" description="Create a deck or import a previously exported JSON file."><Button onClick={() => setCreating(true)} className="gap-2"><Plus className="h-4 w-4" />Create Project</Button><Button variant="outline" onClick={() => void handleImport()} className="gap-2"><Upload className="h-4 w-4" />Import JSON</Button></EmptyState>}{!isLoading && projects.length > 0 && <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>{virtualRows.map((row) => { const rowProjects = projects.slice(row.index * columnCount, row.index * columnCount + columnCount); return <div key={row.key} ref={rowVirtualizer.measureElement} data-index={row.index} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: `${row.size}px`, transform: `translateY(${row.start}px)` }}><div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>{rowProjects.map((project) => <ProjectCard key={project.id} project={project} isRenaming={rename.renamingId === project.id} renameValue={rename.renamingId === project.id ? rename.value : ""} onRenameValueChange={rename.setValue} onCommitRename={rename.commit} onCancelRename={rename.cancel} onStartRename={rename.start} onOpen={handleOpen} onDuplicate={handleDuplicate} onExport={handleExport} onDelete={handleDelete} duplicateBusy={duplicateMutation.isPending} commitBusy={renameMutation.isPending} />)}</div></div>; })}</div>}</div></div><CommandPalette /><ShortcutsHelp /></div>;
+  const mod = modKeyLabel();
+  return <div className="flex h-full flex-col bg-background"><TitleBar leading={<div className="flex items-center gap-2"><img src="/openslides-logo.svg" alt="OpenSlides" className="h-8 w-8 rounded-lg object-cover" /><span className="text-sm font-semibold">OpenSlides</span></div>} trailing={<><Button variant="ghost" size="icon" className="h-8 w-8" title={`Command palette (${mod}K)`} onClick={() => setIsCommandOpen(true)}><CommandIcon className="h-3.5 w-3.5" /></Button><Button variant="outline" size="sm" className="gap-1.5" onClick={() => void handleImport()} disabled={importMutation.isPending}><Upload className="h-4 w-4" />Import</Button><Button onClick={() => setCreating(true)} className="gap-2" size="sm"><Plus className="h-4 w-4" />New Presentation</Button></>} />
+  {creating && <CreateProjectCard name={newName} onNameChange={setNewName} onCreate={() => void handleCreate()} onCancel={() => setCreating(false)} isPending={createMutation.isPending} />}
+  <DashboardStates
+    isLoading={isLoading}
+    isError={isError}
+    error={error as Error | null}
+    projectCount={projects.length}
+    onCreate={() => setCreating(true)}
+    onImport={() => void handleImport()}
+  >
+    {!isLoading && !isError && projects.length > 0 && (
+      <ProjectGridView
+        projects={projects}
+        rename={{
+          renamingId: rename.renamingId,
+          value: rename.value,
+          setValue: rename.setValue,
+          commit: rename.commit,
+          cancel: rename.cancel,
+          start: rename.start,
+        }}
+        onOpen={handleOpen}
+        onDuplicate={handleDuplicate}
+        onExport={handleExport}
+        onDelete={handleDelete}
+        duplicateBusy={duplicateMutation.isPending}
+        commitBusy={renameMutation.isPending}
+      />
+    )}
+  </DashboardStates>
+  <CommandPalette />
+  <ShortcutsHelp />
+  <ConfirmDialog
+    open={deleteTarget !== null}
+    title={`Delete "${deleteTarget?.name}"?`}
+    description="This cannot be undone."
+    confirmLabel="Delete"
+    destructive
+    onConfirm={handleConfirmDelete}
+    onCancel={() => setDeleteTarget(null)}
+  />
+  </div>;
 }
