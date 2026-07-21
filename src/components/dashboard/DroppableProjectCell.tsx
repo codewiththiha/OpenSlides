@@ -1,5 +1,6 @@
 import { memo } from "react";
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useDraggable } from "@dnd-kit/core";
+import { useStackDropTarget } from "@/hooks/useStackDropTarget";
 import { cn } from "@/lib/utils";
 import { type ProjectSummary } from "@/types";
 import { type GroupChunk } from "@/lib/grouping";
@@ -43,10 +44,11 @@ export const DroppableProjectCell = memo(function DroppableProjectCell({
   const isStack = chunk.kind === "stack" && chunk.items.length > 1;
   const id = isStack ? chunk.groupId! : topProject.id;
 
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `drop-${id}`,
-    data: { kind: "project-cell", chunk },
-  });
+  const { setNodeRef: setDropRef, isOver } = useStackDropTarget(
+    `drop-${id}`,
+    { kind: "project-cell", chunk },
+    false,
+  );
 
   const {
     attributes,
