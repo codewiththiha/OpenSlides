@@ -6,7 +6,7 @@ interface AsyncStateProps {
   error?: Error | null;
   loadingLabel?: string;
   errorAction?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function AsyncState({

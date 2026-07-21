@@ -35,21 +35,17 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import {
-  Plus,
-  ChevronDown,
   ChevronUp,
-  Search,
-  X,
 } from "lucide-react";
-import { Button } from "./ui/button";
-import { resolveProjectLanguage, slideDisplayName, type Project, type Slide } from "@/types";
-import { modKeyLabel } from "@/lib/platform";
+import { resolveProjectLanguage, type Project, type Slide } from "@/types";
 import { useSlideStripSearch } from "@/hooks/useSlideStripSearch";
 import { useInlineRename } from "@/hooks/useInlineRename";
+import { useSlidePanelActions } from "@/hooks/useSlidePanelActions";
 import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
+import { SlidesPanelHeader } from "./slides/SlidesPanelHeader";
+import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
 import { useUiStore } from "@/store/useUiStore";
-import { notify } from "@/lib/toast";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -216,137 +212,54 @@ export function BottomSlidesPanel({
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
 
-  const handleRemove = useCallback(
-    (id: string) => {
-      if (ordered.length <= 1 || rename.renamingId) return;
-      const index = ordered.findIndex((s) => s.id === id);
-      const snapshot = ordered[index];
-      if (!snapshot) return;
-      pendingFocusId.current = ordered[index + 1]?.id ?? ordered[index - 1]?.id ?? null;
-
-      deleteSlide.mutate(id, {
-        onSuccess: (proj) => {
-          if (currentSlideId === id) {
-            const fallback =
-              proj.settings.currentSlideId ?? proj.slides[0]?.id ?? null;
-            setCurrentSlideId(fallback);
-          }
-          notify.message("Slide deleted", {
-            description: slideDisplayName(snapshot, index),
-            action: {
-              label: "Undo",
-              onClick: () => {
-                restoreSlide.mutate({
-                  slide: snapshot,
-                  insertAt: index,
-                });
-              },
-            },
-          });
-        },
-      });
-    },
-    [ordered, rename.renamingId, deleteSlide, restoreSlide, currentSlideId, setCurrentSlideId],
-  );
-
-  const handleDuplicate = useCallback(
-    (id: string) => {
-      duplicateSlide.mutate(id);
-    },
-    [duplicateSlide],
-  );
-
-  const handleAdd = useCallback(() => {
-    const nextNum = ordered.length + 1;
-    createSlide.mutate(
-      { name: `Slide ${nextNum}` },
-      {
-        onSuccess: (slide) => setCurrentSlideId(slide.id),
-      },
-    );
-  }, [ordered.length, createSlide, setCurrentSlideId]);
+  const { handleRemove, handleDuplicate, handleAdd } = useSlidePanelActions({
+    ordered,
+    renamingId: rename.renamingId,
+    mutations: { deleteSlide, restoreSlide, duplicateSlide, createSlide },
+    currentSlideId,
+    setCurrentSlideId,
+    pendingFocusId,
+  });
 
   if (isCollapsed) {
     return (
-      <div
-        className="flex h-full min-h-[36px] w-full cursor-pointer items-center justify-center bg-card/60 px-2 hover:bg-muted/30"
+      <CollapsedPanelButton
+        orientation="horizontal"
+        icon={ChevronUp}
+        label={`Slides (${ordered.length})`}
         onClick={toggleCollapse}
         title="Expand slides (or drag the handle above)"
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            toggleCollapse();
-          }
-        }}
-      >
-        <span className="inline-flex max-w-full items-center gap-1.5 truncate text-xs text-muted-foreground">
-          <ChevronUp className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">Slides ({ordered.length})</span>
-        </span>
-      </div>
+      />
     );
   }
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-card/60">
-      <div className="flex shrink-0 items-center gap-2 px-3 py-1">
-        <span
-          className="min-w-0 shrink-0 truncate text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-          title="Slides"
-        >
-          Slides ({ordered.length}
-          {searchQuery ? ` · ${filteredOrdered.length} filtered` : ""})
-        </span>
-        <div className="relative flex-1 mx-2">
-          <Search className="absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-          <input
-            ref={searchInputRef}
-            className="h-6 w-full rounded-md border border-input bg-background pl-6 pr-6 text-xs outline-none focus:ring-1 focus:ring-ring"
-            placeholder="Search by name or code…"
-            title={`Search slides (${modKeyLabel()}⇧F or /)`}
-            value={rawSearchQuery}
-            onChange={(e) => setRawSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.stopPropagation();
-                if (rawSearchQuery) setRawSearchQuery("");
-                else e.currentTarget.blur();
-              }
-              if (e.key === "Enter" && filteredOrdered.length > 0) {
-                e.preventDefault();
-                const first = filteredOrdered[0];
-                setCurrentSlideId(first.id);
-                cardRefs.current.get(first.id)?.scrollIntoView({ inline: "nearest" });
-              }
-            }}
-          />
-          {searchQuery && (
-            <button
-              className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 hover:bg-muted"
-              onClick={clearSearch}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 gap-1 text-xs"
-            onClick={handleAdd}
-            disabled={createSlide.isPending}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Add</span>
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={toggleCollapse}>
-            <ChevronDown className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
+      <SlidesPanelHeader
+        ordered={ordered}
+        filteredOrdered={filteredOrdered}
+        rawSearchQuery={rawSearchQuery}
+        searchQuery={searchQuery}
+        onSearchChange={setRawSearchQuery}
+        onClearSearch={clearSearch}
+        onSearchKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            if (rawSearchQuery) setRawSearchQuery("");
+            else e.currentTarget.blur();
+          }
+          if (e.key === "Enter" && filteredOrdered.length > 0) {
+            e.preventDefault();
+            const first = filteredOrdered[0];
+            setCurrentSlideId(first.id);
+            cardRefs.current.get(first.id)?.scrollIntoView({ inline: "nearest" });
+          }
+        }}
+        searchInputRef={searchInputRef}
+        onAdd={handleAdd}
+        addPending={createSlide.isPending}
+        onToggleCollapse={toggleCollapse}
+      />
 
       <DndContext
         sensors={sensors}
