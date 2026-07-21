@@ -30,10 +30,10 @@ export function useCreateProject() {
     mutationFn: (name: string) => api.createProject(name),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Project created");
+      notify.success("Presentation created");
     },
     onError: (err: Error) =>
-      notify.error(`Failed to create project: ${err.message}`),
+      notify.error(`Couldn't create presentation: ${err.message}`),
   });
 }
 
@@ -43,9 +43,9 @@ export function useDuplicateProject() {
     mutationFn: (id: string) => api.duplicateProject(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Project duplicated");
+      notify.success("Presentation duplicated");
     },
-    onError: (err: Error) => notify.error(`Failed to duplicate: ${err.message}`),
+    onError: (err: Error) => notify.error(`Couldn't duplicate: ${err.message}`),
   });
 }
 
@@ -55,9 +55,9 @@ export function useDeleteProject() {
     mutationFn: (id: string) => api.deleteProject(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Project deleted");
+      notify.success("Presentation deleted");
     },
-    onError: (err: Error) => notify.error(`Failed to delete: ${err.message}`),
+    onError: (err: Error) => notify.error(`Couldn't delete: ${err.message}`),
   });
 }
 
@@ -69,7 +69,7 @@ export function useRenameProject() {
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(project.id), project);
       qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Project renamed");
+      notify.success("Presentation renamed");
     },
     onError: (err: Error) => notify.error(`Rename failed: ${err.message}`),
   });
@@ -157,7 +157,7 @@ export function useImportProject() {
     mutationFn: () => api.importProjectFromJson(),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Project imported");
+      notify.success("Presentation imported");
     },
     onError: (err: Error) => {
       // User closed the open dialog — not a failure.

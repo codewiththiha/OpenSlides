@@ -47,7 +47,7 @@ export function useEditorKeyboard({
         toggleAutoPlaying,
       } = useUiStore.getState();
 
-      // Number keys 1-9 → jump to highlight step (both present and normal/zen)
+      // Number keys 1-9 → jump to highlight step (both present and normal/focus mode)
       // 0 → clean slide (-1)
       if (
         !isModKey(e) &&
@@ -124,7 +124,7 @@ export function useEditorKeyboard({
         return;
       }
 
-      // Zen / dialogs: Esc handling
+      // Focus mode / dialogs: Esc handling
       if (e.key === "Escape" && isZenMode) {
         e.preventDefault();
         toggleZenMode();
@@ -149,7 +149,7 @@ export function useEditorKeyboard({
         return;
       }
 
-      // Arrow nav in normal/zen when not typing
+      // Arrow nav in normal/focus mode when not typing
       if (
         (e.key === "ArrowRight" || e.key === "ArrowLeft") &&
         !isTypingTarget(e.target) &&

@@ -4,36 +4,16 @@
  * Enhancement: HighlightStepIndicator now clickable to jump to steps.
  * Enhancement: Presentation timer + progress bar for autoplay (TypeScript, not Rust — UI animation, no DB needed)
  */
-import { memo, useEffect, useState } from "react";
-import { Pause, Play, Timer } from "lucide-react";
+import { memo } from "react";
 import { SlidePreview } from "../SlidePreview";
 import { HighlightStepIndicator } from "../HighlightStepIndicator";
+import { ProgressBar } from "../ui/progress-bar";
+import { AutoplayTimerChip } from "../presentation/AutoplayTimerChip";
+import { PresentControls } from "../presentation/PresentControls";
 import { usePresentationControls } from "@/store/ui-selectors";
 import type { Project, Slide } from "@/types";
-import { cn, formatClockSeconds } from "@/lib/utils";
-import { Kbd } from "../ui/kbd";
 import { Z_INDEX } from "../ui/overlay";
 
-function useRemainingSec(duration: number, resetKey: string) {
-  const [remaining, setRemaining] = useState(() => Math.ceil(duration / 1000));
-  useEffect(() => {
-    const start = performance.now();
-    setRemaining(Math.ceil(duration / 1000));
-    const id = window.setInterval(() => {
-      const next = Math.max(0, Math.ceil((duration - (performance.now() - start)) / 1000));
-      setRemaining((prev) => prev === next ? prev : next);
-    }, 100);
-    return () => window.clearInterval(id);
-  }, [duration, resetKey]);
-  return remaining;
-}
-function PresentProgressBar({ duration, resetKey, className, style }: { duration: number; resetKey: string; className?: string; style?: React.CSSProperties }) {
-  return <div className={cn("overflow-hidden", className)} style={style}><div key={resetKey} className="openslides-progress-anim h-full w-full origin-left bg-primary" style={{ animation: `openslides-present-progress ${duration}ms linear forwards` }} /></div>;
-}
-function AutoplayTimerChip({ duration, resetKey }: { duration: number; resetKey: string }) {
-  const remaining = useRemainingSec(duration, resetKey);
-  return <div className="flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1 text-xs text-white/80 backdrop-blur"><Timer className="h-3 w-3" /><span className="font-mono tabular-nums">{formatClockSeconds(remaining)}</span><span className="text-white/40">/ {Math.ceil(duration / 1000)}s</span></div>;
-}
 interface PresentOverlayProps {
   project: Project;
   activeSlide?: Slide;
@@ -68,34 +48,24 @@ export const PresentOverlay = memo(function PresentOverlay({
       style={{ zIndex: Z_INDEX.presentation }}
     >
       {/* Slide duration progress bar — TypeScript timer, not Rust, for smooth 60fps animation */}
-      {isAutoPlaying && <PresentProgressBar duration={duration} resetKey={resetKey} className="absolute left-0 top-0 h-1 w-full bg-white/10" style={{ zIndex: Z_INDEX.presentationProgress }} />}
+      {isAutoPlaying && (
+        <ProgressBar
+          duration={duration}
+          resetKey={resetKey}
+          className="absolute left-0 top-0 h-1 w-full bg-white/10"
+          style={{ zIndex: Z_INDEX.presentationProgress }}
+        />
+      )}
 
       <div className="absolute right-4 top-4 flex items-center gap-2" style={{ zIndex: Z_INDEX.presentationControls }}>
-        {isAutoPlaying && <AutoplayTimerChip duration={duration} resetKey={resetKey} />}
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
-          onClick={() => toggleAutoPlaying()}
-          title={isAutoPlaying ? "Pause autoplay" : "Play (auto-advance)"}
-        >
-          {isAutoPlaying ? (
-            <Pause className="h-3.5 w-3.5" />
-          ) : (
-            <Play className="h-3.5 w-3.5" />
-          )}
-          <span className="hidden sm:inline">
-            {isAutoPlaying ? "Pause" : "Play"}
-          </span>
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-md bg-white/10 px-3 py-1.5 text-sm text-white/70 transition hover:bg-white/20 hover:text-white"
-          onClick={() => void exitPresent()}
-        >
-          Press{" "}
-          <Kbd tone="onDark" className="px-2 text-xs">ESC</Kbd>{" "}
-          to exit
-        </button>
+        {isAutoPlaying && (
+          <AutoplayTimerChip duration={duration} resetKey={resetKey} />
+        )}
+        <PresentControls
+          isAutoPlaying={isAutoPlaying}
+          onToggleAutoplay={toggleAutoPlaying}
+          onExit={() => void exitPresent()}
+        />
       </div>
 
       {/* Full-bleed stage — Click next, right-click back */}
