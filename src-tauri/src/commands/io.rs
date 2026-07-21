@@ -87,12 +87,12 @@ pub async fn import_project_from_json(
     let raw = std::fs::read_to_string(&path)
         .map_err(|e| CommandError::Failed(format!("Failed to read file: {e}")))?;
     let value: JsonValue = serde_json::from_str(&raw)
-        .map_err(|e| CommandError::Failed(format!("Invalid JSON: {e}")))?;
+        .map_err(|_| CommandError::Failed("That file isn't a valid presentation file".to_string())))?;
 
     let name = value
         .get("name")
         .and_then(|v| v.as_str())
-        .unwrap_or("Imported Deck")
+        .unwrap_or("Imported Presentation")
         .to_string();
     let theme = value
         .get("theme")
@@ -108,7 +108,7 @@ pub async fn import_project_from_json(
 
     if slides_val.is_empty() {
         return Err(CommandError::Failed(
-            "Import file has no slides".to_string(),
+            "This file doesn't contain any slides".to_string(),
         ));
     }
 

@@ -123,7 +123,7 @@ export function useHighlightNav({
 
   /**
    * Step forward: next highlight intro, or outro-then-next-slide when the
-   * highlights are exhausted. Returns false only when the deck is finished
+   * highlights are exhausted. Returns false only when the presentation is finished
    * and there was nothing to do (autoplay uses this to stop).
    */
   const goNext = useCallback((): boolean => {

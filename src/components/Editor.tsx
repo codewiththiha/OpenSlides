@@ -172,7 +172,7 @@ export function Editor() {
   const menuHandlers = useMemo(
     () => ({
       "menu://new-project": () => {
-        void createProjectRef.current.mutateAsync("Untitled Deck").then((p) => {
+        void createProjectRef.current.mutateAsync("Untitled Presentation").then((p) => {
           navigate(`/editor/${p.id}`);
         });
       },
@@ -230,7 +230,7 @@ export function Editor() {
         <TitleBar title="OpenSlides" />
         <div className="flex flex-1 flex-col items-center justify-center gap-3">
           <p className="text-destructive">
-            {(error as Error)?.message ?? "Project not found"}
+            {(error as Error)?.message ?? "Presentation not found"}
           </p>
           <Button onClick={() => navigate("/")}>Back to Dashboard</Button>
         </div>
@@ -268,7 +268,7 @@ export function Editor() {
           onClick={() => useUiStore.getState().toggleZenMode()}
           className="absolute right-3 top-3 z-30 rounded-md bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow backdrop-blur hover:text-foreground"
         >
-          Exit Zen (Esc)
+          Exit Focus (Esc)
         </button>
       )}
 
