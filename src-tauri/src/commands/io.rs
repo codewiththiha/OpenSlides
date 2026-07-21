@@ -87,7 +87,7 @@ pub async fn import_project_from_json(
     let raw = std::fs::read_to_string(&path)
         .map_err(|e| CommandError::Failed(format!("Failed to read file: {e}")))?;
     let value: JsonValue = serde_json::from_str(&raw)
-        .map_err(|_| CommandError::Failed("That file isn't a valid presentation file".to_string())))?;
+        .map_err(|_| CommandError::Failed("That file isn't a valid presentation file".to_string()))?;
 
     let name = value
         .get("name")
