@@ -1,16 +1,16 @@
-import { memo, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Pencil, Copy, Trash2, Highlighter as HighlighterIcon } from "lucide-react";
+import { memo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { slideDisplayName, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
 import { useSlideCode } from "@/hooks/useSlideCode";
 import { SearchSnippet } from "./SearchSnippet";
-import { Z_INDEX } from "../ui/overlay";
 import { CodeThumbnail } from "../ui/code-thumbnail";
-import { InlineRenameInput } from "../ui/inline-rename-input";
-import { DragHandle } from "../ui/drag-handle";
+import { SlideCardHeader } from "./SlideCardHeader";
+import { SlideCardActions } from "./SlideCardActions";
+import { SlideCardMeta } from "./SlideCardMeta";
+import { SlideCardHoverPreview } from "./SlideCardHoverPreview";
+import { useSlideCardHoverPreview } from "./useSlideCardHoverPreview";
 
 export const ITEM_WIDTH = 152;
 
@@ -69,13 +69,7 @@ export const SlideCard = memo(function SlideCard({
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
   const thumbnailCode = useSlideCode(slide.id, slide.code);
   const preview = thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty";
-  const [showHoverPreview, setShowHoverPreview] = useState(false);
-  const [hoverPosition, setHoverPosition] = useState({ left: 8, top: 8 });
-  const hoverTimerRef = useRef<number | null>(null);
   const cardRootRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => () => {
-    if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
-  }, []);
   const thumbnail = useSlideThumbnail({
     slideId: slide.id,
     code: thumbnailCode,
@@ -83,6 +77,8 @@ export const SlideCard = memo(function SlideCard({
     language,
     initialHtml: slide.thumbnailHtml,
   });
+  const { showHoverPreview, hoverPosition, onMouseEnter, onMouseLeave } =
+    useSlideCardHoverPreview({ isOverlay, enableHoverPreview, cardRootRef });
   const hoverThumbnail = useSlideThumbnail({
     slideId: slide.id,
     code: thumbnailCode,
@@ -160,30 +156,8 @@ export const SlideCard = memo(function SlideCard({
         isActive && !isOverlay && "opacity-30",
       )}
       style={{ width: ITEM_WIDTH, ...style }}
-      onMouseEnter={() => {
-          if (isOverlay || !enableHoverPreview) return;
-        hoverTimerRef.current = window.setTimeout(() => {
-          const rect = cardRootRef.current?.getBoundingClientRect();
-          if (!rect) return;
-          const width = 300;
-          const height = 170;
-          const left = Math.min(
-            Math.max(8, rect.left),
-            Math.max(8, window.innerWidth - width - 8),
-          );
-          const above = rect.top - height - 8;
-          const top = above >= 8
-            ? above
-            : Math.min(rect.bottom + 8, window.innerHeight - height - 8);
-          setHoverPosition({ left, top: Math.max(8, top) });
-          setShowHoverPreview(true);
-        }, 300);
-      }}
-      onMouseLeave={() => {
-        if (hoverTimerRef.current !== null) window.clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = null;
-        setShowHoverPreview(false);
-      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       onClick={() => {
         if (isOverlay || isRenaming) return;
         setCurrentSlideId(slide.id);
@@ -195,89 +169,34 @@ export const SlideCard = memo(function SlideCard({
         onRename(slide.id, title);
       }}
     >
-      {showHoverPreview && hoverThumbnail.html && createPortal(
-        <CodeThumbnail
-          containerRef={hoverThumbnail.ref}
-          html={hoverThumbnail.html}
-          theme={theme}
-          fontSize={8}
-          className="pointer-events-none fixed h-[170px] w-[300px] rounded-lg border border-border bg-card p-2 shadow-2xl"
-          style={{ left: hoverPosition.left, top: hoverPosition.top, zIndex: Z_INDEX.hoverPreview }}
-        />,
-        document.body,
-      )}
-      <div className="flex min-w-0 items-center justify-between gap-1">
-        <div className="flex min-w-0 items-center gap-1">
-          <DragHandle
-            {...dragHandleProps}
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Drag to reorder slide"
-          />
-          {isRenaming ? (
-            <InlineRenameInput
-              value={renameValue}
-              onChange={(v) => onRenameValueChange?.(v)}
-              onCommit={() => onCommitRename?.()}
-              onCancel={() => onCancelRename?.()}
-              className="h-5 min-w-0 flex-1 rounded border border-input bg-background px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
-            />
-          ) : (
-            <span
-              className="truncate text-xs font-medium"
-              title={`${title} — double-click or right-click to rename`}
-              onDoubleClick={(e) => {
-                if (!onRename) return;
-                e.stopPropagation();
-                onRename(slide.id, title);
-              }}
-            >
-              {title}
-            </span>
-          )}
-        </div>
-        {!isOverlay && !isRenaming && (
-          <div className="flex shrink-0 items-center gap-0.5">
-            {onRename && (
-              <button
-                type="button"
-                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
-                title="Rename slide"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRename(slide.id, title);
-                }}
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-            )}
-            {onDuplicate && (
-              <button
-                type="button"
-                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
-                title="Duplicate slide (Cmd+Shift+D)"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDuplicate(slide.id);
-                }}
-              >
-                <Copy className="h-3 w-3" />
-              </button>
-            )}
-            {onRemove && (
-              <button
-                type="button"
-                className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(slide.id);
-                }}
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <SlideCardHoverPreview
+        show={showHoverPreview}
+        html={hoverThumbnail.html}
+        containerRef={hoverThumbnail.ref}
+        theme={theme}
+        left={hoverPosition.left}
+        top={hoverPosition.top}
+      />
+      <SlideCardHeader
+        isRenaming={isRenaming}
+        renameValue={renameValue}
+        title={title}
+        dragHandleProps={dragHandleProps}
+        onRenameValueChange={onRenameValueChange}
+        onCommitRename={onCommitRename}
+        onCancelRename={onCancelRename}
+        onRename={onRename}
+        slideId={slide.id}
+      />
+      <SlideCardActions
+        isOverlay={isOverlay}
+        isRenaming={isRenaming}
+        title={title}
+        slideId={slide.id}
+        onRename={onRename}
+        onDuplicate={onDuplicate}
+        onRemove={onRemove}
+      />
       <CodeThumbnail
         containerRef={thumbnail.ref}
         html={thumbnail.html}
@@ -295,61 +214,12 @@ export const SlideCard = memo(function SlideCard({
         }
       />
       {searchQuery && <SearchSnippet code={`${title}\n${thumbnailCode}`} query={searchQuery} />}
-      <div className="mt-auto flex items-center justify-between gap-1">
-        <span
-          className="truncate text-[10px] text-muted-foreground/70"
-          title={language}
-        >
-          {language}
-        </span>
-        {hlCount > 0 && (
-          <span className="relative grid shrink-0 place-items-center">
-            <span
-              className={cn(
-                "col-start-1 row-start-1 inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-[3px]",
-                "text-[8px] font-semibold leading-none text-primary/70",
-                "transition-opacity duration-150",
-                "group-hover:opacity-0",
-                (isSelected || progress >= 0) && "opacity-0",
-              )}
-            >
-              <HighlighterIcon className="h-2.5 w-2.5" />
-              {hlCount}
-            </span>
-            <span
-              className={cn(
-                "col-start-1 row-start-1 inline-flex items-center gap-[3px] rounded bg-primary/10 px-1.5 py-[3px]",
-                "opacity-0 transition-opacity duration-150",
-                "group-hover:opacity-100",
-                (isSelected || progress >= 0) && "opacity-100",
-              )}
-              title={`${hlCount} highlight${hlCount > 1 ? "s" : ""} — steps through with → before the next slide${
-                progress >= 0 ? ` · showing ${progress + 1}/${hlCount}` : ""
-              }`}
-            >
-              <HighlighterIcon
-                className={cn(
-                  "h-2.5 w-2.5 transition-colors",
-                  progress >= 0 ? "text-primary" : "text-primary/50",
-                )}
-              />
-              {Array.from({ length: Math.min(hlCount, 10) }, (_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full transition-all duration-200",
-                    i <= progress
-                      ? "scale-110 bg-primary"
-                      : progress >= 0
-                        ? "bg-muted-foreground/25"
-                        : "bg-primary/40",
-                  )}
-                />
-              ))}
-            </span>
-          </span>
-        )}
-      </div>
+      <SlideCardMeta
+        language={language}
+        hlCount={hlCount}
+        progress={progress}
+        isSelected={isSelected}
+      />
     </div>
   );
 },
@@ -379,4 +249,3 @@ export const SlideCard = memo(function SlideCard({
   // on* callbacks are stable via useCallback, ignore
   return true;
 });
-
