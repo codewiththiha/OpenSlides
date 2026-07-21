@@ -168,28 +168,3 @@ export function useImportProject() {
   });
 }
 
-export function useStackProjects() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ sourceIds, targetId }: { sourceIds: string[]; targetId: string }) =>
-      api.stackProjects(sourceIds, targetId),
-    onSuccess: (projects) => {
-      qc.setQueryData(projectKeys.all, projects);
-      qc.invalidateQueries({ queryKey: projectKeys.all });
-    },
-    onError: (err: Error) => notify.error(`Couldn't stack presentations: ${err.message}`),
-  });
-}
-
-export function useUnstackProjects() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (projectIds: string[]) => api.unstackProjects(projectIds),
-    onSuccess: (projects) => {
-      qc.setQueryData(projectKeys.all, projects);
-      qc.invalidateQueries({ queryKey: projectKeys.all });
-    },
-    onError: (err: Error) => notify.error(`Couldn't unstack presentations: ${err.message}`),
-  });
-}
-
