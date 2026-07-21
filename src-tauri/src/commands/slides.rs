@@ -82,6 +82,7 @@ pub async fn create_slide(
         name: slide_name,
         highlights: vec![],
         thumbnail_html: String::new(),
+        section_id: None,
     })
 }
 
@@ -276,6 +277,7 @@ pub async fn restore_slide(
             name: &restore_name,
             highlights_json: &highlights_json,
             thumbnail_html: "",
+            section_id: slide.section_id.as_deref(),
         },
     )
     .await?;
@@ -344,7 +346,7 @@ pub async fn update_slide_settings(
 ) -> CommandResult<Slide> {
     let row = sqlx::query(
         r#"
-        SELECT id, project_id, code, duration, transition_duration, stagger, order_index, name, highlights
+        SELECT id, project_id, code, duration, transition_duration, stagger, order_index, name, highlights, section_id
         FROM slides WHERE id = ?
         "#,
     )
@@ -354,6 +356,7 @@ pub async fn update_slide_settings(
     .map_err(|e| e.to_string())?
     .ok_or_else(|| CommandError::NotFound(format!("Slide not found: {slide_id}")))?;
 
+    let section_id: Option<String> = row.try_get("section_id").unwrap_or(None);
     let duration = payload.duration.unwrap_or_else(|| row.get("duration"));
     let transition_duration = payload
         .transition_duration
@@ -406,6 +409,7 @@ pub async fn update_slide_settings(
         name,
         highlights,
         thumbnail_html: String::new(),
+        section_id,
     })
 }
 
