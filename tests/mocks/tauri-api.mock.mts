@@ -6,6 +6,8 @@
  * under test is implemented.
  */
 
+import { resetCodeSaveQueue } from "../../src/lib/code-save.ts";
+
 export interface DeferredSave {
   slideId: string;
   code: string;
@@ -33,6 +35,7 @@ export function resolveSaveAt(i: number): void {
 export function resetApiMocks(): void {
   saveCalls.length = 0;
   pendingSaves.length = 0;
+  try { resetCodeSaveQueue(); } catch {}
 }
 
 export const api = {
