@@ -67,6 +67,11 @@ export function SortableSlideItem({
     isOver: isOverSortable,
   } = useSortable({
     id: slide.id,
+    data: {
+      kind: "slide-item",
+      id: slide.id,
+      slide,
+    },
     animateLayoutChanges: () => false,
     disabled: isRenaming,
   });

@@ -16,6 +16,7 @@ import { StackDeck } from "../ui/stack/StackDeck";
 import { chunkConsecutive, type GroupChunk } from "@/lib/grouping";
 import { useStackProjects, useUnstackProjects } from "@/hooks/queries/stacks";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
+import { useStackDragEnd } from "@/hooks/useStackDragEnd";
 import type { ProjectSummary } from "@/types";
 
 function useProjectGridColumns() {
@@ -110,6 +111,32 @@ export function ProjectGridView({
     return latest;
   }, [chunks, expandedChunkInfo]);
 
+  const { handleStackDrop } = useStackDragEnd({
+    stackTargetKind: "project-cell",
+    resolveSourceIds: (activeData: any) => {
+      if (!activeData) return [];
+      if (activeData.kind === "fan-item" && activeData.project) {
+        return [activeData.project.id];
+      }
+      if (activeData.kind === "project-cell" && activeData.chunk) {
+        return activeData.chunk.items.map((p: ProjectSummary) => p.id);
+      }
+      return [];
+    },
+    resolveTargetId: (overData: any) => {
+      if (overData?.kind === "project-cell" && overData.chunk?.items?.[0]) {
+        return overData.chunk.items[0].id;
+      }
+      return null;
+    },
+    onStack: (sourceIds, targetId) => {
+      stackProjectsMutation.mutate({ sourceIds, targetId });
+      if (currentExpandedChunk && currentExpandedChunk.items.length <= 2) {
+        setExpandedChunkInfo(null);
+      }
+    },
+  });
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveDragItem(event.active.data.current || null);
   }, []);
@@ -119,40 +146,22 @@ export function ProjectGridView({
       setActiveDragItem(null);
       const { active, over, delta } = event;
       const activeKind = active.data.current?.kind;
-      const overKind = over?.data.current?.kind;
 
-      if (activeKind === "fan-item") {
+      if (handleStackDrop(active, over)) {
+        return;
+      }
+
+      if (activeKind === "fan-item" && !over && Math.hypot(delta.x, delta.y) > 120) {
         const project = active.data.current?.project as ProjectSummary;
-        if (overKind === "project-cell") {
-          const targetChunk = over!.data.current?.chunk as GroupChunk<ProjectSummary>;
-          const targetId = targetChunk.items[0].id;
-          if (project.id !== targetId) {
-            stackProjectsMutation.mutate({ sourceIds: [project.id], targetId });
-            if (currentExpandedChunk && currentExpandedChunk.items.length <= 2) {
-              setExpandedChunkInfo(null);
-            }
-          }
-        } else if (!over && Math.hypot(delta.x, delta.y) > 120) {
+        if (project) {
           unstackProjectsMutation.mutate([project.id]);
           if (currentExpandedChunk && currentExpandedChunk.items.length <= 2) {
             setExpandedChunkInfo(null);
           }
         }
-      } else if (
-        activeKind === "project-cell" &&
-        overKind === "project-cell" &&
-        active.id !== over?.id
-      ) {
-        const sourceChunk = active.data.current?.chunk as GroupChunk<ProjectSummary>;
-        const targetChunk = over!.data.current?.chunk as GroupChunk<ProjectSummary>;
-        const sourceIds = sourceChunk.items.map((p) => p.id);
-        const targetId = targetChunk.items[0].id;
-        if (!sourceIds.includes(targetId)) {
-          stackProjectsMutation.mutate({ sourceIds, targetId });
-        }
       }
     },
-    [stackProjectsMutation, unstackProjectsMutation, currentExpandedChunk]
+    [handleStackDrop, unstackProjectsMutation, currentExpandedChunk]
   );
 
   const handleOpenSpread = useCallback(
