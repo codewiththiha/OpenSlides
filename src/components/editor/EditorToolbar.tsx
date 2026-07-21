@@ -13,9 +13,6 @@ import {
   Settings2,
   Download,
   Focus,
-  Loader2,
-  Check,
-  AlertCircle,
   Moon,
   Sun,
   Command as CommandIcon,
@@ -23,6 +20,8 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { TitleBar } from "../TitleBar";
+import { SaveStatusBadge } from "./SaveStatusBadge";
+import { InlineEditableText } from "../ui/inline-editable-text";
 import { useToolbarSlice } from "@/store/ui-selectors";
 import { useExportProject, useUpdateSlideSettings } from "@/hooks/queries";
 import { modKeyLabel } from "@/lib/platform";
@@ -80,27 +79,6 @@ export const EditorToolbar = memo(function EditorToolbar({
     );
   };
 
-  const saveBadge = (
-    {
-      idle: null,
-      saving: (
-        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-          <Loader2 className="h-3 w-3 animate-spin" /> Saving…
-        </span>
-      ),
-      saved: (
-        <span className="flex items-center gap-1 text-[11px] text-emerald-500">
-          <Check className="h-3 w-3" /> Saved
-        </span>
-      ),
-      error: (
-        <span className="flex items-center gap-1 text-[11px] text-destructive">
-          <AlertCircle className="h-3 w-3" /> Save failed
-        </span>
-      ),
-    }[saveStatus] ?? null
-  );
-
   const mod = modKeyLabel();
 
   return (
@@ -123,7 +101,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             </div>
             <div
               className="truncate text-[10px] text-muted-foreground"
-              title={`Total autoplay time: ${formatDurationShort(totalDurationMs)}`}
+              title={`Estimated length: ${formatDurationShort(totalDurationMs)}`}
             >
               {project.slides.length} slide
               {project.slides.length !== 1 ? "s" : ""} · ~
@@ -136,16 +114,13 @@ export const EditorToolbar = memo(function EditorToolbar({
         <>
           <div className="pointer-events-none absolute inset-x-0 flex items-center justify-center px-40">
             {editingSlideName ? (
-              <input
-                className="pointer-events-auto h-7 max-w-[16rem] truncate rounded-md border border-input bg-background px-2 text-center text-xs font-medium outline-none focus:ring-1 focus:ring-ring"
+              <InlineEditableText
                 value={slideNameDraft}
-                autoFocus
-                onChange={(e) => setSlideNameDraft(e.target.value)}
-                onBlur={commitSlideName}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitSlideName();
-                  if (e.key === "Escape") setEditingSlideName(false);
-                }}
+                onChange={setSlideNameDraft}
+                onCommit={commitSlideName}
+                onCancel={() => setEditingSlideName(false)}
+                stopPropagation={false}
+                className="pointer-events-auto max-w-[16rem] truncate text-center text-xs font-medium"
               />
             ) : (
               <button
@@ -163,7 +138,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             )}
           </div>
 
-          {saveBadge}
+          <SaveStatusBadge status={saveStatus} />
 
           <Button
             variant="ghost"
@@ -175,7 +150,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             title={
               isAutoPlaying
                 ? "Pause autoplay"
-                : "Play slides (uses each slide’s duration)"
+                : "Play (auto-advance by slide duration)"
             }
             onClick={() => toggleAutoPlaying()}
           >
@@ -200,7 +175,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title="Toggle UI theme"
+            title="Toggle light/dark mode"
             onClick={toggleTheme}
           >
             {isDarkUi ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -210,7 +185,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title={`Zen mode (${mod}B)`}
+            title={`Focus mode (${mod}B)`}
             onClick={toggleZenMode}
           >
             <Focus className="h-4 w-4" />
@@ -220,7 +195,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title="Export JSON"
+            title="Export"
             onClick={() => exportMutation.mutate(project.id)}
           >
             <Download className="h-4 w-4" />

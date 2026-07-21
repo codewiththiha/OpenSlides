@@ -15,7 +15,7 @@ const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[
     items: [
       { keys: [...SHORTCUTS.commandPalette.keys], desc: SHORTCUTS.commandPalette.description },
       { keys: [...SHORTCUTS.shortcutsHelp.keys], desc: SHORTCUTS.shortcutsHelp.description },
-      { keys: ["Esc"], desc: "Close dialogs / exit present or zen" },
+      { keys: ["Esc"], desc: "Close dialogs / exit presentation or focus mode" },
     ],
   },
   {
@@ -29,8 +29,8 @@ const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[
       { keys: [...SHORTCUTS.focusSlideSearch.keys], desc: SHORTCUTS.focusSlideSearch.description },
       { keys: ["←", "→"], desc: "Step through highlights, then slides" },
       { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
-      { keys: ["0"], desc: "Back to clean slide (no highlight)" },
-      { keys: ["Click dot"], desc: "Jump to highlight via pill dots" },
+      { keys: ["0"], desc: "Back to the full slide (no highlight)" },
+      { keys: ["Click a dot"], desc: "Jump to a highlight by clicking its dot" },
       { keys: ["Tab"], desc: "Indent (insert 2 spaces)" },
       { keys: ["Shift", "Tab"], desc: "Unindent" },
     ],
@@ -38,7 +38,7 @@ const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[
   {
     title: "Playback",
     items: [
-      { keys: ["Play"], desc: "Toolbar play — auto-advance by slide duration" },
+      { keys: ["Play"], desc: "Play — slides advance automatically" },
       { keys: ["P"], desc: "Toggle autoplay in presentation mode" },
     ],
   },
@@ -48,9 +48,9 @@ const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[
       { keys: [...SHORTCUTS.present.keys], desc: SHORTCUTS.present.description },
       { keys: ["←", "→", "Space"], desc: "Step through highlights, then slides" },
       { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
-      { keys: ["0"], desc: "Back to clean slide (no highlight)" },
+      { keys: ["0"], desc: "Back to the full slide (no highlight)" },
       { keys: ["Click"], desc: "Advance one highlight step / slide" },
-      { keys: ["Click dot"], desc: "Jump to highlight via pill dots" },
+      { keys: ["Click a dot"], desc: "Jump to a highlight by clicking its dot" },
       { keys: ["Right-click"], desc: "Step back" },
       { keys: ["Esc"], desc: "Exit presentation / fullscreen" },
     ],

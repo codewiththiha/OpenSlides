@@ -61,7 +61,7 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandRes
     let slide_id = Uuid::new_v4().to_string();
     let ts = now_ms();
     let project_name = if name.trim().is_empty() {
-        "Untitled Deck".to_string()
+        "Untitled Presentation".to_string()
     } else {
         name.trim().to_string()
     };
@@ -132,7 +132,7 @@ pub async fn duplicate_project(
     .fetch_optional(&mut *tx)
     .await
     .map_err(|e| format!("Failed to fetch project: {e}"))?
-    .ok_or_else(|| CommandError::NotFound(format!("Project not found: {project_id}")))?;
+    .ok_or_else(|| CommandError::NotFound(format!("Presentation not found: {project_id}")))?;
 
     let name: String = project.get("name");
     let theme: String = project.get("theme");
@@ -203,7 +203,7 @@ pub async fn rename_project(
     name: String,
 ) -> CommandResult<Project> {
     let project_name = if name.trim().is_empty() {
-        "Untitled Deck".to_string()
+        "Untitled Presentation".to_string()
     } else {
         name.trim().to_string()
     };
@@ -230,7 +230,7 @@ pub async fn delete_project(pool: State<'_, DbPool>, project_id: String) -> Comm
         .map_err(|e| format!("Failed to delete project: {e}"))?;
 
     if result.rows_affected() == 0 {
-        return Err(CommandError::NotFound(format!("Project not found: {project_id}")));
+        return Err(CommandError::NotFound(format!("Presentation not found: {project_id}")));
     }
     Ok(())
 }

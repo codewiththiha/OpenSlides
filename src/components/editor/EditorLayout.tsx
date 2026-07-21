@@ -12,11 +12,11 @@ import {
   type ImperativePanelHandle,
 } from "react-resizable-panels";
 import { ChevronLeft, Code2 } from "lucide-react";
-import { SlidePreview } from "../SlidePreview";
 import { CodeEditor } from "../CodeEditor";
 import { BottomSlidesPanel } from "../BottomSlidesPanel";
 import { RenderErrorBoundary } from "../RenderErrorBoundary";
-import { HighlightStepIndicator } from "../HighlightStepIndicator";
+import { PreviewPane } from "./PreviewPane";
+import { CollapsedPanelButton } from "../ui/collapsed-panel-button";
 import { usePanelSlice, useZenSlice } from "@/store/ui-selectors";
 import { useCollapsiblePanel } from "@/hooks/useCollapsiblePanel";
 import { cn } from "@/lib/utils";
@@ -132,28 +132,13 @@ export const EditorLayout = memo(function EditorLayout({
                 minSize={30}
                 className="min-w-0"
               >
-                <div className="flex h-full items-center justify-center bg-muted/20 p-4 pb-5">
-                  <div className="relative aspect-video h-full max-h-full w-full max-w-full">
-                    <RenderErrorBoundary key={`preview-${project.id}`}>
-                      <SlidePreview
-                        project={project}
-                        activeHighlightIndex={effectiveHighlight}
-                        onHighlightExitComplete={onHighlightExitComplete}
-                      />
-                    </RenderErrorBoundary>
-                    {/* Clickable indicator: pointer-events-auto wrapper */}
-                    <div className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none">
-                      <div className="pointer-events-auto">
-                        <HighlightStepIndicator
-                          compact
-                          total={activeSlide?.highlights?.length ?? 0}
-                          current={effectiveHighlight}
-                          onSelect={(idx) => onSelectHighlight(idx)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PreviewPane
+                  project={project}
+                  activeSlide={activeSlide}
+                  effectiveHighlight={effectiveHighlight}
+                  onHighlightExitComplete={onHighlightExitComplete}
+                  onSelectHighlight={onSelectHighlight}
+                />
               </Panel>
 
               {!isZenMode && (
@@ -194,16 +179,13 @@ export const EditorLayout = memo(function EditorLayout({
                         }}
                       >
                         <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
-                        <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span
-                          className="select-none text-[11px] tracking-wide text-muted-foreground"
-                          style={{
-                            writingMode: "vertical-rl",
-                            textOrientation: "mixed",
-                          }}
-                        >
-                          Code
-                        </span>
+                        <CollapsedPanelButton
+                          orientation="vertical"
+                          icon={Code2}
+                          label="Code"
+                          onClick={expandCodePanel}
+                          className="h-auto w-auto min-w-0 border-0 bg-transparent hover:bg-transparent"
+                        />
                       </div>
                     ) : (
                       <RenderErrorBoundary key={`editor-${project.id}`}>
