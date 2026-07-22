@@ -35,7 +35,7 @@ interface SlideCardProps {
   isTabStop?: boolean;
   isMultiSelectMode?: boolean;
   isMultiSelected?: boolean;
-  onToggleMultiSelect?: (id: string) => void;
+  onToggleMultiSelect?: (id: string, position?: { x: number; y: number }) => void;
   onOpenContextMenu?: (event: React.MouseEvent<HTMLDivElement>, slide: Slide, title: string) => void;
   theme: string;
   language: string;
@@ -174,10 +174,10 @@ export const SlideCard = memo(function SlideCard({
       style={{ width: ITEM_WIDTH, ...style }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      onClick={() => {
+      onClick={(event) => {
         if (isOverlay || isRenaming) return;
         if (isMultiSelectMode) {
-          onToggleMultiSelect?.(slide.id);
+          onToggleMultiSelect?.(slide.id, { x: event.clientX, y: event.clientY });
           return;
         }
         setCurrentSlideId(slide.id);

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowLeftToLine,
   ArrowRightToLine,
@@ -27,6 +27,7 @@ interface SlideContextMenuProps {
   onGroup: () => void;
   onDelete: () => void;
   onClose: () => void;
+  onEscape: () => void;
 }
 
 function MenuItem({
@@ -80,16 +81,40 @@ export function SlideContextMenu({
   onGroup,
   onDelete,
   onClose,
+  onEscape,
 }: SlideContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [resolvedPosition, setResolvedPosition] = useState(position);
+
+  // Keep the menu next to the pointer whenever possible. Only flip it above
+  // the pointer when there is genuinely not enough space below the click.
+  useLayoutEffect(() => {
+    if (!open || !menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const gap = 6;
+    const edge = 8;
+    let left = position.x + gap;
+    let top = position.y + gap;
+
+    if (left + rect.width > window.innerWidth - edge) {
+      left = Math.max(edge, window.innerWidth - rect.width - edge);
+    }
+    if (top + rect.height > window.innerHeight - edge) {
+      top = Math.max(edge, position.y - rect.height - gap);
+    }
+
+    setResolvedPosition({ x: left, y: top });
+  }, [open, position]);
 
   useEffect(() => {
     if (!open) return;
     const dismiss = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (selectionMode && target?.closest("[data-slide-id]")) return;
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) onClose();
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onEscape();
     };
     const timer = window.setTimeout(() => {
       document.addEventListener("mousedown", dismiss);
@@ -100,7 +125,7 @@ export function SlideContextMenu({
       document.removeEventListener("mousedown", dismiss);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, onClose, onEscape, selectionMode]);
 
   return (
     <AnimatePresence>
@@ -109,8 +134,8 @@ export function SlideContextMenu({
           ref={menuRef}
           className="fixed min-w-[210px] overflow-hidden rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
           style={{
-            left: Math.min(position.x, window.innerWidth - 226),
-            top: Math.min(position.y, window.innerHeight - 310),
+            left: resolvedPosition.x,
+            top: resolvedPosition.y,
             zIndex: Z_INDEX.contextMenu,
           }}
           initial={{ opacity: 0, scale: 0.96, y: -4 }}
