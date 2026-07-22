@@ -1,7 +1,7 @@
 {
   "name": "openslides",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.21",
   "type": "module",
   "scripts": {
     "dev": "vite",
