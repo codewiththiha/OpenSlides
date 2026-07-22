@@ -13,6 +13,7 @@ import { SlideCardHoverPreview } from "./SlideCardHoverPreview";
 import { useSlideCardHoverPreview } from "./useSlideCardHoverPreview";
 
 export const ITEM_WIDTH = 152;
+export const ITEM_HEIGHT = 118;
 
 interface SlideCardProps {
   slide: Slide;
@@ -171,7 +172,7 @@ export const SlideCard = memo(function SlideCard({
         isMultiSelected && "border-primary bg-primary/10 ring-2 ring-primary/30",
         isActive && !isOverlay && "opacity-30",
       )}
-      style={{ width: ITEM_WIDTH, ...style }}
+      style={{ width: ITEM_WIDTH, height: ITEM_HEIGHT, ...style }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={(event) => {

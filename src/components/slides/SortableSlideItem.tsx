@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { useStackDropTarget } from "@/hooks/useStackDropTarget";
 import { CSS } from "@dnd-kit/utilities";
-import { SlideCard } from "./SlideCard";
+import { ITEM_HEIGHT, SlideCard } from "./SlideCard";
 import { StackDeck } from "../ui/stack/StackDeck";
 import { cn } from "@/lib/utils";
 import type { Slide } from "@/types";
@@ -139,6 +139,8 @@ export function SortableSlideItem({
         <StackDeck
           count={count}
           variant="slide"
+          className="shrink-0"
+          style={{ height: ITEM_HEIGHT }}
           onExpand={onExpand}
           onOpenTop={onOpenTop}
         >

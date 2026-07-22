@@ -400,7 +400,7 @@ export function BottomSlidesPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col bg-card/60">
+    <div className="flex h-full min-h-[158px] min-w-0 flex-col bg-card/60">
       <SlidesPanelHeader
         ordered={ordered}
         filteredOrdered={filteredOrdered}
@@ -449,7 +449,7 @@ export function BottomSlidesPanel({
                 return (
                   <div
                     key={chunk.groupId}
-                    className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1 transition-all duration-200"
+                    className="flex min-h-[126px] items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1 transition-all duration-200"
                   >
                     <StackExpandedControls
                       count={chunk.items.length}
