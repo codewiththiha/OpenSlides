@@ -86,7 +86,7 @@ function FannedItem({
   const { rotate: fanAngle, x: fanX, y: fanY } = computeFanLayout(total, index);
 
   const cardWidth = 220;
-  const cardHeight = 150;
+  const cardHeight = 180;
 
   const originLeft = (deckRect?.left ?? fanCenterX - cardWidth / 2) + (deckRect?.width ?? cardWidth) / 2 - cardWidth / 2;
   const originTop = (deckRect?.top ?? fanCenterY - cardHeight / 2) + (deckRect?.height ?? cardHeight) / 2 - cardHeight / 2;
@@ -223,7 +223,7 @@ export function StackSpread({
   );
 
   const cardWidth = 220;
-  const cardHeight = 150;
+  const cardHeight = 180;
   const spreadWidth = cardWidth + (total - 1) * 85 + 80;
   const spreadHeight = cardHeight + Math.abs((total - 1) / 2) * 12 + 80;
 
