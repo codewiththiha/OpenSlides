@@ -40,16 +40,23 @@ export function useShikiDisplay({ theme, language }: UseShikiDisplayArgs) {
   } | null>(null);
 
   useEffect(() => {
+    if (shikiLoadFailed) {
+      // A failed requested environment must not retain a previous slide's
+      // highlighter/theme. SlidePreview will use its plain fallback instead.
+      setDisplayState(null);
+      return;
+    }
     if (canUseShiki && highlighter) {
       setDisplayState({ highlighter, theme, language });
     }
-  }, [canUseShiki, highlighter, theme, language]);
+  }, [canUseShiki, highlighter, theme, language, shikiLoadFailed]);
 
+  const useFallback = shikiLoadFailed;
   return {
     highlighter,
     shikiLoadFailed,
-    displayHighlighter: displayState?.highlighter ?? null,
-    displayTheme: displayState?.theme ?? theme,
-    displayLanguage: displayState?.language ?? language,
+    displayHighlighter: useFallback ? null : displayState?.highlighter ?? null,
+    displayTheme: useFallback ? theme : displayState?.theme ?? theme,
+    displayLanguage: useFallback ? language : displayState?.language ?? language,
   };
 }
