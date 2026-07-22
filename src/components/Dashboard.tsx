@@ -19,6 +19,7 @@ import { modKeyLabel } from "@/lib/platform";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { applyUiTheme, useUiStore } from "@/store/useUiStore";
 import { api } from "@/lib/tauri-api";
+import { notify } from "@/lib/toast";
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -51,13 +52,21 @@ export function Dashboard() {
     try {
       const project = await createRef.current.mutateAsync(newName.trim() || "Untitled Presentation");
       if (selectedTheme && selectedTheme !== "dark-plus" && selectedTheme !== project.theme) {
-        await api.updateProjectTheme(project.id, selectedTheme);
+        try {
+          await api.updateProjectTheme(project.id, selectedTheme);
+        } catch {
+          // The deck itself exists and is ready to edit even if its optional
+          // theme update fails, so do not strand the user on the dashboard.
+          notify.error("Presentation created, but the selected theme could not be applied");
+        }
       }
       setCreating(false);
       setNewName("Untitled Presentation");
       setSelectedTheme("dark-plus");
       navigate(`/editor/${project.id}`);
-    } catch {}
+    } catch {
+      // The mutation hook presents the creation error.
+    }
   }, [newName, selectedTheme, navigate]);
   const handleImport = useCallback(async () => { try { const project = await importRef.current.mutateAsync(); navigate(`/editor/${project.id}`); } catch {} }, [navigate]);
   const menuHandlers = useBaseAppMenuHandlers({
@@ -70,7 +79,7 @@ export function Dashboard() {
   useAppMenu(menuHandlers);
   const mod = modKeyLabel();
   return <div className="flex h-full flex-col bg-background"><TitleBar leading={<div className="flex items-center gap-2"><img src="/openslides-logo.svg" alt="OpenSlides" className="h-8 w-8 rounded-lg object-cover" /><span className="text-sm font-semibold">OpenSlides</span></div>} trailing={<><Button variant="ghost" size="icon" className="h-8 w-8" title={`Command palette (${mod}K)`} onClick={() => setIsCommandOpen(true)}><CommandIcon className="h-3.5 w-3.5" /></Button><Button variant="outline" size="sm" className="gap-1.5" onClick={() => void handleImport()} disabled={importMutation.isPending}><Upload className="h-4 w-4" />Import</Button><Button onClick={() => setCreating(true)} className="gap-2" size="sm"><Plus className="h-4 w-4" />New Presentation</Button></>} />
-  {(creating || projects.length === 0) && !isLoading && !isError && (
+  {creating && !isLoading && !isError && (
     <div className="mx-auto max-w-7xl px-6 pt-8">
       <CreateDeckTile
         isExpanded={creating || projects.length === 0}
@@ -92,6 +101,7 @@ export function Dashboard() {
     projectCount={projects.length}
     onCreate={() => setCreating(true)}
     onImport={() => void handleImport()}
+    showEmptyState={!creating}
   >
     {!isLoading && !isError && projects.length > 0 && (
       <ProjectGridView

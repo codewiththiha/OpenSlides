@@ -10,6 +10,8 @@ interface DashboardStatesProps {
   projectCount: number;
   onCreate: () => void;
   onImport: () => void;
+  /** Hide the default empty prompt while the custom create form is open. */
+  showEmptyState?: boolean;
   children: React.ReactNode;
 }
 
@@ -20,6 +22,7 @@ export function DashboardStates({
   projectCount,
   onCreate,
   onImport,
+  showEmptyState = true,
   children,
 }: DashboardStatesProps) {
   if (isLoading || isError) {
@@ -33,7 +36,7 @@ export function DashboardStates({
     );
   }
 
-  if (projectCount === 0) {
+  if (projectCount === 0 && showEmptyState) {
     return (
       <EmptyState
         icon={FolderOpen}
