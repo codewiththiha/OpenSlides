@@ -133,6 +133,12 @@
 }
 
 
+/* Keep the toast lane above the persistent slide-selection action bubbles. */
+:root[data-slide-selection-active] [data-sonner-toaster] {
+  --offset-bottom: 92px !important;
+  --mobile-offset-bottom: 92px !important;
+}
+
 /* ─── Toast system (AppToaster + notify()) — FIXED SIZE for every toast ─── */
 .toast-openslides.toast-fixed,
 .toast-fixed {
