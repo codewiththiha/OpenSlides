@@ -161,7 +161,7 @@ export const SlideCard = memo(function SlideCard({
       tabIndex={isTabStop ? 0 : -1}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        "group relative flex h-full shrink-0 cursor-pointer flex-col gap-1 overflow-hidden rounded-md border p-2 select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
+        "group relative flex h-[118px] shrink-0 self-center cursor-pointer flex-col gap-1 overflow-hidden rounded-md border p-2 select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
         "will-change-transform min-w-0",
         isOverlay
           ? "cursor-grabbing border-primary bg-card shadow-xl ring-2 ring-primary/40"
