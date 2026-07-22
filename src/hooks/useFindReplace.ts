@@ -61,7 +61,10 @@ export function useFindReplace({ code, textareaRef, applyCode, saveCaret, editor
     if (!searchTerm || !matches.length) return;
     const next = matchCase
       ? code.split(searchTerm).join(replaceTerm)
-      : code.replace(new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), replaceTerm);
+      : code.replace(
+          new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+          () => replaceTerm,
+        );
     applyCode(next);
   }, [searchTerm, matches.length, matchCase, code, replaceTerm, applyCode]);
   useEffect(() => {
