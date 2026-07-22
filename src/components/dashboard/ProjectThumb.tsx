@@ -2,8 +2,19 @@ import { FileCode } from "lucide-react";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { type ProjectSummary } from "@/types";
 import { CodeThumbnail } from "../ui/code-thumbnail";
+import { cn } from "@/lib/utils";
 
-export function ProjectThumb({ project }: { project: ProjectSummary }) {
+export function ProjectThumb({
+  project,
+  className,
+  codeClassName,
+  fontSize = 5.5,
+}: {
+  project: ProjectSummary;
+  className?: string;
+  codeClassName?: string;
+  fontSize?: number;
+}) {
   const thumb = useSlideThumbnail({
     slideId: project.firstSlideId || project.id,
     code: project.firstSlideCode,
@@ -16,10 +27,11 @@ export function ProjectThumb({ project }: { project: ProjectSummary }) {
       containerRef={thumb.ref}
       html={thumb.html}
       theme={project.theme}
-      fontSize={3.5}
+      fontSize={fontSize}
       lineHeight={1.3}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60"
-      fallback={<FileCode className="h-4 w-4 text-primary" />}
+      className={cn("relative w-full overflow-hidden", className)}
+      codeClassName={codeClassName}
+      fallback={<FileCode className="h-5 w-5 text-primary" />}
     />
   );
 }
