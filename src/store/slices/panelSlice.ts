@@ -26,5 +26,5 @@ export const createPanelSlice: StateCreator<UiState, [], [], PanelSlice> = (set)
   setCodePanelSize: (v) =>
     set({ codePanelSize: Math.min(70, Math.max(18, Math.round(v))) }),
   setSlidesPanelSize: (v) =>
-    set({ slidesPanelSize: Math.min(40, Math.max(20, Math.round(v))) }),
+    set({ slidesPanelSize: Math.min(40, Math.max(22, Math.round(v))) }),
 });

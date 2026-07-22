@@ -24,7 +24,7 @@ import type { Project, Slide } from "@/types";
 import { Z_INDEX } from "../ui/overlay";
 
 const CODE_COLLAPSE_THRESHOLD = 14;
-const SLIDES_MIN_EXPANDED_SIZE = 20;
+const SLIDES_MIN_EXPANDED_SIZE = 22;
 const SLIDES_COLLAPSE_THRESHOLD = SLIDES_MIN_EXPANDED_SIZE;
 const CODE_COLLAPSED_SIZE = 3.5;
 const SLIDES_COLLAPSED_SIZE = 6;
