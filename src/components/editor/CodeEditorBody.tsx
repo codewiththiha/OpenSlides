@@ -113,7 +113,7 @@ export function CodeEditorBody({
           lang="en"
           inputMode="text"
           enterKeyHint="enter"
-          className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-white outline-none"
+          className="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-foreground outline-none"
           wrap="off"
           style={
             {
