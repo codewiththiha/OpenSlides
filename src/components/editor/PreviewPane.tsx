@@ -28,17 +28,18 @@ export function PreviewPane({
             onHighlightExitComplete={onHighlightExitComplete}
           />
         </RenderErrorBoundary>
-        {/* Clickable indicator: pointer-events-auto wrapper */}
-        <div className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto">
-            <HighlightStepIndicator
-              compact
-              total={activeSlide?.highlights?.length ?? 0}
-              current={effectiveHighlight}
-              onSelect={(idx) => onSelectHighlight(idx)}
-            />
+        {project.settings.showHighlightStepIndicator !== false && (
+          <div className="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto">
+              <HighlightStepIndicator
+                compact
+                total={activeSlide?.highlights?.length ?? 0}
+                current={effectiveHighlight}
+                onSelect={(idx) => onSelectHighlight(idx)}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -101,6 +101,8 @@ export interface Slide {
 
 export interface ProjectSettings {
   showLineNumbers: boolean;
+  /** Show the floating highlight-step progress control on preview and presentation. */
+  showHighlightStepIndicator: boolean;
   fontSize: number;
   lineHeight: number;
   editorFontSize: number;

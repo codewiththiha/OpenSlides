@@ -82,11 +82,7 @@ export const EditorLayout = memo(function EditorLayout({
     collapseThreshold: CODE_COLLAPSE_THRESHOLD,
   });
 
-  const {
-    expand: expandSlidesPanel,
-    collapse: collapseSlidesPanel,
-    onResize: onSlidesPanelResize,
-  } = useCollapsiblePanel({
+  const { onResize: onSlidesPanelResize } = useCollapsiblePanel({
     panelRef: slidesPanelRef,
     isCollapsed: isBottomPanelCollapsed,
     setCollapsed: setIsBottomPanelCollapsed,
@@ -219,10 +215,6 @@ export const EditorLayout = memo(function EditorLayout({
                   project={project}
                   collapsed={isBottomPanelCollapsed}
                   activeHighlightIndex={activeHighlightIndex}
-                  onToggleCollapse={() => {
-                    if (isBottomPanelCollapsed) expandSlidesPanel();
-                    else collapseSlidesPanel();
-                  }}
                 />
               </Panel>
             </>
