@@ -28,14 +28,12 @@ import { PresentOverlay } from "./editor/PresentOverlay";
 import { useUiStore } from "@/store/useUiStore";
 import {
   useProject,
-  useCreateSlide,
   useDuplicateSlide,
   useCreateProject,
   useExportProject,
-  useUpdateSlideSettings,
   useUpdateTheme,
 } from "@/hooks/queries";
-import { useAddSlideAction } from "@/hooks/useSlidePanelActions";
+import { useAddSlide } from "@/hooks/useAddSlide";
 import { api } from "@/lib/tauri-api";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { useHighlightNav } from "@/hooks/useHighlightNav";
@@ -66,17 +64,10 @@ export function Editor() {
   const { data: project, isLoading, isError, error } = useProject(projectId);
 
   const exportMutation = useExportProject();
-  const createSlide = useCreateSlide(projectId ?? "");
   const duplicateSlide = useDuplicateSlide(projectId ?? "");
-  const updateSlideSettings = useUpdateSlideSettings(projectId ?? "");
   const updateTheme = useUpdateTheme(projectId ?? "");
   const createProject = useCreateProject();
-  const addSlide = useAddSlideAction({
-    ordered: project?.slides ?? [],
-    createSlide,
-    updateSettings: updateSlideSettings,
-    setCurrentSlideId,
-  });
+  const addSlide = useAddSlide(projectId ?? "");
   const createProjectRef = useRef(createProject);
   const exportMutationRef = useRef(exportMutation);
   const addSlideRef = useRef(addSlide);
