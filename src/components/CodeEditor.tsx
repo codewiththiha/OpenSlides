@@ -107,11 +107,13 @@ export function CodeEditor({
     500,
   );
 
-  useEffect(() => () => debouncedSave.cancel(), [debouncedSave]);
-
   useEffect(() => {
+    // A slide switch or editor unmount must persist the final debounced edit
+    // before disposing its timer. Keeping this in one cleanup avoids a
+    // cancel-first ordering that could discard the last keystrokes.
     return () => {
       debouncedSave.flush();
+      debouncedSave.cancel();
     };
   }, [slideId, debouncedSave]);
 
