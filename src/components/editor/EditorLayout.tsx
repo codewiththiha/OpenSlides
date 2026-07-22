@@ -24,7 +24,8 @@ import type { Project, Slide } from "@/types";
 import { Z_INDEX } from "../ui/overlay";
 
 const CODE_COLLAPSE_THRESHOLD = 14;
-const SLIDES_COLLAPSE_THRESHOLD = 10;
+const SLIDES_MIN_EXPANDED_SIZE = 20;
+const SLIDES_COLLAPSE_THRESHOLD = SLIDES_MIN_EXPANDED_SIZE;
 const CODE_COLLAPSED_SIZE = 3.5;
 const SLIDES_COLLAPSED_SIZE = 6;
 
@@ -64,6 +65,9 @@ export const EditorLayout = memo(function EditorLayout({
 
   const codePanelRef = useRef<ImperativePanelHandle>(null);
   const slidesPanelRef = useRef<ImperativePanelHandle>(null);
+  // Older saved layouts may be smaller; never restore an expanded slides rail
+  // below the space required for a complete centered card.
+  const slidesExpandedSize = Math.max(SLIDES_MIN_EXPANDED_SIZE, slidesPanelSize);
 
   const {
     expand: expandCodePanel,
@@ -86,7 +90,7 @@ export const EditorLayout = memo(function EditorLayout({
     panelRef: slidesPanelRef,
     isCollapsed: isBottomPanelCollapsed,
     setCollapsed: setIsBottomPanelCollapsed,
-    size: slidesPanelSize,
+    size: slidesExpandedSize,
     setSize: setSlidesPanelSize,
     collapseThreshold: SLIDES_COLLAPSE_THRESHOLD,
   });
@@ -200,7 +204,7 @@ export const EditorLayout = memo(function EditorLayout({
                 defaultSize={
                   isBottomPanelCollapsed
                     ? SLIDES_COLLAPSED_SIZE
-                    : slidesPanelSize
+                    : slidesExpandedSize
                 }
                 minSize={SLIDES_COLLAPSED_SIZE}
                 maxSize={40}
