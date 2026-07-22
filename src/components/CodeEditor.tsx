@@ -36,6 +36,7 @@ import { useCodeEditorTabKey } from "@/hooks/editor/useCodeEditorTabKey";
 import { CodeEditorHeader } from "./editor/CodeEditorHeader";
 import { CodeEditorBody } from "./editor/CodeEditorBody";
 import { CodeEditorFooter } from "./editor/CodeEditorFooter";
+import { usePreviewProjectSettings } from "@/hooks/usePreviewSettings";
 
 interface CodeEditorProps {
   project: Project;
@@ -55,7 +56,7 @@ export function CodeEditor({
   const setSaveStatus = useUiStore((s) => s.setSaveStatus);
   const editorShowLineNumbers = useUiStore((s) => s.editorShowLineNumbers);
   // preview overrides
-  const previewProject = useUiStore((s) => s.previewProject);
+  const previewProject = usePreviewProjectSettings();
 
   const { activeSlide: slide, activeIndex: currentIndex } = useCurrentSlide(project);
   const slideId = slide?.id;

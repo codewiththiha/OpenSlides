@@ -1,28 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { AppToaster } from "./components/ui/toaster";
 import { installAppMenu } from "./lib/app-menu";
 import { flushPendingSave } from "./lib/code-save";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { queryClient } from "./hooks/queries/query-client";
 import "./index.css";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Local SQLite is the single source of truth and Tauri is the only writer,
-      // so we have absolute cache consistency. No need for background refetches.
-      staleTime: Infinity,
-      gcTime: 1000 * 60 * 30, // 30 minutes in memory
-      retry: 1,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchOnMount: false,
-    },
-  },
-});
 
 // Default to dark UI chrome (Zustand persist may override on hydrate)
 document.documentElement.classList.add("dark");

@@ -4,7 +4,7 @@
  * Fix: reads instant preview overrides from Zustand (previewProject / previewSlides / previewHighlights)
  * so fontSize / lineHeight / transitions update live during drag, not only on commit.
  */
-import { useRef, useMemo } from "react";
+import { useRef } from "react";
 import { useShikiDisplay } from "@/hooks/useShikiDisplay";
 import {
   themeBackground,
@@ -12,10 +12,9 @@ import {
   type Project,
 } from "@/types";
 import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
-import { usePreviewHighlightsMap } from "@/hooks/usePreviewSettings";
+import { usePreviewMergedHighlights, usePreviewProjectSetting } from "@/hooks/usePreviewSettings";
 import { useSlideCode } from "@/hooks/useSlideCode";
 import { useCurrentSlide } from "@/hooks/useCurrentSlide";
-import { useUiStore } from "@/store/useUiStore";
 import { HighlightLayer } from "./HighlightLayer";
 import { MagicMoveBlock } from "./preview/MagicMoveBlock";
 import { PreviewFallback } from "./preview/PreviewFallback";
@@ -41,11 +40,10 @@ export function SlidePreview({
 
   // --- instant preview overrides ---
   const useEffective = useEffectiveSettings(project, slide);
-  const previewHighlightsMap = usePreviewHighlightsMap();
 
   const language = resolveProjectLanguage(project);
-  const previewTheme = useUiStore((state) => state.previewProject.theme);
-  const previewBlackCodeBackground = useUiStore((state) => state.previewProject.useBlackCodeBackground);
+  const previewTheme = usePreviewProjectSetting("theme");
+  const previewBlackCodeBackground = usePreviewProjectSetting("useBlackCodeBackground");
   const theme = previewTheme ?? project.theme;
 
   const {
@@ -74,16 +72,7 @@ export function SlidePreview({
   const stagePad = isPresenting ? "p-16 md:p-24" : "p-8 md:p-12";
 
   const rawHighlights = slide.highlights ?? [];
-  // Merge per-highlight preview overrides
-  const highlights = useMemo(
-    () =>
-      rawHighlights.map((hl) => {
-        const preview = previewHighlightsMap.get(hl.id);
-        if (!preview) return hl;
-        return { ...hl, ...preview };
-      }),
-    [rawHighlights, previewHighlightsMap],
-  );
+  const highlights = usePreviewMergedHighlights(rawHighlights);
 
   const activeHighlight =
     activeHighlightIndex >= 0 && activeHighlightIndex < highlights.length

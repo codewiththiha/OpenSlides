@@ -8,7 +8,9 @@ import { api, isCancelledError, type SettingsPatch } from "../../lib/tauri-api";
 import { projectKeys } from "./keys";
 import { useProjectMutation } from "./useProjectMutation";
 import { showUndoToast } from "../../lib/settings-undo";
+import { useUiStore } from "../../store/useUiStore";
 import type { Project, ProjectSettings, ThemeName } from "../../types";
+import type { PreviewProjectSettings } from "../../store/useUiStore";
 
 export function useProjects() {
   return useQuery({
@@ -75,6 +77,19 @@ export function useRenameProject() {
   );
 }
 
+const previewProjectSettingKeys = new Set<string>([
+  "fontSize",
+  "lineHeight",
+  "editorFontSize",
+  "globalTransitionDuration",
+  "globalStagger",
+  "useBlackCodeBackground",
+]);
+
+function isPreviewProjectSettingKey(key: keyof ProjectSettings): key is Extract<keyof ProjectSettings, keyof PreviewProjectSettings> {
+  return previewProjectSettingKeys.has(key);
+}
+
 function describeProjectChange(patch: SettingsPatch, before: ProjectSettings): string | null {
   if (patch.fontSize !== undefined && patch.fontSize !== before.fontSize) return `Preview font ${before.fontSize}px → ${patch.fontSize}px`;
   if (patch.lineHeight !== undefined && patch.lineHeight !== before.lineHeight) return `Line height ${before.lineHeight.toFixed(2)} → ${patch.lineHeight.toFixed(2)}`;
@@ -100,6 +115,12 @@ export function useUpdateSettings(projectId: string) {
     },
     onSuccess: (project, patch, context) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
+      const { clearPreviewProjectSetting } = useUiStore.getState();
+      for (const key of Object.keys(patch) as (keyof SettingsPatch)[]) {
+        if (isPreviewProjectSettingKey(key)) {
+          clearPreviewProjectSetting(key);
+        }
+      }
       const before = context?.before;
       if (!before) return;
       const label = describeProjectChange(patch, before);
