@@ -10,6 +10,7 @@ use crate::models::{
     settings_to_json, Project, ProjectSettings,
 };
 use serde_json::Value as JsonValue;
+use std::collections::HashMap;
 use tauri::{AppHandle, State};
 use uuid::Uuid;
 
@@ -51,6 +52,7 @@ pub async fn export_project_to_json(
             "stagger": s.stagger,
             "name": s.name,
             "highlights": s.highlights,
+            "sectionId": s.section_id,
         })).collect::<Vec<_>>(),
     });
 
@@ -170,13 +172,21 @@ pub async fn import_project_from_json(
     let project_id = Uuid::new_v4().to_string();
     let ts = now_ms();
 
-    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String, String)> = Vec::new();
+    // Imported slides are always assigned fresh IDs. An exported deck can be
+    // imported back into the same database, where reusing its old IDs would
+    // collide with the original slides table rows.
+    let mut imported_slide_ids: HashMap<String, String> = HashMap::new();
+    let mut imported_section_ids: HashMap<String, String> = HashMap::new();
+    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String, String, Option<String>)> = Vec::new();
     for (i, s) in slides_val.iter().enumerate() {
-        let id = s
+        let source_id = s
             .get("id")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+            .map(|value| value.to_string());
+        let id = Uuid::new_v4().to_string();
+        if let Some(source_id) = source_id {
+            imported_slide_ids.insert(source_id, id.clone());
+        }
         let code = s
             .get("code")
             .and_then(|v| v.as_str())
@@ -201,13 +211,23 @@ pub async fn import_project_from_json(
         if i == 0 {
             settings.current_slide_id = Some(id.clone());
         }
-        parsed_slides.push((id, code, duration, transition, stagger, sname, highlights_json));
+        let section_id = s
+            .get("sectionId")
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(|source_section_id| {
+                imported_section_ids
+                    .entry(source_section_id.to_string())
+                    .or_insert_with(|| Uuid::new_v4().to_string())
+                    .clone()
+            });
+        parsed_slides.push((id, code, duration, transition, stagger, sname, highlights_json, section_id));
     }
 
-    // Prefer imported currentSlideId if it matches a slide we keep
+    // Remap the exported current slide ID to the fresh imported slide ID.
     if let Some(cid) = value.get("currentSlideId").and_then(|v| v.as_str()) {
-        if parsed_slides.iter().any(|(id, ..)| id == cid) {
-            settings.current_slide_id = Some(cid.to_string());
+        if let Some(imported_id) = imported_slide_ids.get(cid) {
+            settings.current_slide_id = Some(imported_id.clone());
         }
     }
 
@@ -235,12 +255,12 @@ pub async fn import_project_from_json(
     .await
     .map_err(|e| CommandError::Failed(format!("Failed to insert project: {e}")))?;
 
-    for (i, (id, code, duration, transition, stagger, sname, highlights_json)) in parsed_slides.iter().enumerate() {
+    for (i, (id, code, duration, transition, stagger, sname, highlights_json, section_id)) in parsed_slides.iter().enumerate() {
         sqlx::query(
             r#"
             INSERT INTO slides
-              (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, section_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(id)
@@ -252,6 +272,7 @@ pub async fn import_project_from_json(
         .bind(duration)
         .bind(sname)
         .bind(highlights_json)
+        .bind(section_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| CommandError::Failed(format!("Failed to insert slide: {e}")))?;
