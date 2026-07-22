@@ -69,6 +69,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             k === "globalStagger" ||
             k === "codeAlign" ||
             k === "showLineNumbers" ||
+            k === "useBlackCodeBackground" ||
             k === "showHighlightStepIndicator" ||
             k === "useGlobalTransition" ||
             k === "useGlobalStagger"
@@ -129,6 +130,18 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             <CodeAlignPicker
               value={s.codeAlign ?? "left"}
               onChange={(align) => patch({ codeAlign: align })}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Code background">
+            <ToggleField
+              label="Pure black background"
+              description="Replace the syntax theme background with black for easy video compositing"
+              checked={s.useBlackCodeBackground}
+              onChange={(v) => {
+                setPreviewProjectSetting("useBlackCodeBackground", v);
+                patch({ useBlackCodeBackground: v });
+              }}
             />
           </SettingsSection>
 

@@ -45,6 +45,7 @@ export function SlidePreview({
 
   const language = resolveProjectLanguage(project);
   const previewTheme = useUiStore((state) => state.previewProject.theme);
+  const previewBlackCodeBackground = useUiStore((state) => state.previewProject.useBlackCodeBackground);
   const theme = previewTheme ?? project.theme;
 
   const {
@@ -65,7 +66,8 @@ export function SlidePreview({
   const s = project.settings;
   const settings = { ...s, fontSize: useEffective.fontSize, lineHeight: useEffective.lineHeight };
 
-  const bg = themeBackground(displayTheme);
+  const useBlackBackground = previewBlackCodeBackground ?? s.useBlackCodeBackground;
+  const bg = useBlackBackground ? "#000000" : themeBackground(displayTheme);
   const codeAlign = settings.codeAlign === "center" ? "center" : "left";
   const centerBlock = codeAlign === "center";
 

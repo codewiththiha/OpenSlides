@@ -2,6 +2,7 @@
 
 export type PreviewProjectSettings = {
   theme?: string;
+  useBlackCodeBackground?: boolean;
   fontSize?: number;
   lineHeight?: number;
   editorFontSize?: number;
