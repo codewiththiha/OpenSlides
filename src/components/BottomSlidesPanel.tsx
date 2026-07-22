@@ -45,6 +45,7 @@ import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { SlidesPanelHeader } from "./slides/SlidesPanelHeader";
 import { SlideContextMenu } from "./slides/SlideContextMenu";
+import { SlideSelectionToolbar } from "./slides/SlideSelectionToolbar";
 import { ConfirmDialog } from "./ui/confirm-dialog";
 import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
 import { StackExpandedControls } from "./ui/stack/StackExpandedControls";
@@ -52,6 +53,7 @@ import { useUiStore } from "@/store/useUiStore";
 import { chunkConsecutive } from "@/lib/grouping";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 import { useStackDragEnd } from "@/hooks/useStackDragEnd";
+import { isTypingTarget } from "@/lib/keyboard";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -287,22 +289,25 @@ export function BottomSlidesPanel({
 
   const openContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>, slide: Slide, title: string) => {
     setCurrentSlideId(slide.id);
-    if (isMultiSelectMode && !selectedSlideIds.has(slide.id)) {
-      setSelectedSlideIds((current) => new Set(current).add(slide.id));
+    if (isMultiSelectMode) {
+      toggleSlideSelection(slide.id);
+      return;
     }
     setContextMenu({ slide, title, position: { x: event.clientX, y: event.clientY } });
-  }, [isMultiSelectMode, selectedSlideIds, setCurrentSlideId]);
+  }, [isMultiSelectMode, setCurrentSlideId, toggleSlideSelection]);
 
   const startMultiSelect = useCallback(() => {
     if (!contextMenu) return;
     setIsMultiSelectMode(true);
     setSelectedSlideIds(new Set([contextMenu.slide.id]));
-  }, [contextMenu]);
+    closeContextMenu();
+  }, [closeContextMenu, contextMenu]);
 
   const selectAllSlides = useCallback(() => {
     setIsMultiSelectMode(true);
     setSelectedSlideIds(new Set(ordered.map((slide) => slide.id)));
-  }, [ordered]);
+    closeContextMenu();
+  }, [closeContextMenu, ordered]);
 
   const clearSlideSelection = useCallback(() => {
     setSelectedSlideIds(new Set());
@@ -310,19 +315,13 @@ export function BottomSlidesPanel({
     closeContextMenu();
   }, [closeContextMenu]);
 
-  // Multi-select remains cancellable even after the menu itself has been
-  // dismissed by a normal click elsewhere in the slide strip.
+  // Reserve the bottom-right toast slot for the batch-action bubbles. The
+  // toaster moves above it only while a multi-selection is active.
   useEffect(() => {
-    if (!isMultiSelectMode) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      clearSlideSelection();
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [clearSlideSelection, isMultiSelectMode]);
+    const root = document.documentElement;
+    root.toggleAttribute("data-slide-selection-active", isMultiSelectMode);
+    return () => root.removeAttribute("data-slide-selection-active");
+  }, [isMultiSelectMode]);
 
   const moveSelected = useCallback((destination: "start" | "end") => {
     const selected = selectedInOrder();
@@ -348,6 +347,32 @@ export function BottomSlidesPanel({
     setConfirmBulkDelete(true);
     closeContextMenu();
   }, [closeContextMenu, ordered.length, selectedInOrder]);
+
+  // Keyboard batch actions remain available even when the right-click menu is gone.
+  useEffect(() => {
+    if (!isMultiSelectMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        clearSlideSelection();
+        return;
+      }
+      if (
+        (event.key === "Delete" || event.key === "Backspace") &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !isTypingTarget(event.target)
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteSelected();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [clearSlideSelection, deleteSelected, isMultiSelectMode]);
 
   const confirmDeleteSelected = useCallback(() => {
     const selected = selectedInOrder();
@@ -517,22 +542,24 @@ export function BottomSlidesPanel({
       <SlideContextMenu
         open={contextMenu !== null}
         position={contextMenu?.position ?? { x: 0, y: 0 }}
-        selectionCount={selectedSlideIds.size}
-        totalSlides={ordered.length}
-        selectionMode={isMultiSelectMode}
         onRename={() => {
           if (contextMenu) rename.start(contextMenu.slide.id, contextMenu.title);
           closeContextMenu();
         }}
         onStartSelection={startMultiSelect}
         onSelectAll={selectAllSlides}
-        onClearSelection={clearSlideSelection}
+        onClose={closeContextMenu}
+      />
+
+      <SlideSelectionToolbar
+        open={isMultiSelectMode}
+        selectionCount={selectedSlideIds.size}
+        totalSlides={ordered.length}
         onMoveToStart={() => moveSelected("start")}
         onMoveToEnd={() => moveSelected("end")}
         onGroup={groupSelected}
         onDelete={deleteSelected}
-        onClose={closeContextMenu}
-        onEscape={isMultiSelectMode ? clearSlideSelection : closeContextMenu}
+        onCancel={clearSlideSelection}
       />
 
       <ConfirmDialog
