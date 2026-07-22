@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { requestHtml } from "@/lib/shiki-worker-client";
 
+type StaleHtmlPolicy = "clear" | "keep-last";
+
 interface UseShikiHtmlArgs {
   code: string;
   language: string;
@@ -10,7 +12,18 @@ interface UseShikiHtmlArgs {
   debounceMs?: number;
   priority?: "high" | "low";
   enabled?: boolean;
+  /** What to render when the worker fails for the current request. */
+  errorPolicy?: StaleHtmlPolicy;
+  /** What to render when `code` is empty. */
+  emptyPolicy?: StaleHtmlPolicy;
+  /** What to render when `code` is too large for the worker. */
+  largeCodePolicy?: StaleHtmlPolicy;
+  /** What to render when the hook is disabled. */
+  disabledPolicy?: StaleHtmlPolicy;
+  maxCodeLength?: number;
 }
+
+const DEFAULT_MAX_CODE_LENGTH = 20_000;
 
 export function useShikiHtml({
   code,
@@ -20,12 +33,25 @@ export function useShikiHtml({
   debounceMs = 80,
   priority = "high",
   enabled = true,
+  errorPolicy = "keep-last",
+  emptyPolicy = "clear",
+  largeCodePolicy = "clear",
+  disabledPolicy = "clear",
+  maxCodeLength = DEFAULT_MAX_CODE_LENGTH,
 }: UseShikiHtmlArgs): string | null {
   const lastRef = useRef<string | null>(null);
   const [html, setHtml] = useState<string | null>(null);
   const activeKeyRef = useRef("");
   const htmlKeyRef = useRef("");
   const activeKey = `${resetKey}\u0000${language}\u0000${theme}`;
+  const isEmpty = code.length === 0;
+  const isTooLarge = code.length > maxCodeLength;
+
+  const clearCurrent = () => {
+    lastRef.current = null;
+    htmlKeyRef.current = activeKey;
+    setHtml(null);
+  };
 
   // A reset key represents a different document. Do not render its previous
   // document's retained worker HTML during the next request.
@@ -35,10 +61,16 @@ export function useShikiHtml({
   }
 
   useEffect(() => {
-    if (!enabled || !code || code.length > 20_000) {
-      lastRef.current = null;
-      htmlKeyRef.current = activeKey;
-      setHtml(null);
+    if (!enabled) {
+      if (disabledPolicy === "clear") clearCurrent();
+      return;
+    }
+    if (isEmpty) {
+      if (emptyPolicy === "clear") clearCurrent();
+      return;
+    }
+    if (isTooLarge) {
+      if (largeCodePolicy === "clear") clearCurrent();
       return;
     }
 
@@ -57,12 +89,9 @@ export function useShikiHtml({
         })
         .catch((error) => {
           if ((error as DOMException)?.name === "AbortError") return;
-          // Large code deliberately has no highlighted overlay. Keeping the
-          // previous document here would display stale syntax content.
-          if ((error as Error)?.message === "code_too_large" && activeKeyRef.current === activeKey) {
-            lastRef.current = null;
-            htmlKeyRef.current = activeKey;
-            setHtml(null);
+          if (activeKeyRef.current !== activeKey) return;
+          if (errorPolicy === "clear" || (error as Error)?.message === "code_too_large") {
+            clearCurrent();
           }
         });
     }, actualDebounce);
@@ -71,10 +100,29 @@ export function useShikiHtml({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [code, language, theme, activeKey, debounceMs, priority, enabled]);
+  }, [
+    code,
+    language,
+    theme,
+    activeKey,
+    debounceMs,
+    priority,
+    enabled,
+    errorPolicy,
+    emptyPolicy,
+    largeCodePolicy,
+    disabledPolicy,
+    maxCodeLength,
+    isEmpty,
+    isTooLarge,
+  ]);
 
-  // Retain the last render only for the same document and theme. This avoids
-  // typing flicker without showing another slide's code during a transition.
-  if (!enabled || !code || code.length > 20_000 || htmlKeyRef.current !== activeKey) return null;
+  // Retention is now an explicit policy instead of an accidental hook detail:
+  // resetKey/language/theme changes always isolate documents, while individual
+  // invalid states decide whether to clear or keep the previous same-document HTML.
+  if (htmlKeyRef.current !== activeKey) return null;
+  if (!enabled && disabledPolicy === "clear") return null;
+  if (isEmpty && emptyPolicy === "clear") return null;
+  if (isTooLarge && largeCodePolicy === "clear") return null;
   return html ?? lastRef.current;
 }

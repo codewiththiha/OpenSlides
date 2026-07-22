@@ -9,5 +9,15 @@ interface Args {
 }
 
 export function useShikiWorker({ code, language, theme, resetKey }: Args): string | null {
-  return useShikiHtml({ code, language, theme, resetKey, debounceMs: 80, priority: "high" });
+  return useShikiHtml({
+    code,
+    language,
+    theme,
+    resetKey,
+    debounceMs: 80,
+    priority: "high",
+    errorPolicy: "clear",
+    emptyPolicy: "clear",
+    largeCodePolicy: "clear",
+  });
 }

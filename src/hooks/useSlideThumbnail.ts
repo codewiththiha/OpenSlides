@@ -88,9 +88,14 @@ export function useSlideThumbnail({
     code: truncatedCode,
     language,
     theme,
+    resetKey: key,
     debounceMs,
     priority,
     enabled: shouldRequest,
+    errorPolicy: "clear",
+    emptyPolicy: "clear",
+    largeCodePolicy: "clear",
+    disabledPolicy: "clear",
   });
 
   useEffect(() => {
