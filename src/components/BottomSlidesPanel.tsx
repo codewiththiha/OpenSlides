@@ -413,7 +413,7 @@ export function BottomSlidesPanel({
   }
 
   return (
-    <div className="flex h-full min-h-[172px] min-w-0 flex-col bg-card/60">
+    <div className="flex h-full min-h-[148px] min-w-0 flex-col bg-card/60">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -435,7 +435,7 @@ export function BottomSlidesPanel({
                 return (
                   <div
                     key={chunk.groupId}
-                    className="flex min-h-[140px] items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1 transition-all duration-200"
+                    className="flex min-h-[132px] items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-2 py-1 transition-all duration-200"
                   >
                     <StackExpandedControls
                       count={chunk.items.length}
@@ -522,13 +522,10 @@ export function BottomSlidesPanel({
               type="button"
               onClick={handleAdd}
               disabled={createSlide.isPending}
-              className="flex h-[132px] w-[152px] shrink-0 self-center flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border/80 bg-card/30 text-muted-foreground transition-all hover:border-primary/60 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-50"
+              className="grid h-[132px] w-[152px] shrink-0 self-center place-items-center rounded-md border border-dashed border-border/80 bg-card/30 text-muted-foreground transition-all hover:border-primary/60 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-50"
               title="Add slide"
             >
-              <span className="grid h-7 w-7 place-items-center rounded-full border border-current/30 bg-background/50">
-                <Plus className="h-3.5 w-3.5" />
-              </span>
-              <span className="text-xs font-medium">Add</span>
+              <Plus className="h-7 w-7 stroke-[1.35]" />
             </button>
           </div>
         </SortableContext>
