@@ -2,7 +2,7 @@ import type { StateCreator } from "zustand";
 import type { UiState } from "../types";
 
 const DEFAULT_CODE_SIZE = 42;
-const DEFAULT_SLIDES_SIZE = 18;
+const DEFAULT_SLIDES_SIZE = 22;
 
 export interface PanelSlice {
   isBottomPanelCollapsed: boolean;
@@ -26,5 +26,5 @@ export const createPanelSlice: StateCreator<UiState, [], [], PanelSlice> = (set)
   setCodePanelSize: (v) =>
     set({ codePanelSize: Math.min(70, Math.max(18, Math.round(v))) }),
   setSlidesPanelSize: (v) =>
-    set({ slidesPanelSize: Math.min(40, Math.max(18, Math.round(v))) }),
+    set({ slidesPanelSize: Math.min(28, Math.max(22, Math.round(v))) }),
 });
