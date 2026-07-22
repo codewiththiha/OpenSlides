@@ -127,9 +127,11 @@ export function SortableSlideItem({
       <div
         ref={setStackTargetRef}
         className={cn(
-          "absolute inset-0 z-30 rounded-md transition-all duration-150",
+          // Center-only target: card edges remain available to dnd-kit's
+          // sortable hit area for reordering, while the center means stack.
+          "absolute inset-x-[24%] inset-y-[20%] z-30 rounded-md transition-all duration-150",
           isOverStackTarget
-            ? "ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary/10 shadow-md pointer-events-auto"
+            ? "ring-2 ring-primary ring-offset-1 ring-offset-background bg-primary/15 shadow-md pointer-events-auto"
             : "pointer-events-none"
         )}
         style={{ pointerEvents: isDraggingId && isDraggingId !== slide.id ? "auto" : "none" }}

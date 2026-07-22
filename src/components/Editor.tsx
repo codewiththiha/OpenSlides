@@ -32,8 +32,10 @@ import {
   useDuplicateSlide,
   useCreateProject,
   useExportProject,
+  useUpdateSlideSettings,
   useUpdateTheme,
 } from "@/hooks/queries";
+import { useAddSlideAction } from "@/hooks/useSlidePanelActions";
 import { api } from "@/lib/tauri-api";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { useHighlightNav } from "@/hooks/useHighlightNav";
@@ -66,15 +68,22 @@ export function Editor() {
   const exportMutation = useExportProject();
   const createSlide = useCreateSlide(projectId ?? "");
   const duplicateSlide = useDuplicateSlide(projectId ?? "");
+  const updateSlideSettings = useUpdateSlideSettings(projectId ?? "");
   const updateTheme = useUpdateTheme(projectId ?? "");
   const createProject = useCreateProject();
+  const addSlide = useAddSlideAction({
+    ordered: project?.slides ?? [],
+    createSlide,
+    updateSettings: updateSlideSettings,
+    setCurrentSlideId,
+  });
   const createProjectRef = useRef(createProject);
   const exportMutationRef = useRef(exportMutation);
-  const createSlideRef = useRef(createSlide);
+  const addSlideRef = useRef(addSlide);
   const duplicateSlideRef = useRef(duplicateSlide);
   createProjectRef.current = createProject;
   exportMutationRef.current = exportMutation;
-  createSlideRef.current = createSlide;
+  addSlideRef.current = addSlide;
   duplicateSlideRef.current = duplicateSlide;
 
   const [editorExpanded, setEditorExpanded] = useState(false);
@@ -186,7 +195,7 @@ export function Editor() {
       "menu://command-palette": () =>
         useUiStore.getState().setIsCommandOpen(true),
       "menu://add-slide": () => {
-        if (projectId) createSlideRef.current.mutate({});
+        if (projectId) addSlideRef.current();
       },
       "menu://duplicate-slide": () => {
         if (projectId && currentSlideId) duplicateSlideRef.current.mutate(currentSlideId);
@@ -295,7 +304,7 @@ export function Editor() {
       <CommandPalette
         projectId={project.id}
         onExport={() => exportMutation.mutate(project.id)}
-        onAddSlide={() => createSlide.mutate({})}
+        onAddSlide={addSlide}
         onTheme={(theme) => updateTheme.mutate(theme)}
       />
       <GoToSlideDialog project={project} />
