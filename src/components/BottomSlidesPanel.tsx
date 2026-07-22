@@ -49,7 +49,7 @@ import { StackExpandedControls } from "./ui/stack/StackExpandedControls";
 import { useUiStore } from "@/store/useUiStore";
 import { chunkConsecutive } from "@/lib/grouping";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
-import { useStackDragEnd } from "@/hooks/useStackDragEnd";
+import { useStackDragEnd, type StackDragData, type StackDropData } from "@/hooks/useStackDragEnd";
 import { isTypingTarget } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { notify } from "@/lib/toast";
@@ -58,6 +58,16 @@ interface BottomSlidesPanelProps {
   project: Project;
   collapsed?: boolean;
   activeHighlightIndex?: number;
+}
+
+interface SlideDragData extends StackDragData {
+  kind: "slide-item";
+  slide: Slide;
+}
+
+interface SlideStackDropData extends StackDropData {
+  kind: "slide-stack-target";
+  targetId: string;
 }
 
 const dropAnimation: DropAnimation = {
@@ -100,9 +110,9 @@ export function BottomSlidesPanel({
   const theme = project.theme;
   const language = resolveProjectLanguage(project);
 
-  const { handleStackDrop } = useStackDragEnd({
+  const { handleStackDrop } = useStackDragEnd<SlideDragData, SlideStackDropData>({
     stackTargetKind: "slide-stack-target",
-    resolveSourceIds: (activeData: any) => {
+    resolveSourceIds: (activeData) => {
       const activeId = activeData?.id ? String(activeData.id) : null;
       if (!activeId) return [];
       const activeSlide = project.slides.find((slide) => slide.id === activeId);
@@ -113,8 +123,7 @@ export function BottomSlidesPanel({
         ? project.slides.filter((slide) => slide.sectionId?.trim() === sectionId).map((slide) => slide.id)
         : [activeId];
     },
-    resolveTargetId: (overData: any) =>
-      overData?.targetId ? String(overData.targetId) : null,
+    resolveTargetId: (overData) => overData.targetId,
     onStack: (sourceIds, targetId) => {
       stackSlides.mutate({ sourceIds, targetId });
     },

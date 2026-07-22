@@ -44,6 +44,7 @@ await build({
     join(repo, "tests", "editor-save-race.test.mts"),
     join(repo, "tests", "codeeditor-typing.test.mts"),
     join(repo, "tests", "highlight-utils-cache.test.mts"),
+    join(repo, "tests", "editor-history.test.mts"),
   ],
   outdir: outDir,
   outExtension: { ".js": ".mjs" },
@@ -68,6 +69,7 @@ execFileSync(
     join(outDir, "editor-save-race.test.mjs"),
     join(outDir, "codeeditor-typing.test.mjs"),
     join(outDir, "highlight-utils-cache.test.mjs"),
+    join(outDir, "editor-history.test.mjs"),
   ],
   { stdio: "inherit" },
 );
