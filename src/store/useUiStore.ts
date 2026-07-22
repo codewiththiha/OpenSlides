@@ -44,9 +44,7 @@ export const useUiStore = create<UiState>()(
       resetEditorUi: () => {
         clearAllLocalCodeAtoms();
         clearCaretPositions();
-        set((s) => {
-          s.previewSlides.clear();
-          s.previewHighlights.clear();
+        set(() => {
           return {
             currentSlideId: null,
             isPresenting: false,
@@ -58,8 +56,8 @@ export const useUiStore = create<UiState>()(
             saveStatus: "idle",
             previewHighlightIndex: -1,
             previewProject: {},
-            previewSlidesRevision: s.previewSlidesRevision + 1,
-            previewHighlightsRevision: s.previewHighlightsRevision + 1,
+            previewSlides: new Map(),
+            previewHighlights: new Map(),
           };
         });
       },

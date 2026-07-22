@@ -38,8 +38,6 @@ export interface UiState {
   previewProject: PreviewProjectSettings;
   previewSlides: Map<string, PreviewSlideSettings>;
   previewHighlights: Map<string, Partial<import("@/types").Highlight>>;
-  previewSlidesRevision: number;
-  previewHighlightsRevision: number;
 
   setCurrentSlideId: (id: string | null) => void;
   setIsPresenting: (v: boolean) => void;
