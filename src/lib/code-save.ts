@@ -51,7 +51,9 @@ export async function flushPendingSave(): Promise<void> {
   const p = pending;
   if (!p) return;
   try {
-    await api.updateSlideCode(p.slideId, p.code);
+    // Use the same per-slide queue as normal autosaves so the final flush
+    // cannot overtake a write that is already in flight.
+    await enqueueCodeSave(p.slideId, p.code);
     if (pending === p) pending = null;
   } catch {
     /* quitting anyway */
