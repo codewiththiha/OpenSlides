@@ -54,7 +54,7 @@ export function SortableSlideItem({
   isTabStop: boolean;
   isMultiSelectMode: boolean;
   isMultiSelected: boolean;
-  onToggleMultiSelect: (id: string) => void;
+  onToggleMultiSelect: (id: string, position?: { x: number; y: number }) => void;
   onOpenContextMenu: (event: React.MouseEvent<HTMLDivElement>, slide: Slide, title: string) => void;
   theme: string;
   language: string;

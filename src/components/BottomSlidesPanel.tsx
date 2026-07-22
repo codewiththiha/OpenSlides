@@ -271,13 +271,16 @@ export function BottomSlidesPanel({
     [ordered, selectedSlideIds],
   );
 
-  const toggleSlideSelection = useCallback((id: string) => {
+  const toggleSlideSelection = useCallback((id: string, position?: { x: number; y: number }) => {
     setSelectedSlideIds((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    if (position) {
+      setContextMenu((current) => current ? { ...current, position } : current);
+    }
   }, []);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
@@ -515,6 +518,7 @@ export function BottomSlidesPanel({
         onGroup={groupSelected}
         onDelete={deleteSelected}
         onClose={closeContextMenu}
+        onEscape={isMultiSelectMode ? clearSlideSelection : closeContextMenu}
       />
 
       <ConfirmDialog
