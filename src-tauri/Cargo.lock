@@ -2395,7 +2395,7 @@ dependencies = [
 
 [[package]]
 name = "openslides"
-version = "1.0.21"
+version = "1.0.3"
 dependencies = [
  "aho-corasick",
  "chrono",
