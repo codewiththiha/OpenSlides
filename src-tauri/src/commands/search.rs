@@ -44,38 +44,50 @@ fn safe_prefix_query(query: &str) -> String {
         .join(" ")
 }
 
-/// Never surface an FTS syntax error to the UI. This fallback is deliberately
-/// literal (not LIKE), so `%`, `_`, quotes, and operators remain harmless.
+fn has_literal_punctuation(query: &str) -> bool {
+    query
+        .chars()
+        .any(|ch| !ch.is_alphanumeric() && !ch.is_whitespace() && ch != '_')
+}
+
+fn escape_like_pattern(query: &str) -> String {
+    let mut escaped = String::with_capacity(query.len());
+    for ch in query.chars() {
+        if matches!(ch, '\\' | '%' | '_') {
+            escaped.push('\\');
+        }
+        escaped.push(ch);
+    }
+    escaped
+}
+
+/// Never surface an FTS syntax error to the UI. This fallback keeps the user's
+/// code punctuation intact (`console.log`, `useEffect(`, `[]`, `?.`) while
+/// escaping LIKE wildcards so `%`, `_`, and `\` remain literal characters.
 async fn fallback_text_search(
     pool: &DbPool,
     project_id: &str,
     query: &str,
 ) -> Result<Vec<String>, String> {
-    let needle = query
-        .chars()
-        .filter(|ch| ch.is_alphanumeric() || ch.is_whitespace() || *ch == '_')
-        .collect::<String>()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
-
+    let needle = query.trim();
     if needle.is_empty() {
         return Ok(Vec::new());
     }
+    let pattern = format!("%{}%", escape_like_pattern(&needle.to_lowercase()));
 
     let rows = sqlx::query(
         r#"
         SELECT id
         FROM slides
         WHERE project_id = ?
-          AND (instr(lower(code), lower(?)) > 0 OR instr(lower(name), lower(?)) > 0)
+          AND (lower(code) LIKE ? ESCAPE '\' OR lower(name) LIKE ? ESCAPE '\')
         ORDER BY order_index
         LIMIT 50
         "#,
     )
     .bind(project_id)
-    .bind(&needle)
-    .bind(&needle)
+    .bind(&pattern)
+    .bind(&pattern)
     .fetch_all(pool)
     .await
     .map_err(|error| format!("Failed to search slides: {error}"))?;
@@ -110,12 +122,18 @@ pub async fn search_slides(
 
     if !primary_query.is_empty() {
         match run_fts_search(pool.inner(), &project_id, &primary_query).await {
-            Ok(rows) => return Ok(rows),
+            Ok(rows) => {
+                if !rows.is_empty() || !has_literal_punctuation(query) {
+                    return Ok(rows);
+                }
+            }
             Err(_) => {
                 let safe_query = safe_prefix_query(query);
                 if !safe_query.is_empty() && safe_query != primary_query {
                     if let Ok(rows) = run_fts_search(pool.inner(), &project_id, &safe_query).await {
-                        return Ok(rows);
+                        if !rows.is_empty() || !has_literal_punctuation(query) {
+                            return Ok(rows);
+                        }
                     }
                 }
             }
