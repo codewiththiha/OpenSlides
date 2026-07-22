@@ -68,7 +68,10 @@ pub async fn export_project_to_json(
     let pretty = serde_json::to_string_pretty(&export)
         .map_err(|e| CommandError::Failed(format!("JSON serialize failed: {e}")))?;
 
-    std::fs::write(&path, pretty)
+    let write_path = path.clone();
+    tauri::async_runtime::spawn_blocking(move || std::fs::write(write_path, pretty))
+        .await
+        .map_err(|e| CommandError::Failed(format!("File write task failed: {e}")))?
         .map_err(|e| CommandError::Failed(format!("Failed to write file: {e}")))?;
 
     Ok(path.display().to_string())
@@ -88,7 +91,9 @@ pub async fn import_project_from_json(
     .map_err(|e| CommandError::Failed(format!("Dialog task failed: {e}")))?
     .ok_or_else(|| CommandError::Cancelled("Import cancelled".to_string()))?;
 
-    let raw = std::fs::read_to_string(&path)
+    let raw = tauri::async_runtime::spawn_blocking(move || std::fs::read_to_string(path))
+        .await
+        .map_err(|e| CommandError::Failed(format!("File read task failed: {e}")))?
         .map_err(|e| CommandError::Failed(format!("Failed to read file: {e}")))?;
     let value: JsonValue = serde_json::from_str(&raw)
         .map_err(|_| CommandError::Failed("That file isn't a valid presentation file".to_string()))?;
