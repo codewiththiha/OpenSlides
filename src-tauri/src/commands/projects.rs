@@ -1,8 +1,8 @@
 //! Project-level Tauri commands.
 
 use crate::commands::helpers::{
-    clone_highlights_with_fresh_ids, fetch_project, invalidate_project_thumbnails, load_settings,
-    now_ms, DEFAULT_CODE,
+    clone_highlights_with_fresh_ids, fetch_project, invalidate_project_thumbnails, is_supported_language,
+    is_supported_theme, load_settings, now_ms, DEFAULT_CODE,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -258,6 +258,9 @@ pub async fn update_project_settings(
 ) -> CommandResult<Project> {
     let existing = load_settings(pool.inner(), &project_id).await?;
     let merged = merge_settings(&existing, &settings)?;
+    if !is_supported_language(&merged.language) {
+        return Err(CommandError::Validation(format!("Unsupported language: {}", merged.language)));
+    }
 
     let settings_json = settings_to_json(&merged)?;
     let ts = now_ms();
@@ -287,6 +290,10 @@ pub async fn update_project_theme(
     project_id: String,
     theme: String,
 ) -> CommandResult<Project> {
+    if !is_supported_theme(&theme) {
+        return Err(CommandError::Validation(format!("Unsupported theme: {theme}")));
+    }
+
     sqlx::query("UPDATE projects SET theme = ?, updated_at = ? WHERE id = ?")
         .bind(&theme)
         .bind(now_ms())

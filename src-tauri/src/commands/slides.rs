@@ -11,6 +11,7 @@ use crate::models::{
     DEFAULT_SLIDE_DURATION_MS, DEFAULT_SLIDE_STAGGER, DEFAULT_SLIDE_TRANSITION_MS,
 };
 use sqlx::Row;
+use std::collections::HashSet;
 use tauri::State;
 use uuid::Uuid;
 
@@ -240,7 +241,27 @@ pub async fn restore_slide(
     slide: Slide,
     insert_at: Option<i64>,
 ) -> CommandResult<Project> {
-    let order_index = insert_at.unwrap_or(0);
+    if slide.id.trim().is_empty() {
+        return Err(CommandError::Validation("Slide ID is required for restore".into()));
+    }
+    let project_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM projects WHERE id = ?")
+        .bind(&project_id)
+        .fetch_one(pool.inner())
+        .await
+        .map_err(|e| format!("Failed to validate project: {e}"))?;
+    if project_count.0 == 0 {
+        return Err(CommandError::NotFound(format!("Project not found: {project_id}")));
+    }
+    let existing_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM slides WHERE id = ?")
+        .bind(&slide.id)
+        .fetch_one(pool.inner())
+        .await
+        .map_err(|e| format!("Failed to validate restored slide: {e}"))?;
+    if existing_count.0 > 0 {
+        return Err(CommandError::Validation("Cannot restore a slide that already exists".into()));
+    }
+
+    let order_index = insert_at.unwrap_or(0).max(0);
 
     let mut tx = pool
         .inner()
@@ -347,7 +368,7 @@ pub async fn update_slide_settings(
 ) -> CommandResult<Slide> {
     let row = sqlx::query(
         r#"
-        SELECT id, project_id, code, duration, transition_duration, stagger, order_index, name, highlights, section_id
+        SELECT id, project_id, code, duration, transition_duration, stagger, order_index, name, highlights, thumbnail_html, section_id
         FROM slides WHERE id = ?
         "#,
     )
@@ -370,6 +391,7 @@ pub async fn update_slide_settings(
     let project_id: String = row.get("project_id");
     let code: String = row.get("code");
     let order_index: i64 = row.get("order_index");
+    let thumbnail_html: String = row.try_get("thumbnail_html").unwrap_or_default();
 
     // Parse existing highlights or use payload
     let highlights_raw: String = row.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
@@ -409,7 +431,7 @@ pub async fn update_slide_settings(
         order_index,
         name,
         highlights,
-        thumbnail_html: String::new(),
+        thumbnail_html,
         section_id,
     })
 }
@@ -431,6 +453,20 @@ pub async fn reorder_slides(
         .begin()
         .await
         .map_err(|e| format!("TX begin failed: {e}"))?;
+
+    let rows = sqlx::query("SELECT id FROM slides WHERE project_id = ?")
+        .bind(&project_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| format!("Failed to validate slide order: {e}"))?;
+    let actual_ids: HashSet<String> = rows.into_iter().map(|row| row.get("id")).collect();
+    let requested_ids: HashSet<String> = slide_ids.iter().cloned().collect();
+    if requested_ids.len() != slide_ids.len() || requested_ids != actual_ids {
+        return Err(CommandError::Validation(
+            "Slide order must contain each slide in the presentation exactly once".into(),
+        ));
+    }
+
     batch_reindex(&mut *tx, &project_id, &slide_ids).await?;
     touch_project(&mut *tx, &project_id).await?;
 
@@ -449,6 +485,20 @@ pub async fn set_current_slide(
     project_id: String,
     slide_id: String,
 ) -> CommandResult<()> {
+    let belongs_to_project: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM slides WHERE id = ? AND project_id = ?",
+    )
+    .bind(&slide_id)
+    .bind(&project_id)
+    .fetch_one(pool.inner())
+    .await
+    .map_err(|e| format!("Failed to validate current slide: {e}"))?;
+    if belongs_to_project.0 == 0 {
+        return Err(CommandError::Validation(
+            "Current slide must belong to the selected presentation".into(),
+        ));
+    }
+
     let mut settings = load_settings(pool.inner(), &project_id).await?;
     settings.current_slide_id = Some(slide_id);
     // No updated_at bump — purely a navigation record.

@@ -1,8 +1,8 @@
 //! Import / export Tauri commands.
 
 use crate::commands::helpers::{
-    clone_highlights_with_fresh_ids, default_slide_name, dialog_pick_path, fetch_project, now_ms,
-    normalize_code_align, normalize_language, sanitize_filename, DialogMode,
+    clone_highlights_with_fresh_ids, default_slide_name, dialog_pick_path, fetch_project, is_supported_theme,
+    now_ms, normalize_code_align, normalize_language, sanitize_filename, DialogMode,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -103,11 +103,15 @@ pub async fn import_project_from_json(
         .and_then(|v| v.as_str())
         .unwrap_or("Imported Presentation")
         .to_string();
-    let theme = value
+    let imported_theme = value
         .get("theme")
         .and_then(|v| v.as_str())
-        .unwrap_or("dark-plus")
-        .to_string();
+        .unwrap_or("dark-plus");
+    let theme = if is_supported_theme(imported_theme) {
+        imported_theme.to_string()
+    } else {
+        "dark-plus".to_string()
+    };
 
     let slides_val = value
         .get("slides")

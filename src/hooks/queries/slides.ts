@@ -20,7 +20,14 @@ export function mergeSlidePreservingEditorCode(
   cached: Slide,
   incoming: Slide,
 ): Slide {
-  return { ...cached, ...incoming, code: cached.code };
+  return {
+    ...cached,
+    ...incoming,
+    code: cached.code,
+    // Settings changes do not regenerate a thumbnail; retain an in-memory
+    // render if an older backend response has no cached thumbnail yet.
+    thumbnailHtml: incoming.thumbnailHtml || cached.thumbnailHtml,
+  };
 }
 
 export function useUpdateSlideCode() {
