@@ -15,6 +15,7 @@ import { useEffectiveSettings } from "@/hooks/useEffectiveSettings";
 import { usePreviewHighlightsMap } from "@/hooks/usePreviewSettings";
 import { useSlideCode } from "@/hooks/useSlideCode";
 import { useCurrentSlide } from "@/hooks/useCurrentSlide";
+import { useUiStore } from "@/store/useUiStore";
 import { HighlightLayer } from "./HighlightLayer";
 import { MagicMoveBlock } from "./preview/MagicMoveBlock";
 import { PreviewFallback } from "./preview/PreviewFallback";
@@ -43,7 +44,8 @@ export function SlidePreview({
   const previewHighlightsMap = usePreviewHighlightsMap();
 
   const language = resolveProjectLanguage(project);
-  const theme = project.theme;
+  const previewTheme = useUiStore((state) => state.previewProject.theme);
+  const theme = previewTheme ?? project.theme;
 
   const {
     shikiLoadFailed,

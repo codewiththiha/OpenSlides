@@ -6,6 +6,7 @@
  * happens only on commit.
  */
 import { X } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "./ui/button";
 import { type Project, type ThemeName } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
@@ -39,6 +40,10 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
   const previewProject = useUiStore((s) => s.previewProject);
   const setPreviewProjectSetting = useUiStore((s) => s.setPreviewProjectSetting);
   const clearPreviewProjectSetting = useUiStore((s) => s.clearPreviewProjectSetting);
+
+  useEffect(() => {
+    if (!open) clearPreviewProjectSetting("theme");
+  }, [clearPreviewProjectSetting, open]);
 
   const s = project.settings;
 
@@ -108,7 +113,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
           >
             <ThemeGridPicker
               value={project.theme}
-              onChange={(theme) => updateTheme.mutate(theme as ThemeName)}
+              onPreviewTheme={(theme) => setPreviewProjectSetting("theme", theme)}
+              onClearPreviewTheme={() => clearPreviewProjectSetting("theme")}
+              onChange={(theme) => {
+                clearPreviewProjectSetting("theme");
+                updateTheme.mutate(theme as ThemeName);
+              }}
             />
           </SettingsSection>
 

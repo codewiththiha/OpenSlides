@@ -15,11 +15,15 @@ function ThemeTile({
   label,
   selected,
   onSelect,
+  onPreview,
+  onPreviewEnd,
 }: {
   value: ThemeName;
   label: string;
   selected: boolean;
   onSelect: () => void;
+  onPreview: () => void;
+  onPreviewEnd: () => void;
 }) {
   const html = useShikiHtml({
     code: THEME_SAMPLE,
@@ -33,6 +37,10 @@ function ThemeTile({
     <button
       type="button"
       onClick={onSelect}
+      onMouseEnter={onPreview}
+      onMouseLeave={onPreviewEnd}
+      onFocus={onPreview}
+      onBlur={onPreviewEnd}
       className={cn(
         "group relative overflow-hidden rounded-lg border text-left transition-all duration-150",
         selected
@@ -48,7 +56,7 @@ function ThemeTile({
         fontSize={5.5}
         lineHeight={1.35}
         className="h-[72px] w-full p-2"
-        codeClassName="flex h-full items-center justify-center text-center"
+        codeClassName="!absolute left-1/2 top-1/2 !inline-block -translate-x-1/2 -translate-y-1/2"
         fallback={<span className="block text-center font-mono text-[9px] text-muted-foreground">···</span>}
       />
       <div className="flex items-center justify-between bg-card px-2 py-1.5">
@@ -60,7 +68,17 @@ function ThemeTile({
 }
 
 /** A compact theme control that opens the visual Shiki theme gallery on demand. */
-export function ThemeGridPicker({ value, onChange }: { value: string; onChange: (theme: ThemeName) => void }) {
+export function ThemeGridPicker({
+  value,
+  onChange,
+  onPreviewTheme,
+  onClearPreviewTheme,
+}: {
+  value: string;
+  onChange: (theme: ThemeName) => void;
+  onPreviewTheme: (theme: ThemeName) => void;
+  onClearPreviewTheme: () => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const selected = THEMES.find((theme) => theme.value === value) ?? THEMES[0];
 
@@ -68,7 +86,10 @@ export function ThemeGridPicker({ value, onChange }: { value: string; onChange: 
     <div className="space-y-3">
       <button
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => setIsOpen((open) => {
+          if (open) onClearPreviewTheme();
+          return !open;
+        })}
         className="flex w-full items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
         aria-expanded={isOpen}
       >
@@ -95,6 +116,8 @@ export function ThemeGridPicker({ value, onChange }: { value: string; onChange: 
                 onChange(theme.value);
                 setIsOpen(false);
               }}
+              onPreview={() => onPreviewTheme(theme.value)}
+              onPreviewEnd={onClearPreviewTheme}
             />
           ))}
         </div>
