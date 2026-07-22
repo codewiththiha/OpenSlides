@@ -123,10 +123,11 @@ export function CodeEditor({
       if (!slideId) return;
       const el = textareaRef.current;
       const before = beforeOverride ?? editorSnapshotRef.current;
-      recordEditorHistory(slideId, before, value);
       const caretStart = el?.selectionStart ?? value.length;
       const caretEnd = el?.selectionEnd ?? caretStart;
-      editorSnapshotRef.current = { code: value, caretStart, caretEnd };
+      const after = { code: value, caretStart, caretEnd };
+      recordEditorHistory(slideId, before, after);
+      editorSnapshotRef.current = after;
       setLocalCode(slideId, value);
       markSavePending(slideId, value);
       debouncedSave(slideId, value);
