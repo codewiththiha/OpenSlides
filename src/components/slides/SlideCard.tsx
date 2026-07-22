@@ -190,6 +190,23 @@ export const SlideCard = memo(function SlideCard({
         onOpenContextMenu?.(e, slide, title);
       }}
     >
+      <CodeThumbnail
+        containerRef={thumbnail.ref}
+        html={thumbnail.html}
+        theme={theme}
+        fontSize={5.5}
+        className={cn(
+          "absolute inset-0 h-full w-full rounded-none border-0",
+          isSelected && "ring-1 ring-primary/30",
+        )}
+        codeClassName="p-2 pt-9"
+        fallback={
+          <span className="block truncate p-2 pt-9 font-mono text-[10px] leading-tight text-muted-foreground/80">
+            {preview}
+          </span>
+        }
+      />
+
       <SlideCardHoverPreview
         show={showHoverPreview}
         html={hoverThumbnail.html}
@@ -198,49 +215,50 @@ export const SlideCard = memo(function SlideCard({
         left={hoverPosition.left}
         top={hoverPosition.top}
       />
-      <SlideCardHeader
-        isRenaming={isRenaming}
-        renameValue={renameValue}
-        title={title}
-        dragHandleProps={dragHandleProps}
-        onRenameValueChange={onRenameValueChange}
-        onCommitRename={onCommitRename}
-        onCancelRename={onCancelRename}
-        onRename={onRename}
-        slideId={slide.id}
-      />
-      <SlideCardActions
-        isOverlay={isOverlay}
-        isRenaming={isRenaming}
-        title={title}
-        slideId={slide.id}
-        onRename={onRename}
-        onDuplicate={onDuplicate}
-        onRemove={onRemove}
-      />
-      <CodeThumbnail
-        containerRef={thumbnail.ref}
-        html={thumbnail.html}
-        theme={theme}
-        fontSize={5.5}
-        className={cn(
-          "rounded border border-border/70 p-1",
-          isSelected && "ring-1 ring-primary/30",
-        )}
-        style={{ aspectRatio: "16 / 9" }}
-        fallback={
-          <span className="block truncate font-mono text-[10px] leading-tight text-muted-foreground/80">
-            {preview}
-          </span>
-        }
-      />
-      {searchQuery && <SearchSnippet code={`${title}\n${thumbnailCode}`} query={searchQuery} />}
-      <SlideCardMeta
-        language={language}
-        hlCount={hlCount}
-        progress={progress}
-        isSelected={isSelected}
-      />
+
+      {/* The title sits over the code with a soft fade rather than taking layout space. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-background via-background/85 to-transparent px-2 pb-8 pt-2">
+        <div className="pointer-events-auto pr-14">
+          <SlideCardHeader
+            isRenaming={isRenaming}
+            renameValue={renameValue}
+            title={title}
+            dragHandleProps={dragHandleProps}
+            onRenameValueChange={onRenameValueChange}
+            onCommitRename={onCommitRename}
+            onCancelRename={onCancelRename}
+            onRename={onRename}
+            slideId={slide.id}
+          />
+        </div>
+      </div>
+
+      <div className="absolute right-2 top-1.5 z-20">
+        <SlideCardActions
+          isOverlay={isOverlay}
+          isRenaming={isRenaming}
+          title={title}
+          slideId={slide.id}
+          onRename={onRename}
+          onDuplicate={onDuplicate}
+          onRemove={onRemove}
+        />
+      </div>
+
+      {searchQuery && (
+        <div className="absolute inset-x-2 bottom-7 z-10">
+          <SearchSnippet code={`${title}\n${thumbnailCode}`} query={searchQuery} />
+        </div>
+      )}
+
+      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-2 pb-1.5 pt-7">
+        <SlideCardMeta
+          language={language}
+          hlCount={hlCount}
+          progress={progress}
+          isSelected={isSelected}
+        />
+      </div>
     </div>
   );
 },
