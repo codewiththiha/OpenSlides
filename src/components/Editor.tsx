@@ -28,12 +28,12 @@ import { PresentOverlay } from "./editor/PresentOverlay";
 import { useUiStore } from "@/store/useUiStore";
 import {
   useProject,
-  useDuplicateSlide,
   useCreateProject,
   useExportProject,
   useUpdateTheme,
 } from "@/hooks/queries";
 import { useAddSlide } from "@/hooks/useAddSlide";
+import { useDuplicateSlide } from "@/hooks/useSlideActions";
 import { api } from "@/lib/tauri-api";
 import { useAppMenu } from "@/hooks/useAppMenu";
 import { useHighlightNav } from "@/hooks/useHighlightNav";
@@ -189,7 +189,7 @@ export function Editor() {
         if (projectId) addSlideRef.current();
       },
       "menu://duplicate-slide": () => {
-        if (projectId && currentSlideId) duplicateSlideRef.current.mutate(currentSlideId);
+        if (projectId && currentSlideId) duplicateSlideRef.current(currentSlideId);
       },
       "menu://toggle-theme": () => useUiStore.getState().toggleTheme(),
       "menu://shortcuts-app": () =>
