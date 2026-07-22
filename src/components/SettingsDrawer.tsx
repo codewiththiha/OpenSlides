@@ -20,6 +20,7 @@ import { ToggleField } from "./ui/toggle-field";
 import { CodeAlignPicker } from "./settings/CodeAlignPicker";
 import { GlobalAnimationSection } from "./settings/GlobalAnimationSection";
 import { ThemeGridPicker } from "./settings/ThemeGridPicker";
+import { usePreviewProjectSettings } from "@/hooks/usePreviewSettings";
 
 interface SettingsDrawerProps {
   project: Project;
@@ -37,7 +38,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
     (s) => s.setEditorShowLineNumbers,
   );
 
-  const previewProject = useUiStore((s) => s.previewProject);
+  const previewProject = usePreviewProjectSettings();
   const setPreviewProjectSetting = useUiStore((s) => s.setPreviewProjectSetting);
   const clearPreviewProjectSetting = useUiStore((s) => s.clearPreviewProjectSetting);
 
@@ -56,31 +57,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
   const effGlobalStagger = previewProject.globalStagger ?? s.globalStagger;
 
   const patch = (partial: Parameters<typeof updateSettings.mutate>[0]) => {
-    updateSettings.mutate(partial, {
-      onSuccess: () => {
-        // Sync preview back to DB state after successful save:
-        // clear the preview override for the keys we just saved.
-        for (const k of Object.keys(partial)) {
-          if (
-            k === "fontSize" ||
-            k === "lineHeight" ||
-            k === "editorFontSize" ||
-            k === "globalTransitionDuration" ||
-            k === "globalStagger" ||
-            k === "codeAlign" ||
-            k === "showLineNumbers" ||
-            k === "useBlackCodeBackground" ||
-            k === "showHighlightStepIndicator" ||
-            k === "useGlobalTransition" ||
-            k === "useGlobalStagger"
-          ) {
-            clearPreviewProjectSetting(
-              k as keyof typeof previewProject,
-            );
-          }
-        }
-      },
-    });
+    updateSettings.mutate(partial);
   };
 
   return (
