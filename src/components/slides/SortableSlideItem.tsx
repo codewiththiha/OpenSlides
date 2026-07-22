@@ -23,6 +23,10 @@ export function SortableSlideItem({
   navigationIds,
   cardRefs,
   isTabStop,
+  isMultiSelectMode,
+  isMultiSelected,
+  onToggleMultiSelect,
+  onOpenContextMenu,
   theme,
   language,
   searchQuery,
@@ -48,6 +52,10 @@ export function SortableSlideItem({
   navigationIds: string[];
   cardRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   isTabStop: boolean;
+  isMultiSelectMode: boolean;
+  isMultiSelected: boolean;
+  onToggleMultiSelect: (id: string) => void;
+  onOpenContextMenu: (event: React.MouseEvent<HTMLDivElement>, slide: Slide, title: string) => void;
   theme: string;
   language: string;
   searchQuery: string;
@@ -151,6 +159,10 @@ export function SortableSlideItem({
             navigationIds={navigationIds}
             cardRefs={cardRefs}
             isTabStop={isTabStop}
+            isMultiSelectMode={isMultiSelectMode}
+            isMultiSelected={isMultiSelected}
+            onToggleMultiSelect={onToggleMultiSelect}
+            onOpenContextMenu={onOpenContextMenu}
             theme={theme}
             language={language}
             searchQuery={searchQuery}
@@ -175,6 +187,10 @@ export function SortableSlideItem({
           navigationIds={navigationIds}
           cardRefs={cardRefs}
           isTabStop={isTabStop}
+          isMultiSelectMode={isMultiSelectMode}
+          isMultiSelected={isMultiSelected}
+          onToggleMultiSelect={onToggleMultiSelect}
+          onOpenContextMenu={onOpenContextMenu}
           theme={theme}
           language={language}
           searchQuery={searchQuery}

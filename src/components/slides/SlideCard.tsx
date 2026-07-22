@@ -33,6 +33,10 @@ interface SlideCardProps {
   navigationIds?: string[];
   cardRefs?: React.MutableRefObject<Map<string, HTMLDivElement>>;
   isTabStop?: boolean;
+  isMultiSelectMode?: boolean;
+  isMultiSelected?: boolean;
+  onToggleMultiSelect?: (id: string) => void;
+  onOpenContextMenu?: (event: React.MouseEvent<HTMLDivElement>, slide: Slide, title: string) => void;
   theme: string;
   language: string;
   searchQuery?: string;
@@ -59,6 +63,10 @@ export const SlideCard = memo(function SlideCard({
   navigationIds = [],
   cardRefs,
   isTabStop = false,
+  isMultiSelectMode = false,
+  isMultiSelected = false,
+  onToggleMultiSelect,
+  onOpenContextMenu,
   theme,
   language,
   searchQuery = "",
@@ -96,6 +104,13 @@ export const SlideCard = memo(function SlideCard({
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget || isOverlay || isRenaming) return;
+
+    if (isMultiSelectMode && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      e.stopPropagation();
+      onToggleMultiSelect?.(slide.id);
+      return;
+    }
 
     if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "Home" || e.key === "End") {
       e.preventDefault();
@@ -153,6 +168,7 @@ export const SlideCard = memo(function SlideCard({
           : isSelected
             ? "border-primary/50 bg-muted ring-1 ring-primary/20"
             : "bg-background/60 hover:border-primary/30 hover:bg-muted/40",
+        isMultiSelected && "border-primary bg-primary/10 ring-2 ring-primary/30",
         isActive && !isOverlay && "opacity-30",
       )}
       style={{ width: ITEM_WIDTH, ...style }}
@@ -160,13 +176,17 @@ export const SlideCard = memo(function SlideCard({
       onMouseLeave={onMouseLeave}
       onClick={() => {
         if (isOverlay || isRenaming) return;
+        if (isMultiSelectMode) {
+          onToggleMultiSelect?.(slide.id);
+          return;
+        }
         setCurrentSlideId(slide.id);
       }}
       onContextMenu={(e) => {
-        if (isOverlay || !onRename) return;
+        if (isOverlay) return;
         e.preventDefault();
         e.stopPropagation();
-        onRename(slide.id, title);
+        onOpenContextMenu?.(e, slide, title);
       }}
     >
       <SlideCardHoverPreview
@@ -238,6 +258,8 @@ export const SlideCard = memo(function SlideCard({
   if (prev.renameValue !== next.renameValue) return false;
   if (prev.highlightProgress !== next.highlightProgress) return false;
   if (prev.isTabStop !== next.isTabStop) return false;
+  if (prev.isMultiSelectMode !== next.isMultiSelectMode) return false;
+  if (prev.isMultiSelected !== next.isMultiSelected) return false;
   if (prev.navigationIds !== next.navigationIds) return false;
   if (prev.theme !== next.theme) return false;
   if (prev.language !== next.language) return false;
