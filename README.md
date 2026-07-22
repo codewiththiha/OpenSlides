@@ -110,6 +110,35 @@ cd src-tauri
 cargo test
 ```
 
+
+## Automated releases
+
+Push a version tag such as `v1.2.3` to start the cross-platform release workflow.
+The workflow reads `release-notes/1.2.3.md`, uses its frontmatter `whatsNew` field for
+the marketing site, creates a GitHub release using the full Markdown body, and builds
+macOS (universal), Windows, and Linux Tauri bundles.
+
+Each release note must contain `version`, `date`, and `whatsNew` frontmatter. For example:
+
+```md
+---
+version: 1.2.3
+date: 2026-07-22
+whatsNew: |
+  - A marketing-friendly change.
+---
+
+## Full changelog
+
+- The complete technical release notes.
+```
+
+Before creating the first tag, add `WEBSITE_DISPATCH_TOKEN` as an Actions secret in this
+repository. It must be a fine-grained personal access token (or GitHub App token) with
+access to `codewiththiha/OpenSlidesWebsite`; it is used only to send the release payload
+via `repository_dispatch`. The website workflow opens a pull request containing the
+updated `src/data/latest-release.json`.
+
 ## Application Architecture
 
 ### Frontend
