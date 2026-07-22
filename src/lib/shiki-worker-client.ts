@@ -27,11 +27,12 @@ const pending = new Map<number, Pending>();
 function getWorker(): Worker {
   if (worker) return worker;
 
-  worker = new Worker(
+  const createdWorker = new Worker(
     new URL("../workers/shiki.worker.ts", import.meta.url),
     { type: "module" },
   );
-  worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
+  worker = createdWorker;
+  createdWorker.onmessage = (event: MessageEvent<WorkerResponse>) => {
     const response = event.data;
     const entry = pending.get(response.id);
     if (!entry) return;
@@ -47,14 +48,20 @@ function getWorker(): Worker {
       entry.resolve(response);
     }
   };
-  worker.onerror = (event) => {
+  createdWorker.onerror = (event) => {
     const error = event.error ?? new Error(event.message || "Shiki worker failed");
+    // A fatal worker error leaves this instance unusable. Drop and terminate it
+    // so the next request can create a clean worker rather than reusing a dead one.
+    if (worker === createdWorker) {
+      worker = null;
+      createdWorker.terminate();
+    }
     for (const [id, entry] of pending) {
       pending.delete(id);
       entry.reject(error);
     }
   };
-  return worker;
+  return createdWorker;
 }
 
 function send(

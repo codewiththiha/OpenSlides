@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { getLocalCodeAtom } from "@/store/localCodeAtoms";
 import { getCaretPosition, setCaretPosition } from "@/store/caretPositions";
 import { type Snapshot } from "@/lib/editor-history";
@@ -17,44 +17,56 @@ export function useCodeEditorCaret({
   slide,
   editorSnapshotRef,
 }: UseCodeEditorCaretArgs) {
-  // ── Uncontrolled textarea, by design ─────────────
-  // Fix Caret Restoration Flash: useLayoutEffect fires synchronously after DOM mutation
-  // but before browser paint, so caret never flashes to end before snapping back.
-  // Previously rAF caused a one-frame flash when switching slides fast.
+  const previousSlideIdRef = useRef<string | undefined>(undefined);
+
+  // Keep the uncontrolled textarea synchronized before paint. A same-slide
+  // external update preserves the current caret; a slide switch restores that
+  // slide's saved caret position.
   useLayoutEffect(() => {
     const el = textareaRef.current;
     if (!el || !slideId) return;
-    const next = getLocalCodeAtom(slideId) ?? slide?.code ?? "";
+
+    const switchingSlides = previousSlideIdRef.current !== slideId;
+    previousSlideIdRef.current = slideId;
+    const localOverride = getLocalCodeAtom(slideId);
+    const next = localOverride ?? slide?.code ?? "";
     const isNewValue = el.value !== next;
+
     if (isNewValue) {
-      // Synchronous value update in same microtask as caret restore
       el.value = next;
     }
-    const saved = getCaretPosition(slideId);
-    if (saved) {
-      const len = next.length;
-      const start = Math.min(Math.max(saved.start, 0), len);
-      const end = Math.min(Math.max(saved.end, 0), len);
-      try {
-        // Synchronous caret restore before paint — no flash
-        el.selectionStart = start;
-        el.selectionEnd = end;
-      } catch {}
-    } else {
-      if (isNewValue) {
+
+    if (switchingSlides) {
+      const saved = getCaretPosition(slideId);
+      if (saved) {
+        const len = next.length;
+        const start = Math.min(Math.max(saved.start, 0), len);
+        const end = Math.min(Math.max(saved.end, 0), len);
         try {
-          // Place at end only when value actually changed and no saved pos
+          el.selectionStart = start;
+          el.selectionEnd = end;
+        } catch {}
+      } else if (isNewValue) {
+        try {
           el.selectionStart = el.selectionEnd = next.length;
         } catch {}
       }
+    } else if (isNewValue && localOverride === undefined) {
+      // A server/cache update for the currently open slide should be visible,
+      // but must not reset the user's caret to a saved position or the end.
+      const len = next.length;
+      try {
+        el.selectionStart = Math.min(el.selectionStart, len);
+        el.selectionEnd = Math.min(el.selectionEnd, len);
+      } catch {}
     }
+
     editorSnapshotRef.current = {
       code: next,
       caretStart: el.selectionStart,
       caretEnd: el.selectionEnd,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideId]);
+  }, [slideId, slide?.code, editorSnapshotRef, textareaRef]);
 
   const saveCaret = useCallback(() => {
     const el = textareaRef.current;
