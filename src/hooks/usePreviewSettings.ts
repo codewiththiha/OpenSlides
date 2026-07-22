@@ -15,25 +15,20 @@ export function usePreviewSlideSetting<K extends keyof PreviewSlideSettings>(
   slideId: string | undefined,
   key: K,
 ): PreviewSlideSettings[K] | undefined {
-  useUiStore((s) => s.previewSlidesRevision);
-  if (!slideId) return undefined;
-  return useUiStore.getState().previewSlides.get(slideId)?.[key];
+  return useUiStore((s) => slideId ? s.previewSlides.get(slideId)?.[key] : undefined);
 }
 
 export function usePreviewHighlightSetting<K extends keyof Highlight>(
   highlightId: string,
   key: K,
 ): Highlight[K] | undefined {
-  useUiStore((s) => s.previewHighlightsRevision);
-  return useUiStore.getState().previewHighlights.get(highlightId)?.[key];
+  return useUiStore((s) => s.previewHighlights.get(highlightId)?.[key]);
 }
 
 export function usePreviewSlidesMap() {
-  useUiStore((s) => s.previewSlidesRevision);
-  return useUiStore.getState().previewSlides;
+  return useUiStore((s) => s.previewSlides);
 }
 
 export function usePreviewHighlightsMap() {
-  useUiStore((s) => s.previewHighlightsRevision);
-  return useUiStore.getState().previewHighlights;
+  return useUiStore((s) => s.previewHighlights);
 }

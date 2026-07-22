@@ -6,8 +6,6 @@ export interface PreviewSlice {
   previewProject: PreviewProjectSettings;
   previewSlides: Map<string, PreviewSlideSettings>;
   previewHighlights: Map<string, Partial<import("@/types").Highlight>>;
-  previewSlidesRevision: number;
-  previewHighlightsRevision: number;
 
   setPreviewHighlightIndex: (v: number) => void;
   setPreviewProjectSetting: <K extends keyof PreviewProjectSettings>(
@@ -35,13 +33,16 @@ export interface PreviewSlice {
   clearAllPreviewSettings: () => void;
 }
 
+/**
+ * Transient preview overrides use immutable Maps. Their references change on
+ * every edit, allowing memoized preview consumers to react without separate
+ * revision counters or in-place mutation.
+ */
 export const createPreviewSlice: StateCreator<UiState, [], [], PreviewSlice> = (set) => ({
   previewHighlightIndex: -1,
   previewProject: {},
   previewSlides: new Map(),
   previewHighlights: new Map(),
-  previewSlidesRevision: 0,
-  previewHighlightsRevision: 0,
 
   setPreviewHighlightIndex: (v) => set({ previewHighlightIndex: v }),
 
@@ -57,28 +58,27 @@ export const createPreviewSlice: StateCreator<UiState, [], [], PreviewSlice> = (
 
   setPreviewSlideSetting: (slideId, key, value) =>
     set((s) => {
-      const current = s.previewSlides.get(slideId) ?? {};
-      if (value === null || value === undefined) {
-        if (!(key in current)) return s;
-        delete current[key];
-        if (Object.keys(current).length === 0) s.previewSlides.delete(slideId);
-      } else {
-        current[key] = value;
-        s.previewSlides.set(slideId, current);
-      }
-      return { previewSlidesRevision: s.previewSlidesRevision + 1 };
+      const next = new Map(s.previewSlides);
+      const current = { ...(next.get(slideId) ?? {}) };
+      if (value === null || value === undefined) delete current[key];
+      else current[key] = value;
+
+      if (Object.keys(current).length === 0) next.delete(slideId);
+      else next.set(slideId, current);
+      return { previewSlides: next };
     }),
 
   setPreviewHighlightSetting: (highlightId, patch) =>
     set((s) => {
-      const current = s.previewHighlights.get(highlightId) ?? {};
+      const next = new Map(s.previewHighlights);
+      const current = { ...(next.get(highlightId) ?? {}) };
       for (const [key, value] of Object.entries(patch as Record<string, unknown>)) {
         if (value === null || value === undefined) delete current[key as keyof typeof current];
         else (current as Record<string, unknown>)[key] = value;
       }
-      if (Object.keys(current).length === 0) s.previewHighlights.delete(highlightId);
-      else s.previewHighlights.set(highlightId, current);
-      return { previewHighlightsRevision: s.previewHighlightsRevision + 1 };
+      if (Object.keys(current).length === 0) next.delete(highlightId);
+      else next.set(highlightId, current);
+      return { previewHighlights: next };
     }),
 
   clearPreviewProjectSetting: (key) =>
@@ -90,39 +90,34 @@ export const createPreviewSlice: StateCreator<UiState, [], [], PreviewSlice> = (
 
   clearPreviewSlideSetting: (slideId, key) =>
     set((s) => {
-      if (key) {
-        const current = s.previewSlides.get(slideId);
-        if (!current) return s;
+      const next = new Map(s.previewSlides);
+      if (!key) next.delete(slideId);
+      else {
+        const current = { ...(next.get(slideId) ?? {}) };
         delete current[key];
-        if (Object.keys(current).length === 0) s.previewSlides.delete(slideId);
-      } else {
-        s.previewSlides.delete(slideId);
+        if (Object.keys(current).length === 0) next.delete(slideId);
+        else next.set(slideId, current);
       }
-      return { previewSlidesRevision: s.previewSlidesRevision + 1 };
+      return { previewSlides: next };
     }),
 
   clearPreviewHighlightSetting: (highlightId, key) =>
     set((s) => {
-      if (key) {
-        const current = s.previewHighlights.get(highlightId);
-        if (!current) return s;
+      const next = new Map(s.previewHighlights);
+      if (!key) next.delete(highlightId);
+      else {
+        const current = { ...(next.get(highlightId) ?? {}) };
         delete current[key as keyof typeof current];
-        if (Object.keys(current).length === 0) s.previewHighlights.delete(highlightId);
-      } else {
-        s.previewHighlights.delete(highlightId);
+        if (Object.keys(current).length === 0) next.delete(highlightId);
+        else next.set(highlightId, current);
       }
-      return { previewHighlightsRevision: s.previewHighlightsRevision + 1 };
+      return { previewHighlights: next };
     }),
 
   clearAllPreviewSettings: () =>
-    set((s) => {
-      s.previewProject = {};
-      s.previewSlides.clear();
-      s.previewHighlights.clear();
-      return {
-        previewProject: s.previewProject,
-        previewSlidesRevision: s.previewSlidesRevision + 1,
-        previewHighlightsRevision: s.previewHighlightsRevision + 1,
-      };
+    set({
+      previewProject: {},
+      previewSlides: new Map(),
+      previewHighlights: new Map(),
     }),
 });
