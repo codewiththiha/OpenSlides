@@ -2,7 +2,8 @@
 
 use crate::commands::helpers::{
     default_slide_name, dialog_pick_path, fetch_project, is_supported_theme, now_ms,
-    normalize_code_align, normalize_language, remap_highlight_ids, sanitize_filename, DialogMode,
+    normalize_code_align, normalize_imported_highlights, normalize_language, remap_section_id,
+    sanitize_filename, DialogMode,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -213,25 +214,17 @@ pub async fn import_project_from_json(
             .filter(|n| !n.trim().is_empty())
             .map(|n| n.to_string())
             .unwrap_or_else(|| default_slide_name(i as i64));
-        let imported_highlights = s
-            .get("highlights")
-            .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()))
-            .unwrap_or_else(|| "[]".to_string());
-        let highlights_json = remap_highlight_ids(&imported_highlights)
+        let highlights_json = normalize_imported_highlights(s)
             .map_err(CommandError::Failed)?;
         if i == 0 {
             settings.current_slide_id = Some(id.clone());
         }
-        let section_id = s
-            .get("sectionId")
-            .and_then(|value| value.as_str())
-            .filter(|value| !value.trim().is_empty())
-            .map(|source_section_id| {
-                imported_section_ids
-                    .entry(source_section_id.to_string())
-                    .or_insert_with(|| Uuid::new_v4().to_string())
-                    .clone()
-            });
+        let section_id = remap_section_id(
+            &mut imported_section_ids,
+            s.get("sectionId")
+                .and_then(|value| value.as_str())
+                .map(|value| value.to_string()),
+        );
         parsed_slides.push((id, code, duration, transition, stagger, sname, highlights_json, section_id));
     }
 

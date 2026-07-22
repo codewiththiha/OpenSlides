@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod lifecycle;
 mod models;
+mod services;
 
 use commands::*;
 use db::init_db;

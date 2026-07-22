@@ -38,8 +38,13 @@ import { Plus } from "lucide-react";
 import { resolveProjectLanguage, type Project, type Slide } from "@/types";
 import { useSlideStripSearch } from "@/hooks/useSlideStripSearch";
 import { useInlineRename } from "@/hooks/useInlineRename";
-import { useSlidePanelActions } from "@/hooks/useSlidePanelActions";
 import { useAddSlide } from "@/hooks/useAddSlide";
+import {
+  useDeleteSlideWithUndo,
+  useDuplicateSlide,
+  useReorderSlides,
+  useStackSlides,
+} from "@/hooks/useSlideActions";
 import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { SlideSearchDialog, type SearchScope } from "./slides/SlideSearchDialog";
@@ -53,7 +58,6 @@ import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 import { useStackDragEnd, type StackDragData, type StackDropData } from "@/hooks/useStackDragEnd";
 import { isTypingTarget } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
-import { notify } from "@/lib/toast";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -77,15 +81,7 @@ const dropAnimation: DropAnimation = {
   sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0.4" } } }),
 };
 
-import {
-  useDeleteSlide,
-  useDuplicateSlide,
-  useReorderSlides,
-  useRestoreSlide,
-  useUpdateSlideSettings,
-  useStackSlides,
-  useUnstackSlides,
-} from "@/hooks/queries";
+import { useUpdateSlideSettings } from "@/hooks/queries";
 
 export function BottomSlidesPanel({
   project,
@@ -100,13 +96,10 @@ export function BottomSlidesPanel({
   const isCollapsed = collapsed ?? isBottomPanelCollapsed;
 
   const addSlide = useAddSlide(project.id);
-  const deleteSlide = useDeleteSlide(project.id);
   const duplicateSlide = useDuplicateSlide(project.id);
-  const restoreSlide = useRestoreSlide(project.id);
-  const reorder = useReorderSlides(project.id);
+  const reorderSlides = useReorderSlides(project.id);
+  const { stackSlides, unstackSlides } = useStackSlides(project.id);
   const updateSettings = useUpdateSlideSettings(project.id);
-  const stackSlides = useStackSlides(project.id);
-  const unstackSlides = useUnstackSlides(project.id);
   const theme = project.theme;
   const language = resolveProjectLanguage(project);
 
@@ -125,7 +118,7 @@ export function BottomSlidesPanel({
     },
     resolveTargetId: (overData) => overData.targetId,
     onStack: (sourceIds, targetId) => {
-      stackSlides.mutate({ sourceIds, targetId });
+      stackSlides(sourceIds, targetId);
     },
   });
 
@@ -133,7 +126,7 @@ export function BottomSlidesPanel({
     project.slides,
     (s) => s.sectionId,
     (s) => s.id,
-    unstackSlides.mutate,
+    unstackSlides,
   );
 
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
@@ -210,6 +203,12 @@ export function BottomSlidesPanel({
     ),
   );
 
+  const { deleteSlideWithUndo, deleteSlides } = useDeleteSlideWithUndo(project.id, {
+    ordered,
+    renamingId: rename.renamingId,
+    pendingFocusId,
+  });
+
   const activeSlide = useMemo(
     () => ordered.find((s) => s.id === activeId) ?? null,
     [ordered, activeId],
@@ -259,23 +258,17 @@ export function BottomSlidesPanel({
         .filter(Boolean);
 
       setOrdered(nextOrdered);
-      reorder.mutate(nextIds, {
+      reorderSlides(nextIds, {
         onError: () => setOrdered(previous),
       });
     },
-    [ordered, slideChunks, handleStackDrop, reorder, searchQuery],
+    [ordered, slideChunks, handleStackDrop, reorderSlides, searchQuery],
   );
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
 
-  const { handleRemove, handleDuplicate } = useSlidePanelActions({
-    ordered,
-    renamingId: rename.renamingId,
-    mutations: { deleteSlide, restoreSlide, duplicateSlide },
-    currentSlideId,
-    setCurrentSlideId,
-    pendingFocusId,
-  });
+  const handleRemove = deleteSlideWithUndo;
+  const handleDuplicate = duplicateSlide;
 
   const selectedInOrder = useCallback(
     () => ordered.filter((slide) => selectedSlideIds.has(slide.id)).map((slide) => slide.id),
@@ -353,14 +346,14 @@ export function BottomSlidesPanel({
     if (!selected.length) return;
     const selectedSet = new Set(selected);
     const remaining = ordered.filter((slide) => !selectedSet.has(slide.id)).map((slide) => slide.id);
-    reorder.mutate(destination === "start" ? [...selected, ...remaining] : [...remaining, ...selected]);
+    reorderSlides(destination === "start" ? [...selected, ...remaining] : [...remaining, ...selected]);
     closeContextMenu();
-  }, [closeContextMenu, ordered, reorder, selectedInOrder]);
+  }, [closeContextMenu, ordered, reorderSlides, selectedInOrder]);
 
   const groupSelected = useCallback(() => {
     const selected = selectedInOrder();
     if (selected.length < 2) return;
-    stackSlides.mutate({ sourceIds: selected.slice(1), targetId: selected[0] }, {
+    stackSlides(selected.slice(1), selected[0], {
       onSuccess: () => setSelectedSlideIds(new Set(selected)),
     });
     closeContextMenu();
@@ -406,22 +399,17 @@ export function BottomSlidesPanel({
     const selected = selectedInOrder();
     setConfirmBulkDelete(false);
     void (async () => {
-      const deletedIds = new Set<string>();
-      try {
-        for (const id of selected) {
-          await deleteSlide.mutateAsync(id);
-          deletedIds.add(id);
-        }
+      const result = await deleteSlides(selected);
+      if (result.ok) {
         setSelectedSlideIds(new Set());
         setIsMultiSelectMode(false);
-      } catch (error) {
-        // Keep any slides that were not deleted selected so the user can
-        // retry or choose another bulk action without losing context.
-        setSelectedSlideIds((current) => new Set([...current].filter((id) => !deletedIds.has(id))));
-        notify.error(`Could not delete all selected slides: ${(error as Error).message}`);
+        return;
       }
+      // Keep any slides that were not deleted selected so the user can retry
+      // or choose another bulk action without losing context.
+      setSelectedSlideIds((current) => new Set([...current].filter((id) => !result.deletedIds.has(id))));
     })();
-  }, [deleteSlide, selectedInOrder]);
+  }, [deleteSlides, selectedInOrder]);
 
   if (isCollapsed) {
     return (
@@ -483,7 +471,7 @@ export function BottomSlidesPanel({
                       count={chunk.items.length}
                       variant="slide-strip"
                       onUngroup={() => {
-                        unstackSlides.mutate(chunk.items.map((s) => s.id));
+                        unstackSlides(chunk.items.map((s) => s.id));
                         setExpandedSectionId(null);
                       }}
                       onClose={() => setExpandedSectionId(null)}

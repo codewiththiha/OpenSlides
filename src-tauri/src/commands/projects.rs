@@ -2,7 +2,7 @@
 
 use crate::commands::helpers::{
     fetch_project, invalidate_project_thumbnails, is_supported_language, is_supported_theme, load_settings,
-    now_ms, remap_highlight_ids, DEFAULT_CODE,
+    normalize_copied_slide_highlights, now_ms, remap_section_id, DEFAULT_CODE,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -157,9 +157,6 @@ pub async fn duplicate_project(
     let mut section_map = std::collections::HashMap::new();
     for row in &slides {
         id_map.insert(row.get::<String, _>("id"), Uuid::new_v4().to_string());
-        if let Some(sec) = row.try_get::<Option<String>, _>("section_id").unwrap_or(None) {
-            section_map.entry(sec).or_insert_with(|| Uuid::new_v4().to_string());
-        }
     }
     settings.current_slide_id = settings
         .current_slide_id
@@ -183,9 +180,9 @@ pub async fn duplicate_project(
     for row in slides {
         let old_id: String = row.get("id");
         let old_sec = row.try_get::<Option<String>, _>("section_id").unwrap_or(None);
-        let new_sec = old_sec.and_then(|sec| section_map.get(&sec).cloned());
+        let new_sec = remap_section_id(&mut section_map, old_sec);
         let highlights_raw: String = row.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
-        let duplicate_highlights = remap_highlight_ids(&highlights_raw)?;
+        let duplicate_highlights = normalize_copied_slide_highlights(&highlights_raw)?;
         sqlx::query("INSERT INTO slides (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(id_map.get(&old_id).unwrap())
             .bind(&new_project_id)
