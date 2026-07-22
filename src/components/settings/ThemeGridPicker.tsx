@@ -29,8 +29,12 @@ function ThemeTile({
     code: THEME_SAMPLE,
     language: "typescript",
     theme: value,
+    resetKey: `theme-tile-${value}`,
     priority: "low",
     debounceMs: 40,
+    errorPolicy: "clear",
+    emptyPolicy: "clear",
+    largeCodePolicy: "clear",
   });
 
   return (

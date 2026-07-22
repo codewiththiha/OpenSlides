@@ -41,7 +41,11 @@ export function CreateDeckTile({
     code: DEFAULT_WELCOME,
     language: "typescript",
     theme: selectedTheme || "dark-plus",
+    resetKey: "create-deck-preview",
     debounceMs: 80,
+    errorPolicy: "clear",
+    emptyPolicy: "clear",
+    largeCodePolicy: "clear",
   });
 
   useEffect(() => {
