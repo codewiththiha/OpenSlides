@@ -88,6 +88,7 @@ export function CodeEditor({
     code,
     language,
     theme,
+    resetKey: slideId,
   });
 
   const debouncedSave = useDebouncedCallback(
