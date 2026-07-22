@@ -1,10 +1,9 @@
 //! Naming helpers and default constants used by command modules.
 
-pub const DEFAULT_CODE: &str = r#"// Welcome to OpenSlides
-// Feedback: @codewiththiha
-function greet() {
-  console.log("Hi, Mom!");
-}"#;
+pub const DEFAULT_CODE: &str = r#"// Every presentation starts with one clear idea.
+const opening = "Make code memorable";
+
+console.log(opening);"#;
 
 pub const DEFAULT_LANGUAGE: &str = "typescript";
 

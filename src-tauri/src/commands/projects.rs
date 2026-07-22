@@ -100,7 +100,7 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandRes
         r#"
         INSERT INTO slides
           (id, project_id, order_index, code, transition_duration, stagger, duration, name)
-        VALUES (?, ?, 0, ?, 750, 5, 3000, 'Slide 1')
+        VALUES (?, ?, 0, ?, 750, 5, 3000, '1. Open with an idea')
         "#,
     )
     .bind(&slide_id)
