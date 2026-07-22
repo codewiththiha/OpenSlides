@@ -142,10 +142,7 @@ export function useCreateSlide(projectId: string) {
   return useMutation({
     mutationFn: (opts?: { code?: string; name?: string }) =>
       api.createSlide(projectId, opts),
-    onSuccess: async (slide) => {
-      // All creation paths (toolbar, native menu, command palette, and the
-      // slide rail) should land on the newly created slide immediately.
-      useUiStore.getState().setCurrentSlideId(slide.id);
+    onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
       await qc.invalidateQueries({ queryKey: projectKeys.all });
     },

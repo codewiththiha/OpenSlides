@@ -2,17 +2,13 @@ import { useCallback } from "react";
 import { slideDisplayName } from "@/types";
 import type { Slide } from "@/types";
 import { notify } from "@/lib/toast";
-import type { SlideSettingsPatch } from "@/lib/tauri-api";
 import type { UseMutationResult } from "@tanstack/react-query";
 import type { Project } from "@/types";
-import { nextStarterSlideAction } from "@/constants";
 
 interface SlidePanelMutations {
   deleteSlide: UseMutationResult<Project, Error, string>;
   restoreSlide: UseMutationResult<Project, Error, { slide: Slide; insertAt?: number }>;
   duplicateSlide: UseMutationResult<Project, Error, string>;
-  createSlide: UseMutationResult<Slide, Error, { code?: string; name?: string } | undefined>;
-  updateSettings: UseMutationResult<Slide, Error, { slideId: string; payload: SlideSettingsPatch }>;
 }
 
 interface UseSlidePanelActionsArgs {
@@ -24,54 +20,10 @@ interface UseSlidePanelActionsArgs {
   pendingFocusId: React.MutableRefObject<string | null>;
 }
 
-interface UseAddSlideActionArgs {
-  ordered: Slide[];
-  createSlide: SlidePanelMutations["createSlide"];
-  updateSettings: SlidePanelMutations["updateSettings"];
-  setCurrentSlideId: (id: string | null) => void;
-}
-
-/** One shared add flow for the slide rail, command palette, and native menu. */
-export function useAddSlideAction({
-  ordered,
-  createSlide,
-  updateSettings,
-  setCurrentSlideId,
-}: UseAddSlideActionArgs) {
-  return useCallback(() => {
-    const starterAction = nextStarterSlideAction(ordered);
-
-    if (starterAction?.kind === "append") {
-      void (async () => {
-        const slide = await createSlide.mutateAsync({
-          name: starterAction.slide.name,
-          code: starterAction.slide.code,
-        });
-        if (starterAction.slide.highlights.length) {
-          await updateSettings.mutateAsync({
-            slideId: slide.id,
-            payload: { highlights: starterAction.slide.highlights },
-          });
-        }
-        setCurrentSlideId(slide.id);
-      })().catch((err: Error) => notify.error(`Could not add starter slide: ${err.message}`));
-      return;
-    }
-
-    const nextNum = ordered.length + 1;
-    createSlide.mutate(
-      { name: `Slide ${nextNum}` },
-      {
-        onSuccess: (slide) => setCurrentSlideId(slide.id),
-      },
-    );
-  }, [ordered, createSlide, updateSettings, setCurrentSlideId]);
-}
-
 export function useSlidePanelActions({
   ordered,
   renamingId,
-  mutations: { deleteSlide, restoreSlide, duplicateSlide, createSlide, updateSettings },
+  mutations: { deleteSlide, restoreSlide, duplicateSlide },
   currentSlideId,
   setCurrentSlideId,
   pendingFocusId,
@@ -116,7 +68,5 @@ export function useSlidePanelActions({
     [duplicateSlide],
   );
 
-  const handleAdd = useAddSlideAction({ ordered, createSlide, updateSettings, setCurrentSlideId });
-
-  return { handleRemove, handleDuplicate, handleAdd };
+  return { handleRemove, handleDuplicate };
 }

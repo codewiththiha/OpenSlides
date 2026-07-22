@@ -39,6 +39,7 @@ import { resolveProjectLanguage, type Project, type Slide } from "@/types";
 import { useSlideStripSearch } from "@/hooks/useSlideStripSearch";
 import { useInlineRename } from "@/hooks/useInlineRename";
 import { useSlidePanelActions } from "@/hooks/useSlidePanelActions";
+import { useAddSlide } from "@/hooks/useAddSlide";
 import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { SlideSearchDialog, type SearchScope } from "./slides/SlideSearchDialog";
@@ -77,7 +78,6 @@ const dropAnimation: DropAnimation = {
 };
 
 import {
-  useCreateSlide,
   useDeleteSlide,
   useDuplicateSlide,
   useReorderSlides,
@@ -99,7 +99,7 @@ export function BottomSlidesPanel({
 
   const isCollapsed = collapsed ?? isBottomPanelCollapsed;
 
-  const createSlide = useCreateSlide(project.id);
+  const addSlide = useAddSlide(project.id);
   const deleteSlide = useDeleteSlide(project.id);
   const duplicateSlide = useDuplicateSlide(project.id);
   const restoreSlide = useRestoreSlide(project.id);
@@ -268,10 +268,10 @@ export function BottomSlidesPanel({
 
   const onDragCancel = useCallback(() => setActiveId(null), []);
 
-  const { handleRemove, handleDuplicate, handleAdd } = useSlidePanelActions({
+  const { handleRemove, handleDuplicate } = useSlidePanelActions({
     ordered,
     renamingId: rename.renamingId,
-    mutations: { deleteSlide, restoreSlide, duplicateSlide, createSlide, updateSettings },
+    mutations: { deleteSlide, restoreSlide, duplicateSlide },
     currentSlideId,
     setCurrentSlideId,
     pendingFocusId,
@@ -444,8 +444,7 @@ export function BottomSlidesPanel({
         ))}
         <button
           type="button"
-          onClick={handleAdd}
-          disabled={createSlide.isPending}
+          onClick={() => void addSlide()}
           className="flex h-full min-w-11 shrink-0 items-center justify-center px-3 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary disabled:opacity-50"
           title="Add slide"
         >
@@ -563,8 +562,7 @@ export function BottomSlidesPanel({
             })}
             <button
               type="button"
-              onClick={handleAdd}
-              disabled={createSlide.isPending}
+              onClick={() => void addSlide()}
               className="grid h-[132px] w-[152px] shrink-0 self-center place-items-center rounded-md border border-dashed border-border/80 bg-card/30 text-muted-foreground transition-all hover:border-primary/60 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-50"
               title="Add slide"
             >
