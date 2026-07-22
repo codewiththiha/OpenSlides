@@ -1,6 +1,7 @@
 /** Shared store types — imported by slices and the main store. */
 
 export type PreviewProjectSettings = {
+  theme?: string;
   fontSize?: number;
   lineHeight?: number;
   editorFontSize?: number;
