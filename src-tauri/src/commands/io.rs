@@ -1,8 +1,8 @@
 //! Import / export Tauri commands.
 
 use crate::commands::helpers::{
-    default_slide_name, dialog_pick_path, fetch_project, now_ms, normalize_code_align,
-    normalize_language, sanitize_filename, DialogMode,
+    clone_highlights_with_fresh_ids, default_slide_name, dialog_pick_path, fetch_project, now_ms,
+    normalize_code_align, normalize_language, sanitize_filename, DialogMode,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -204,10 +204,12 @@ pub async fn import_project_from_json(
             .filter(|n| !n.trim().is_empty())
             .map(|n| n.to_string())
             .unwrap_or_else(|| default_slide_name(i as i64));
-        let highlights_json = s
+        let imported_highlights = s
             .get("highlights")
             .map(|v| serde_json::to_string(v).unwrap_or_else(|_| "[]".to_string()))
             .unwrap_or_else(|| "[]".to_string());
+        let highlights_json = clone_highlights_with_fresh_ids(&imported_highlights)
+            .map_err(CommandError::Failed)?;
         if i == 0 {
             settings.current_slide_id = Some(id.clone());
         }

@@ -1,7 +1,8 @@
 //! Project-level Tauri commands.
 
 use crate::commands::helpers::{
-    fetch_project, invalidate_project_thumbnails, load_settings, now_ms, DEFAULT_CODE,
+    clone_highlights_with_fresh_ids, fetch_project, invalidate_project_thumbnails, load_settings,
+    now_ms, DEFAULT_CODE,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -183,6 +184,8 @@ pub async fn duplicate_project(
         let old_id: String = row.get("id");
         let old_sec = row.try_get::<Option<String>, _>("section_id").unwrap_or(None);
         let new_sec = old_sec.and_then(|sec| section_map.get(&sec).cloned());
+        let highlights_raw: String = row.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
+        let duplicate_highlights = clone_highlights_with_fresh_ids(&highlights_raw)?;
         sqlx::query("INSERT INTO slides (id, project_id, order_index, code, transition_duration, stagger, duration, name, highlights, thumbnail_html, section_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind(id_map.get(&old_id).unwrap())
             .bind(&new_project_id)
@@ -192,7 +195,7 @@ pub async fn duplicate_project(
             .bind(row.get::<i64, _>("stagger"))
             .bind(row.get::<i64, _>("duration"))
             .bind(row.try_get::<String, _>("name").unwrap_or_default())
-            .bind(row.try_get::<String, _>("highlights").unwrap_or_else(|_| "[]".to_string()))
+            .bind(duplicate_highlights)
             .bind(row.try_get::<String, _>("thumbnail_html").unwrap_or_default())
             .bind(new_sec)
             .execute(&mut *tx)
