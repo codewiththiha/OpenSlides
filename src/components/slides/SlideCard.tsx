@@ -1,6 +1,6 @@
 import { memo, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { slideDisplayName, type Slide } from "@/types";
+import { slideDisplayName, themeBackground, type Slide } from "@/types";
 import { useSlideThumbnail } from "@/hooks/useSlideThumbnail";
 import { useUiStore } from "@/store/useUiStore";
 import { useSlideCode } from "@/hooks/useSlideCode";
@@ -102,6 +102,10 @@ export const SlideCard = memo(function SlideCard({
   const title = slideDisplayName(slide, index);
   const hlCount = slide.highlights?.length ?? 0;
   const progress = isSelected ? highlightProgress : -1;
+  const codeBackground = themeBackground(theme);
+  // Theme backgrounds are six-digit hex values; the alpha suffix keeps the
+  // title and metadata fades visually connected to the code preview.
+  const softCodeBackground = `${codeBackground}e0`;
 
   const handleCardKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget || isOverlay || isRenaming) return;
@@ -217,7 +221,10 @@ export const SlideCard = memo(function SlideCard({
       />
 
       {/* The title sits over the code with a soft fade rather than taking layout space. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-background via-background/85 to-transparent px-2 pb-8 pt-2">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pb-8 pt-2"
+        style={{ background: `linear-gradient(to bottom, ${codeBackground} 0%, ${softCodeBackground} 45%, transparent 100%)` }}
+      >
         <div className="pointer-events-auto pr-14">
           <SlideCardHeader
             isRenaming={isRenaming}
@@ -251,7 +258,10 @@ export const SlideCard = memo(function SlideCard({
         </div>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-2 pb-1.5 pt-7">
+      <div
+        className="absolute inset-x-0 bottom-0 z-10 px-2 pb-1.5 pt-7"
+        style={{ background: `linear-gradient(to top, ${codeBackground} 0%, ${softCodeBackground} 48%, transparent 100%)` }}
+      >
         <SlideCardMeta
           language={language}
           hlCount={hlCount}
