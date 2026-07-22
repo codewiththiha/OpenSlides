@@ -52,6 +52,7 @@ import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 import { useStackDragEnd } from "@/hooks/useStackDragEnd";
 import { isTypingTarget } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
+import { notify } from "@/lib/toast";
 
 interface BottomSlidesPanelProps {
   project: Project;
@@ -101,8 +102,17 @@ export function BottomSlidesPanel({
 
   const { handleStackDrop } = useStackDragEnd({
     stackTargetKind: "slide-stack-target",
-    resolveSourceIds: (activeData: any) =>
-      activeData?.id ? [String(activeData.id)] : [],
+    resolveSourceIds: (activeData: any) => {
+      const activeId = activeData?.id ? String(activeData.id) : null;
+      if (!activeId) return [];
+      const activeSlide = project.slides.find((slide) => slide.id === activeId);
+      const sectionId = activeSlide?.sectionId?.trim();
+      // Dragging the visible top card of a stack represents its entire
+      // section, not only that first slide.
+      return sectionId
+        ? project.slides.filter((slide) => slide.sectionId?.trim() === sectionId).map((slide) => slide.id)
+        : [activeId];
+    },
     resolveTargetId: (overData: any) =>
       overData?.targetId ? String(overData.targetId) : null,
     onStack: (sourceIds, targetId) => {
@@ -387,9 +397,20 @@ export function BottomSlidesPanel({
     const selected = selectedInOrder();
     setConfirmBulkDelete(false);
     void (async () => {
-      for (const id of selected) await deleteSlide.mutateAsync(id);
-      setSelectedSlideIds(new Set());
-      setIsMultiSelectMode(false);
+      const deletedIds = new Set<string>();
+      try {
+        for (const id of selected) {
+          await deleteSlide.mutateAsync(id);
+          deletedIds.add(id);
+        }
+        setSelectedSlideIds(new Set());
+        setIsMultiSelectMode(false);
+      } catch (error) {
+        // Keep any slides that were not deleted selected so the user can
+        // retry or choose another bulk action without losing context.
+        setSelectedSlideIds((current) => new Set([...current].filter((id) => !deletedIds.has(id))));
+        notify.error(`Could not delete all selected slides: ${(error as Error).message}`);
+      }
     })();
   }, [deleteSlide, selectedInOrder]);
 
