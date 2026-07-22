@@ -1,8 +1,8 @@
 //! Slide-level Tauri commands.
 
 use crate::commands::helpers::{
-    batch_reindex, default_slide_name, fetch_project, insert_slide_row, load_settings,
-    parse_highlights, save_settings, serialize_highlights, touch_project, NewSlide,
+    batch_reindex, clone_highlights_with_fresh_ids, default_slide_name, fetch_project, insert_slide_row,
+    load_settings, parse_highlights, save_settings, serialize_highlights, touch_project, NewSlide,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
@@ -120,6 +120,7 @@ pub async fn duplicate_slide(
     let orig_order: i64 = orig.get("order_index");
     let orig_name: String = orig.try_get("name").unwrap_or_default();
     let orig_highlights: String = orig.try_get("highlights").unwrap_or_else(|_| "[]".to_string());
+    let duplicate_highlights = clone_highlights_with_fresh_ids(&orig_highlights)?;
     let orig_thumbnail: String = orig.try_get("thumbnail_html").unwrap_or_default();
     let orig_section: Option<String> = orig.try_get("section_id").unwrap_or(None);
 
@@ -154,7 +155,7 @@ pub async fn duplicate_slide(
             stagger: orig_stagger,
             duration: orig_duration,
             name: &new_name,
-            highlights_json: &orig_highlights,
+            highlights_json: &duplicate_highlights,
             thumbnail_html: &orig_thumbnail,
             section_id: orig_section.as_deref(),
         },
