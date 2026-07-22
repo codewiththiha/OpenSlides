@@ -40,7 +40,6 @@ export function useStackSlides(projectId: string) {
       api.stackSlides(projectId, sourceIds, targetId),
     {
       invalidateProjectDetail: true,
-      invalidateProjectList: false,
       onSuccess: (slides) => {
         qc.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
           old ? { ...old, slides } : old,
@@ -58,7 +57,6 @@ export function useUnstackSlides(projectId: string) {
     (slideIds: string[]) => api.unstackSlides(projectId, slideIds),
     {
       invalidateProjectDetail: true,
-      invalidateProjectList: false,
       onSuccess: (slides) => {
         qc.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
           old ? { ...old, slides } : old,

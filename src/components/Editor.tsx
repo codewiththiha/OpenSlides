@@ -67,7 +67,7 @@ export function Editor() {
   const duplicateSlide = useDuplicateSlide(projectId ?? "");
   const updateTheme = useUpdateTheme(projectId ?? "");
   const createProject = useCreateProject();
-  const addSlide = useAddSlide(projectId ?? "");
+  const { addSlide } = useAddSlide(projectId ?? "");
   const createProjectRef = useRef(createProject);
   const exportMutationRef = useRef(exportMutation);
   const addSlideRef = useRef(addSlide);
