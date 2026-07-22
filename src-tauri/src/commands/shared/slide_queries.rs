@@ -19,10 +19,11 @@ pub fn serialize_highlights(
     serde_json::to_string(highlights).map_err(|e| e.to_string())
 }
 
-/// Copies of slides must not share highlight IDs. Preview overrides and
-/// animation keys are keyed by highlight ID, so assign fresh IDs on every
-/// duplicate/import boundary.
-pub fn clone_highlights_with_fresh_ids(raw: &str) -> Result<String, String> {
+/// Normalize highlight IDs when slides are copied into a new context.
+///
+/// Preview overrides and animation keys are keyed by highlight ID, so copied
+/// slides must never share IDs with their source slide/project/import file.
+pub fn remap_highlight_ids(raw: &str) -> Result<String, String> {
     let mut highlights = parse_highlights(raw);
     for highlight in &mut highlights {
         highlight.id = uuid::Uuid::new_v4().to_string();
