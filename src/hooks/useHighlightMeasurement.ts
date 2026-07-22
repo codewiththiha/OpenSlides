@@ -84,9 +84,13 @@ export function useHighlightMeasurement({
         return;
       }
 
-      let m = measureHighlightPureMath(container, codeRoot, plan, fontSize, lineHeight);
+      // DOM Range geometry follows the rendered Shiki output, including line
+      // numbers, tabs, Unicode glyph widths, and font fallback. The pure-math
+      // path is retained only as a last-resort fallback when Range measurement
+      // cannot produce a usable result.
+      let m = measureHighlight(container, codeRoot, plan, fontSize, lineHeight);
       if (!m) {
-        m = measureHighlight(container, codeRoot, plan, fontSize, lineHeight);
+        m = measureHighlightPureMath(container, codeRoot, plan, fontSize, lineHeight);
       }
       if (!disposed && m) setMeasurement(m);
     };
