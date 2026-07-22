@@ -88,10 +88,11 @@ export function useEditorKeyboard({
         return;
       }
 
-      // Cmd/Ctrl+Shift+F or / → focus slide-strip search.
+      // Cmd/Ctrl+F opens the centered finder. Slide search is its default scope.
       if (
-        ((isModKey(e) && e.shiftKey && e.key.toLowerCase() === "f") ||
-          (e.key === "/" && !isModKey(e) && !e.altKey && !isTypingTarget(e.target))) &&
+        isModKey(e) &&
+        !e.shiftKey &&
+        e.key.toLowerCase() === "f" &&
         !isPresenting &&
         !isZenMode &&
         !isSettingsOpen &&
@@ -100,7 +101,7 @@ export function useEditorKeyboard({
         !isGoToSlideOpen
       ) {
         e.preventDefault();
-        window.dispatchEvent(new Event("openslides:focus-slide-search"));
+        window.dispatchEvent(new Event("openslides:open-search"));
         return;
       }
 

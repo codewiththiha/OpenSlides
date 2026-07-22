@@ -138,6 +138,14 @@ export function CodeEditor({
   });
   const { open: isFindOpen, openFind, close: closeFind } = findReplace;
 
+  useEffect(() => {
+    const openCodeFind = (event: Event) => {
+      const query = (event as CustomEvent<{ query?: string }>).detail?.query;
+      openFind(query);
+    };
+    window.addEventListener("openslides:find-in-code", openCodeFind);
+    return () => window.removeEventListener("openslides:find-in-code", openCodeFind);
+  }, [openFind]);
 
   const { applyHistorySnapshot } = useEditorHistory({ slideId, textareaRef, handleChange, saveCaret });
 
@@ -157,12 +165,7 @@ export function CodeEditor({
       }
       if (isMod && key === "f" && !e.shiftKey) {
         e.preventDefault();
-        let selection = "";
-        try {
-          const el = e.currentTarget;
-          selection = el.value.slice(el.selectionStart, el.selectionEnd);
-        } catch {}
-        openFind(selection || undefined);
+        window.dispatchEvent(new Event("openslides:open-search"));
         return;
       }
       if (e.key === "Escape" && isFindOpen) {

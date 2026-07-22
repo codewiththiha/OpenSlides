@@ -13,7 +13,7 @@ import { SlideCardHoverPreview } from "./SlideCardHoverPreview";
 import { useSlideCardHoverPreview } from "./useSlideCardHoverPreview";
 
 export const ITEM_WIDTH = 152;
-export const ITEM_HEIGHT = 118;
+export const ITEM_HEIGHT = 132;
 
 interface SlideCardProps {
   slide: Slide;
