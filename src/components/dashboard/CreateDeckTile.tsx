@@ -6,12 +6,9 @@ import { CodeThumbnail } from "../ui/code-thumbnail";
 import { useShikiHtml } from "@/hooks/useShikiHtml";
 import { THEMES } from "@/lib/themes";
 import { cn } from "@/lib/utils";
+import { NEW_PRESENTATION_CODE } from "@/constants";
 
-export const DEFAULT_WELCOME = `// Welcome to OpenSlides
-// Feedback: @codewiththiha
-function greet() {
-  console.log("Hi, Mom!");
-}`;
+export const DEFAULT_WELCOME = NEW_PRESENTATION_CODE;
 
 export interface CreateDeckTileProps {
   isExpanded: boolean;
