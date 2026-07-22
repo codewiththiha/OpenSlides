@@ -67,6 +67,7 @@ export function InlineEditableText({
             buttonSize === "sm" && "h-5 w-5 [&_svg]:size-3",
             buttonSize === "md" && "h-8 w-8",
           )}
+          onMouseDown={(event) => event.preventDefault()}
           onClick={onCommit}
           disabled={commitBusy}
         >
@@ -80,6 +81,7 @@ export function InlineEditableText({
             buttonSize === "sm" && "h-5 w-5 [&_svg]:size-3",
             buttonSize === "md" && "h-8 w-8",
           )}
+          onMouseDown={(event) => event.preventDefault()}
           onClick={onCancel}
         >
           <X />
