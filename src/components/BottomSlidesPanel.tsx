@@ -310,6 +310,20 @@ export function BottomSlidesPanel({
     closeContextMenu();
   }, [closeContextMenu]);
 
+  // Multi-select remains cancellable even after the menu itself has been
+  // dismissed by a normal click elsewhere in the slide strip.
+  useEffect(() => {
+    if (!isMultiSelectMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      clearSlideSelection();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [clearSlideSelection, isMultiSelectMode]);
+
   const moveSelected = useCallback((destination: "start" | "end") => {
     const selected = selectedInOrder();
     if (!selected.length) return;
