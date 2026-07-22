@@ -6,8 +6,9 @@ import {
 import { notify } from "../../lib/toast";
 import { api, isCancelledError, type SettingsPatch } from "../../lib/tauri-api";
 import { projectKeys } from "./keys";
+import { useProjectMutation } from "./useProjectMutation";
 import { showUndoToast } from "../../lib/settings-undo";
-import type { ProjectSettings, ThemeName } from "../../types";
+import type { Project, ProjectSettings, ThemeName } from "../../types";
 
 export function useProjects() {
   return useQuery({
@@ -29,54 +30,49 @@ export function useProject(projectId: string | undefined) {
 }
 
 export function useCreateProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (name: string) => api.createProject(name),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Presentation created");
+  return useProjectMutation(
+    (name: string) => api.createProject(name),
+    {
+      onSuccess: () => notify.success("Presentation created"),
+      onError: (err: Error) =>
+        notify.error(`Couldn't create presentation: ${err.message}`),
     },
-    onError: (err: Error) =>
-      notify.error(`Couldn't create presentation: ${err.message}`),
-  });
+  );
 }
 
 export function useDuplicateProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.duplicateProject(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Presentation duplicated");
+  return useProjectMutation(
+    (id: string) => api.duplicateProject(id),
+    {
+      onSuccess: () => notify.success("Presentation duplicated"),
+      onError: (err: Error) => notify.error(`Couldn't duplicate: ${err.message}`),
     },
-    onError: (err: Error) => notify.error(`Couldn't duplicate: ${err.message}`),
-  });
+  );
 }
 
 export function useDeleteProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => api.deleteProject(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Presentation deleted");
+  return useProjectMutation(
+    (id: string) => api.deleteProject(id),
+    {
+      onSuccess: () => notify.success("Presentation deleted"),
+      onError: (err: Error) => notify.error(`Couldn't delete: ${err.message}`),
     },
-    onError: (err: Error) => notify.error(`Couldn't delete: ${err.message}`),
-  });
+  );
 }
 
 export function useRenameProject() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ projectId, name }: { projectId: string; name: string }) =>
+  return useProjectMutation(
+    ({ projectId, name }: { projectId: string; name: string }) =>
       api.renameProject(projectId, name),
-    onSuccess: (project) => {
-      qc.setQueryData(projectKeys.detail(project.id), project);
-      qc.invalidateQueries({ queryKey: projectKeys.all });
-      notify.success("Presentation renamed");
+    {
+      onSuccess: (project) => {
+        qc.setQueryData(projectKeys.detail(project.id), project);
+        notify.success("Presentation renamed");
+      },
+      onError: (err: Error) => notify.error(`Rename failed: ${err.message}`),
     },
-    onError: (err: Error) => notify.error(`Rename failed: ${err.message}`),
-  });
+  );
 }
 
 function describeProjectChange(patch: SettingsPatch, before: ProjectSettings): string | null {
@@ -95,15 +91,15 @@ function describeProjectChange(patch: SettingsPatch, before: ProjectSettings): s
 
 export function useUpdateSettings(projectId: string) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (settings: SettingsPatch) => api.updateProjectSettings(projectId, settings),
+  return useProjectMutation<Project, SettingsPatch, { before?: ProjectSettings }>(
+    (settings) => api.updateProjectSettings(projectId, settings),
+    {
     onMutate: () => {
-      const project = qc.getQueryData<import("../../types").Project>(projectKeys.detail(projectId));
+      const project = qc.getQueryData<Project>(projectKeys.detail(projectId));
       return { before: project?.settings };
     },
     onSuccess: (project, patch, context) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
-      qc.invalidateQueries({ queryKey: projectKeys.all });
       const before = context?.before;
       if (!before) return;
       const label = describeProjectChange(patch, before);
@@ -127,21 +123,22 @@ export function useUpdateSettings(projectId: string) {
       );
     },
     onError: (err: Error) => notify.error(`Settings save failed: ${err.message}`),
-  });
+    },
+  );
 }
 
 export function useUpdateTheme(projectId: string) {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (theme: ThemeName) => api.updateProjectTheme(projectId, theme),
-    onSuccess: (project) => {
-      qc.setQueryData(projectKeys.detail(projectId), project);
-      // Project cards display the theme, so mark the dashboard summary stale.
-      void qc.invalidateQueries({ queryKey: projectKeys.all });
+  return useProjectMutation(
+    (theme: ThemeName) => api.updateProjectTheme(projectId, theme),
+    {
+      onSuccess: (project) => {
+        qc.setQueryData(projectKeys.detail(projectId), project);
+      },
+      onError: (err: Error) =>
+        notify.error(`Theme update failed: ${err.message}`),
     },
-    onError: (err: Error) =>
-      notify.error(`Theme update failed: ${err.message}`),
-  });
+  );
 }
 
 export function useExportProject() {
@@ -158,11 +155,10 @@ export function useExportProject() {
 }
 
 export function useImportProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.importProjectFromJson(),
+  return useProjectMutation<Project, void>(
+    () => api.importProjectFromJson(),
+    {
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: projectKeys.all });
       notify.success("Presentation imported");
     },
     onError: (err: Error) => {
@@ -171,6 +167,7 @@ export function useImportProject() {
         notify.error(`Import failed: ${err.message}`);
       }
     },
-  });
+    },
+  );
 }
 
