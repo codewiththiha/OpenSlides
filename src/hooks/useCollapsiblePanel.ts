@@ -11,7 +11,7 @@
  *   4. `onResize` — drag auto-collapse / drag-open lock choreography
  *      (byte-identical in both rails before this hook existed).
  */
-import { useCallback, useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, type RefObject } from "react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 
 interface UseCollapsiblePanelArgs {
@@ -80,55 +80,13 @@ export function useCollapsiblePanel({
     }
   }, [panelRef, collapseThreshold, setSize, setCollapsed]);
 
-  /* ---- drag auto-collapse (Panel onResize) ----
-   * The panel's layout engine can call onResize between renders (mid-drag),
-   * so the handler must not trust render-scoped `isCollapsed` — mirror it.
-   * A short async lock after each auto-transition breaks the feedback loop
-   * the collapse→resize→collapse hand-off would otherwise create. */
-  const collapsedRef = useRef(isCollapsed);
-  useEffect(() => {
-    collapsedRef.current = isCollapsed;
-  }, [isCollapsed]);
-
-  const resizeLock = useRef(false);
-  const lockTimer = useRef(0);
-  useEffect(() => () => window.clearTimeout(lockTimer.current), []);
-
+  /* Native panel collapse owns snapping. This callback only remembers usable
+   * expanded sizes; it does not issue another collapse or expand request. */
   const onResize = useCallback(
     (size: number) => {
-      if (resizeLock.current) return;
-      const collapsed = collapsedRef.current;
-
-      // Drag-open from the collapsed rail
-      if (collapsed && size > collapseThreshold) {
-        resizeLock.current = true;
-        setCollapsed(false);
-        setSize(size);
-        lockTimer.current = window.setTimeout(() => {
-          resizeLock.current = false;
-        }, 150);
-        return;
-      }
-
-      if (!collapsed && size >= collapseThreshold) {
-        setSize(size);
-        return;
-      }
-
-      if (!collapsed && size < collapseThreshold) {
-        resizeLock.current = true;
-        setCollapsed(true);
-        try {
-          panelRef.current?.collapse();
-        } catch {
-          /* ignore */
-        }
-        lockTimer.current = window.setTimeout(() => {
-          resizeLock.current = false;
-        }, 200);
-      }
+      if (size >= collapseThreshold) setSize(size);
     },
-    [panelRef, collapseThreshold, setCollapsed, setSize],
+    [collapseThreshold, setSize],
   );
 
   return { expand, collapse, onResize };

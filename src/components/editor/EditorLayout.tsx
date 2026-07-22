@@ -159,7 +159,7 @@ export const EditorLayout = memo(function EditorLayout({
                     defaultSize={
                       isCodePanelCollapsed ? CODE_COLLAPSED_SIZE : codePanelSize
                     }
-                    minSize={CODE_COLLAPSED_SIZE}
+                    minSize={18}
                     maxSize={70}
                     collapsible
                     collapsedSize={CODE_COLLAPSED_SIZE}
@@ -206,7 +206,7 @@ export const EditorLayout = memo(function EditorLayout({
                     ? SLIDES_COLLAPSED_SIZE
                     : slidesExpandedSize
                 }
-                minSize={SLIDES_COLLAPSED_SIZE}
+                minSize={SLIDES_MIN_EXPANDED_SIZE}
                 maxSize={40}
                 collapsible
                 collapsedSize={SLIDES_COLLAPSED_SIZE}
