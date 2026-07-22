@@ -24,6 +24,50 @@ interface UseSlidePanelActionsArgs {
   pendingFocusId: React.MutableRefObject<string | null>;
 }
 
+interface UseAddSlideActionArgs {
+  ordered: Slide[];
+  createSlide: SlidePanelMutations["createSlide"];
+  updateSettings: SlidePanelMutations["updateSettings"];
+  setCurrentSlideId: (id: string | null) => void;
+}
+
+/** One shared add flow for the slide rail, command palette, and native menu. */
+export function useAddSlideAction({
+  ordered,
+  createSlide,
+  updateSettings,
+  setCurrentSlideId,
+}: UseAddSlideActionArgs) {
+  return useCallback(() => {
+    const starterAction = nextStarterSlideAction(ordered);
+
+    if (starterAction?.kind === "append") {
+      void (async () => {
+        const slide = await createSlide.mutateAsync({
+          name: starterAction.slide.name,
+          code: starterAction.slide.code,
+        });
+        if (starterAction.slide.highlights.length) {
+          await updateSettings.mutateAsync({
+            slideId: slide.id,
+            payload: { highlights: starterAction.slide.highlights },
+          });
+        }
+        setCurrentSlideId(slide.id);
+      })().catch((err: Error) => notify.error(`Could not add starter slide: ${err.message}`));
+      return;
+    }
+
+    const nextNum = ordered.length + 1;
+    createSlide.mutate(
+      { name: `Slide ${nextNum}` },
+      {
+        onSuccess: (slide) => setCurrentSlideId(slide.id),
+      },
+    );
+  }, [ordered, createSlide, updateSettings, setCurrentSlideId]);
+}
+
 export function useSlidePanelActions({
   ordered,
   renamingId,
@@ -72,34 +116,7 @@ export function useSlidePanelActions({
     [duplicateSlide],
   );
 
-  const handleAdd = useCallback(() => {
-    const starterAction = nextStarterSlideAction(ordered);
-
-    if (starterAction?.kind === "append") {
-      void (async () => {
-        const slide = await createSlide.mutateAsync({
-          name: starterAction.slide.name,
-          code: starterAction.slide.code,
-        });
-        if (starterAction.slide.highlights.length) {
-          await updateSettings.mutateAsync({
-            slideId: slide.id,
-            payload: { highlights: starterAction.slide.highlights },
-          });
-        }
-        setCurrentSlideId(slide.id);
-      })().catch((err: Error) => notify.error(`Could not add starter slide: ${err.message}`));
-      return;
-    }
-
-    const nextNum = ordered.length + 1;
-    createSlide.mutate(
-      { name: `Slide ${nextNum}` },
-      {
-        onSuccess: (slide) => setCurrentSlideId(slide.id),
-      },
-    );
-  }, [ordered, createSlide, updateSettings, setCurrentSlideId]);
+  const handleAdd = useAddSlideAction({ ordered, createSlide, updateSettings, setCurrentSlideId });
 
   return { handleRemove, handleDuplicate, handleAdd };
 }
