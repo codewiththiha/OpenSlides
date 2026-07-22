@@ -192,7 +192,9 @@ export function Editor() {
         if (projectId && currentSlideId) duplicateSlideRef.current.mutate(currentSlideId);
       },
       "menu://toggle-theme": () => useUiStore.getState().toggleTheme(),
-      "menu://shortcuts": () =>
+      "menu://shortcuts-app": () =>
+        useUiStore.getState().setIsShortcutsOpen(true),
+      "menu://shortcuts-help": () =>
         useUiStore.getState().setIsShortcutsOpen(true),
       "menu://undo": () => {
         window.dispatchEvent(new Event("openslides:undo"));
