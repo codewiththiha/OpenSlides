@@ -7,9 +7,29 @@ console.log(opening);"#;
 
 pub const DEFAULT_LANGUAGE: &str = "typescript";
 
+const SUPPORTED_LANGUAGES: &[&str] = &[
+    "typescript", "javascript", "tsx", "jsx", "python", "java", "go", "rust", "php",
+    "css", "html", "json", "yaml", "sql", "bash", "markdown", "merustmar",
+];
+
+pub const SUPPORTED_THEMES: &[&str] = &[
+    "dark-plus", "dracula", "github-dark", "github-light", "nord", "poimandres",
+    "min-light", "min-dark", "monokai", "solarized-dark", "solarized-light", "andromeeda",
+    "aurora-x", "catppuccin-latte", "catppuccin-mocha", "night-owl",
+];
+
+pub fn is_supported_language(input: &str) -> bool {
+    SUPPORTED_LANGUAGES.contains(&input)
+}
+
+pub fn is_supported_theme(input: &str) -> bool {
+    SUPPORTED_THEMES.contains(&input)
+}
+
+/// Import data from older/unknown files safely falls back to the default.
 pub fn normalize_language(input: &str) -> String {
     let trimmed = input.trim();
-    if trimmed.is_empty() || trimmed == "dynamic" {
+    if trimmed.is_empty() || trimmed == "dynamic" || !is_supported_language(trimmed) {
         DEFAULT_LANGUAGE.to_string()
     } else {
         trimmed.to_string()
