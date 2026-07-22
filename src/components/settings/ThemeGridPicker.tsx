@@ -1,4 +1,5 @@
-import { Check } from "lucide-react";
+import { Check, ChevronDown, Palette } from "lucide-react";
+import { useState } from "react";
 import { CodeThumbnail } from "../ui/code-thumbnail";
 import { useShikiHtml } from "@/hooks/useShikiHtml";
 import { THEMES } from "@/lib/themes";
@@ -12,13 +13,11 @@ const THEME_SAMPLE = `const makeSlide = (idea: string) => {
 function ThemeTile({
   value,
   label,
-  background,
   selected,
   onSelect,
 }: {
   value: ThemeName;
   label: string;
-  background: string;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -49,7 +48,8 @@ function ThemeTile({
         fontSize={5.5}
         lineHeight={1.35}
         className="h-[72px] w-full p-2"
-        fallback={<span className="block font-mono text-[9px]" style={{ color: background }}>···</span>}
+        codeClassName="flex h-full items-center justify-center text-center"
+        fallback={<span className="block text-center font-mono text-[9px] text-muted-foreground">···</span>}
       />
       <div className="flex items-center justify-between bg-card px-2 py-1.5">
         <span className="truncate text-[10px] font-medium">{label}</span>
@@ -59,20 +59,46 @@ function ThemeTile({
   );
 }
 
-/** Visual theme chooser with real Shiki-rendered code for every option. */
+/** A compact theme control that opens the visual Shiki theme gallery on demand. */
 export function ThemeGridPicker({ value, onChange }: { value: string; onChange: (theme: ThemeName) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = THEMES.find((theme) => theme.value === value) ?? THEMES[0];
+
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {THEMES.map((theme) => (
-        <ThemeTile
-          key={theme.value}
-          value={theme.value}
-          label={theme.label}
-          background={theme.background}
-          selected={value === theme.value}
-          onSelect={() => onChange(theme.value)}
-        />
-      ))}
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setIsOpen((open) => !open)}
+        className="flex w-full items-center justify-between rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+        aria-expanded={isOpen}
+      >
+        <span className="flex items-center gap-2">
+          <span className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: selected.background }} />
+          <span>{selected.label}</span>
+        </span>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Palette className="h-3.5 w-3.5" />
+          Browse themes
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="grid grid-cols-2 gap-2">
+          {THEMES.map((theme) => (
+            <ThemeTile
+              key={theme.value}
+              value={theme.value}
+              label={theme.label}
+              selected={value === theme.value}
+              onSelect={() => {
+                onChange(theme.value);
+                setIsOpen(false);
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
