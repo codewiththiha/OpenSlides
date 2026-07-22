@@ -66,28 +66,38 @@ export function usePresentFullscreen() {
     return () => window.clearTimeout(t);
   }, [isPresenting, tryEnterFullscreen]);
 
-  // If user exits OS fullscreen via Esc / system UI while presenting, sync off
+  // If the user exits browser fullscreen or native Tauri fullscreen via Esc /
+  // OS-level window controls, sync presentation state back to the UI. Native
+  // fullscreen exits do not always emit `fullscreenchange`, so poll while the
+  // presentation overlay is active as a small cross-platform safety net.
   useEffect(() => {
     if (!isPresenting) return;
-    const onFsChange = () => {
-      if (!document.fullscreenElement) {
-        const el = document.getElementById("openslides-present-root");
-        if (el) {
-          void (async () => {
-            try {
-              const win = getCurrentWindow();
-              const nativeFs = await win.isFullscreen().catch(() => false);
-              if (!nativeFs) setIsPresenting(false);
-            } catch {
-              setIsPresenting(false);
-            }
-          })();
+
+    const syncFullscreenState = () => {
+      const el = document.getElementById("openslides-present-root");
+      if (!el || document.fullscreenElement) return;
+      void (async () => {
+        try {
+          const win = getCurrentWindow();
+          const nativeFs = await win.isFullscreen().catch(() => false);
+          if (!nativeFs) {
+            setIsPresenting(false);
+            setIsAutoPlaying(false);
+          }
+        } catch {
+          setIsPresenting(false);
+          setIsAutoPlaying(false);
         }
-      }
+      })();
     };
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
-  }, [isPresenting, setIsPresenting]);
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    const interval = window.setInterval(syncFullscreenState, 750);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFullscreenState);
+      window.clearInterval(interval);
+    };
+  }, [isPresenting, setIsPresenting, setIsAutoPlaying]);
 
   return { enterPresent, exitPresent };
 }

@@ -18,12 +18,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let handle = app.handle().clone();
-            tauri::async_runtime::block_on(async move {
-                let pool = init_db(&handle)
-                    .await
-                    .expect("failed to initialize database");
-                handle.manage(pool);
-            });
+            let pool = tauri::async_runtime::block_on(async move { init_db(&handle).await })
+                .map_err(|error| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("failed to initialize database: {error}"),
+                    )
+                })?;
+            app.handle().manage(pool);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

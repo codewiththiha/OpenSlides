@@ -21,6 +21,13 @@ pub async fn stack_slides(
         ));
     }
 
+    if source_ids.is_empty() {
+        let settings = load_settings(pool.inner(), &project_id).await?;
+        return fetch_slides(pool.inner(), &project_id, &settings.language)
+            .await
+            .map_err(CommandError::Failed);
+    }
+
     let mut tx = pool
         .inner()
         .begin()
@@ -29,12 +36,6 @@ pub async fn stack_slides(
 
     let settings = load_settings(&mut *tx, &project_id).await?;
     let language = settings.language.clone();
-
-    if source_ids.is_empty() {
-        return fetch_slides(pool.inner(), &project_id, &language)
-            .await
-            .map_err(CommandError::Failed);
-    }
 
     let target_row = sqlx::query(
         "SELECT order_index, section_id FROM slides WHERE id = ? AND project_id = ?",
@@ -126,6 +127,13 @@ pub async fn unstack_slides(
     project_id: String,
     slide_ids: Vec<String>,
 ) -> CommandResult<Vec<Slide>> {
+    if slide_ids.is_empty() {
+        let settings = load_settings(pool.inner(), &project_id).await?;
+        return fetch_slides(pool.inner(), &project_id, &settings.language)
+            .await
+            .map_err(CommandError::Failed);
+    }
+
     let mut tx = pool
         .inner()
         .begin()
@@ -134,12 +142,6 @@ pub async fn unstack_slides(
 
     let settings = load_settings(&mut *tx, &project_id).await?;
     let language = settings.language.clone();
-
-    if slide_ids.is_empty() {
-        return fetch_slides(pool.inner(), &project_id, &language)
-            .await
-            .map_err(CommandError::Failed);
-    }
 
     for id in &slide_ids {
         sqlx::query("UPDATE slides SET section_id = NULL WHERE id = ? AND project_id = ?")

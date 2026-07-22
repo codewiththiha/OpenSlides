@@ -141,7 +141,12 @@ pub async fn duplicate_project(
     .ok_or_else(|| CommandError::NotFound(format!("Presentation not found: {project_id}")))?;
 
     let name: String = project.get("name");
-    let theme: String = project.get("theme");
+    let source_theme: String = project.get("theme");
+    let theme = if is_supported_theme(&source_theme) {
+        source_theme
+    } else {
+        "dark-plus".to_string()
+    };
     let settings_raw: String = project.get("settings");
     let mut settings = crate::models::parse_settings(&settings_raw);
     let slides = sqlx::query(
