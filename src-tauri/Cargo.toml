@@ -1,6 +1,6 @@
 [package]
 name = "openslides"
-version = "1.0.1"
+version = "1.0.2"
 description = "OpenSlides — offline-first code presentation desktop app"
 authors = ["codewiththiha"]
 edition = "2024"
