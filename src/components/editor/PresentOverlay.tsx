@@ -92,8 +92,12 @@ export const PresentOverlay = memo(function PresentOverlay({
             <div className="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4">
               <div className="flex-1" />
               <div className="pointer-events-none flex justify-center">
-                <div className="pointer-events-auto">
-                  <HighlightStepIndicator
+              <div
+                className="pointer-events-auto"
+                onClick={(event) => event.stopPropagation()}
+                onContextMenu={(event) => event.stopPropagation()}
+              >
+                <HighlightStepIndicator
                     total={activeSlide?.highlights?.length ?? 0}
                     current={activeHighlightIndex}
                     onSelect={(idx) => {
