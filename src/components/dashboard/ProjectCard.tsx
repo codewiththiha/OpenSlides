@@ -84,14 +84,16 @@ export const ProjectCard = memo(function ProjectCard({
       )}
 
       <div
-        className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-between px-3 pb-2.5 pt-8 text-white mix-blend-difference"
-        style={{ background: `linear-gradient(to top, ${codeBackground} 0%, ${softCodeBackground} 48%, transparent 100%)` }}
+        className="absolute inset-x-0 bottom-0 z-10 px-3 pb-2.5 pt-9"
+        style={{ background: `linear-gradient(to top, ${codeBackground} 0%, ${softCodeBackground} 58%, transparent 100%)` }}
       >
-        <span className="text-[11px] font-medium opacity-80">{project.theme}</span>
-        <span className="flex items-center gap-2 text-[11px] opacity-80">
-          Updated {formatRelative(project.updatedAt)}
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-        </span>
+        <div className="flex items-center justify-between text-white mix-blend-difference">
+          <span className="text-[11px] font-medium opacity-80">{project.theme}</span>
+          <span className="flex items-center gap-2 text-[11px] opacity-80">
+            Updated {formatRelative(project.updatedAt)}
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </span>
+        </div>
       </div>
     </Card>
   );
