@@ -4,7 +4,6 @@ use sqlx::sqlite::{
     SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
 };
 use sqlx::SqlitePool;
-use std::str::FromStr;
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
@@ -23,7 +22,6 @@ pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, String> {
         .map_err(|e| format!("Failed to create app data dir: {e}"))?;
 
     let db_path = app_dir.join("openslides.db");
-    let db_url = format!("sqlite:{}?mode=rwc", db_path.display());
 
     // WAL + relaxed sync so the debounced auto-save never blocks reads
     // (scrolling/animation) on the full-DB write lock; busy_timeout avoids
@@ -32,8 +30,8 @@ pub async fn init_db(app: &AppHandle) -> Result<SqlitePool, String> {
     // applied identically to all 5 pooled connections.
     // Added memory-cache tuning: 20MB cache (default 2MB) + 256MB mmap keeps
     // projects/slides indices in RAM, making reordering/dashboard instant even with thousands of slides.
-    let options = SqliteConnectOptions::from_str(&db_url)
-        .map_err(|e| format!("Invalid DB URL: {e}"))?
+    let options = SqliteConnectOptions::new()
+        .filename(&db_path)
         .create_if_missing(true)
         .foreign_keys(true)
         .journal_mode(SqliteJournalMode::Wal)
