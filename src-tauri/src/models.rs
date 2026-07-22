@@ -82,6 +82,8 @@ pub struct Slide {
 pub struct ProjectSettings {
     #[serde(default = "default_show_line_numbers")]
     pub show_line_numbers: bool,
+    #[serde(default)]
+    pub use_black_code_background: bool,
     #[serde(default = "default_show_highlight_step_indicator")]
     pub show_highlight_step_indicator: bool,
     #[serde(default = "default_font_size")]
@@ -141,6 +143,7 @@ impl Default for ProjectSettings {
     fn default() -> Self {
         Self {
             show_line_numbers: true,
+            use_black_code_background: false,
             show_highlight_step_indicator: true,
             font_size: 16,
             line_height: 1.5,

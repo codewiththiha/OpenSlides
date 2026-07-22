@@ -30,6 +30,7 @@ pub async fn export_project_to_json(
         "updatedAt": project.updated_at,
         "theme": project.theme,
         "showLineNumbers": project.settings.show_line_numbers,
+        "useBlackCodeBackground": project.settings.use_black_code_background,
         "showHighlightStepIndicator": project.settings.show_highlight_step_indicator,
         "fontSize": project.settings.font_size,
         "lineHeight": project.settings.line_height,
@@ -128,6 +129,10 @@ pub async fn import_project_from_json(
             .get("showLineNumbers")
             .and_then(|v| v.as_bool())
             .unwrap_or(true),
+        use_black_code_background: value
+            .get("useBlackCodeBackground")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
         show_highlight_step_indicator: value
             .get("showHighlightStepIndicator")
             .and_then(|v| v.as_bool())
