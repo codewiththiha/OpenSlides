@@ -88,7 +88,6 @@ export function useSlidePanelActions({
           });
         }
         setCurrentSlideId(slide.id);
-        notify.success(`Starter slide ${ordered.length + 1} of 6 added`);
       })().catch((err: Error) => notify.error(`Could not add starter slide: ${err.message}`));
       return;
     }

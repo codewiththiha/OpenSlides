@@ -131,7 +131,6 @@ export function useCreateSlide(projectId: string) {
       api.createSlide(projectId, opts),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
-      notify.success("Slide added");
     },
     onError: (err: Error) =>
       notify.error(`Could not add slide: ${err.message}`),
