@@ -225,7 +225,7 @@ export const SlideCard = memo(function SlideCard({
         className="pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pb-8 pt-2"
         style={{ background: `linear-gradient(to bottom, ${codeBackground} 0%, ${softCodeBackground} 45%, transparent 100%)` }}
       >
-        <div className="pointer-events-auto pr-14">
+        <div className="pointer-events-auto pr-14 text-white mix-blend-difference">
           <SlideCardHeader
             isRenaming={isRenaming}
             renameValue={renameValue}
@@ -262,12 +262,14 @@ export const SlideCard = memo(function SlideCard({
         className="absolute inset-x-0 bottom-0 z-10 px-2 pb-1.5 pt-7"
         style={{ background: `linear-gradient(to top, ${codeBackground} 0%, ${softCodeBackground} 48%, transparent 100%)` }}
       >
-        <SlideCardMeta
-          language={language}
-          hlCount={hlCount}
-          progress={progress}
-          isSelected={isSelected}
-        />
+        <div className="text-white mix-blend-difference">
+          <SlideCardMeta
+            language={language}
+            hlCount={hlCount}
+            progress={progress}
+            isSelected={isSelected}
+          />
+        </div>
       </div>
     </div>
   );
