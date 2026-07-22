@@ -84,27 +84,31 @@ export function SlideContextMenu({
   onEscape,
 }: SlideContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [resolvedPosition, setResolvedPosition] = useState(position);
+  const [resolvedPosition, setResolvedPosition] = useState({ x: -9999, y: -9999 });
+  const [isPositioned, setIsPositioned] = useState(false);
 
-  // Keep the menu next to the pointer whenever possible. Only flip it above
-  // the pointer when there is genuinely not enough space below the click.
+  // Place the menu above the pointer by default. This keeps the cards below
+  // the cursor immediately available for multi-select. It flips below only
+  // when the click is too close to the top edge.
   useLayoutEffect(() => {
     if (!open || !menuRef.current) return;
+    setIsPositioned(false);
     const rect = menuRef.current.getBoundingClientRect();
-    const gap = 6;
+    const gap = 8;
     const edge = 8;
     let left = position.x + gap;
-    let top = position.y + gap;
+    let top = position.y - rect.height - gap;
 
     if (left + rect.width > window.innerWidth - edge) {
       left = Math.max(edge, window.innerWidth - rect.width - edge);
     }
-    if (top + rect.height > window.innerHeight - edge) {
-      top = Math.max(edge, position.y - rect.height - gap);
+    if (top < edge) {
+      top = Math.min(window.innerHeight - rect.height - edge, position.y + gap);
     }
 
     setResolvedPosition({ x: left, y: top });
-  }, [open, position]);
+    setIsPositioned(true);
+  }, [open, position, selectionMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -136,6 +140,7 @@ export function SlideContextMenu({
           style={{
             left: resolvedPosition.x,
             top: resolvedPosition.y,
+            visibility: isPositioned ? "visible" : "hidden",
             zIndex: Z_INDEX.contextMenu,
           }}
           initial={{ opacity: 0, scale: 0.96, y: -4 }}
