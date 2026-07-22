@@ -30,6 +30,7 @@ pub async fn export_project_to_json(
         "updatedAt": project.updated_at,
         "theme": project.theme,
         "showLineNumbers": project.settings.show_line_numbers,
+        "showHighlightStepIndicator": project.settings.show_highlight_step_indicator,
         "fontSize": project.settings.font_size,
         "lineHeight": project.settings.line_height,
         "editorFontSize": project.settings.editor_font_size,
@@ -125,6 +126,10 @@ pub async fn import_project_from_json(
     let mut settings = ProjectSettings {
         show_line_numbers: value
             .get("showLineNumbers")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true),
+        show_highlight_step_indicator: value
+            .get("showHighlightStepIndicator")
             .and_then(|v| v.as_bool())
             .unwrap_or(true),
         font_size: value.get("fontSize").and_then(|v| v.as_i64()).unwrap_or(16),

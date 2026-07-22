@@ -64,6 +64,7 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
             k === "globalStagger" ||
             k === "codeAlign" ||
             k === "showLineNumbers" ||
+            k === "showHighlightStepIndicator" ||
             k === "useGlobalTransition" ||
             k === "useGlobalStagger"
           ) {
@@ -126,6 +127,12 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
               description="Shown during preview / presentation"
               checked={s.showLineNumbers}
               onChange={(v) => patch({ showLineNumbers: v })}
+            />
+            <ToggleField
+              label="Highlight step control"
+              description="Show the floating highlight progress control in preview and presentation"
+              checked={s.showHighlightStepIndicator}
+              onChange={(v) => patch({ showHighlightStepIndicator: v })}
             />
             <ToggleField
               label="Code editor"

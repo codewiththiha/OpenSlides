@@ -82,6 +82,8 @@ pub struct Slide {
 pub struct ProjectSettings {
     #[serde(default = "default_show_line_numbers")]
     pub show_line_numbers: bool,
+    #[serde(default = "default_show_highlight_step_indicator")]
+    pub show_highlight_step_indicator: bool,
     #[serde(default = "default_font_size")]
     pub font_size: i64,
     #[serde(default = "default_line_height")]
@@ -110,6 +112,9 @@ pub struct ProjectSettings {
 fn default_show_line_numbers() -> bool {
     true
 }
+fn default_show_highlight_step_indicator() -> bool {
+    true
+}
 fn default_font_size() -> i64 {
     16
 }
@@ -136,6 +141,7 @@ impl Default for ProjectSettings {
     fn default() -> Self {
         Self {
             show_line_numbers: true,
+            show_highlight_step_indicator: true,
             font_size: 16,
             line_height: 1.5,
             editor_font_size: 14,

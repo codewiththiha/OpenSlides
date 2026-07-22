@@ -34,7 +34,7 @@ import {
   horizontalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable";
-import { ChevronUp, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { resolveProjectLanguage, type Project, type Slide } from "@/types";
 import { useSlideStripSearch } from "@/hooks/useSlideStripSearch";
 import { useInlineRename } from "@/hooks/useInlineRename";
@@ -45,19 +45,18 @@ import { SlideSearchDialog, type SearchScope } from "./slides/SlideSearchDialog"
 import { SlideContextMenu } from "./slides/SlideContextMenu";
 import { SlideSelectionToolbar } from "./slides/SlideSelectionToolbar";
 import { ConfirmDialog } from "./ui/confirm-dialog";
-import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
 import { StackExpandedControls } from "./ui/stack/StackExpandedControls";
 import { useUiStore } from "@/store/useUiStore";
 import { chunkConsecutive } from "@/lib/grouping";
 import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks";
 import { useStackDragEnd } from "@/hooks/useStackDragEnd";
 import { isTypingTarget } from "@/lib/keyboard";
+import { cn } from "@/lib/utils";
 
 interface BottomSlidesPanelProps {
   project: Project;
   collapsed?: boolean;
   activeHighlightIndex?: number;
-  onToggleCollapse?: () => void;
 }
 
 const dropAnimation: DropAnimation = {
@@ -81,19 +80,13 @@ export function BottomSlidesPanel({
   project,
   collapsed,
   activeHighlightIndex = -1,
-  onToggleCollapse,
 }: BottomSlidesPanelProps) {
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
   const showSlideHoverPreview = useUiStore((s) => s.showSlideHoverPreview);
   const currentSlideId = useUiStore((s) => s.currentSlideId);
   const isBottomPanelCollapsed = useUiStore((s) => s.isBottomPanelCollapsed);
-  const setIsBottomPanelCollapsed = useUiStore(
-    (s) => s.setIsBottomPanelCollapsed,
-  );
 
   const isCollapsed = collapsed ?? isBottomPanelCollapsed;
-  const toggleCollapse =
-    onToggleCollapse ?? (() => setIsBottomPanelCollapsed(!isBottomPanelCollapsed));
 
   const createSlide = useCreateSlide(project.id);
   const deleteSlide = useDeleteSlide(project.id);
@@ -402,13 +395,33 @@ export function BottomSlidesPanel({
 
   if (isCollapsed) {
     return (
-      <CollapsedPanelButton
-        orientation="horizontal"
-        icon={ChevronUp}
-        label={`Slides (${ordered.length})`}
-        onClick={toggleCollapse}
-        title="Expand slides (or drag the handle above)"
-      />
+      <div className="flex h-full min-h-[36px] items-center gap-1 overflow-x-auto bg-card/60 px-2">
+        {ordered.map((slide, index) => (
+          <button
+            key={slide.id}
+            type="button"
+            onClick={() => setCurrentSlideId(slide.id)}
+            className={cn(
+              "grid h-7 min-w-7 place-items-center rounded border px-1.5 text-[10px] font-medium tabular-nums transition-colors",
+              currentSlideId === slide.id
+                ? "border-primary/60 bg-primary/15 text-primary"
+                : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+            )}
+            title={`Slide ${index + 1}`}
+          >
+            {index + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={createSlide.isPending}
+          className="grid h-7 min-w-7 place-items-center rounded border border-dashed border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary disabled:opacity-50"
+          title="Add slide"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
     );
   }
 

@@ -88,23 +88,24 @@ export const PresentOverlay = memo(function PresentOverlay({
             activeHighlightIndex={activeHighlightIndex}
             onHighlightExitComplete={onHighlightExitComplete}
           />
-          {/* Bottom bar: timer (left) + highlight dots (center) — both clickable */}
-          <div className="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4">
-            <div className="flex-1" />
-            <div className="pointer-events-none flex justify-center">
-              <div className="pointer-events-auto">
-                <HighlightStepIndicator
-                  total={activeSlide?.highlights?.length ?? 0}
-                  current={activeHighlightIndex}
-                  onSelect={(idx) => {
-                    setIsAutoPlaying(false);
-                    goToHighlight(idx);
-                  }}
-                />
+          {project.settings.showHighlightStepIndicator !== false && (
+            <div className="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4">
+              <div className="flex-1" />
+              <div className="pointer-events-none flex justify-center">
+                <div className="pointer-events-auto">
+                  <HighlightStepIndicator
+                    total={activeSlide?.highlights?.length ?? 0}
+                    current={activeHighlightIndex}
+                    onSelect={(idx) => {
+                      setIsAutoPlaying(false);
+                      goToHighlight(idx);
+                    }}
+                  />
+                </div>
               </div>
+              <div className="flex-1" />
             </div>
-            <div className="flex-1" />
-          </div>
+          )}
         </div>
       </div>
     </div>
