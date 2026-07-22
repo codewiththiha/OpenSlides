@@ -52,6 +52,8 @@ pub fn now_ms() -> i64 {
 }
 
 pub fn sanitize_filename(name: &str) -> String {
+    const MAX_FILENAME_STEM_CHARS: usize = 80;
+
     let cleaned: String = name
         .chars()
         .map(|c| {
@@ -63,9 +65,11 @@ pub fn sanitize_filename(name: &str) -> String {
         })
         .collect();
     let trimmed = cleaned.trim();
-    if trimmed.is_empty() {
-        "openslides-export".into()
+    let stem = if trimmed.is_empty() {
+        "openslides-export".to_string()
     } else {
         trimmed.replace(' ', "-")
-    }
+    };
+
+    stem.chars().take(MAX_FILENAME_STEM_CHARS).collect()
 }
