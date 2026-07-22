@@ -66,6 +66,15 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: "openslides-ui",
+      version: 1,
+      // Existing installations retain their old, taller persisted slide rail.
+      // Reset that one layout value once so the new compact default is visible.
+      migrate: (persistedState, version) => {
+        if (version < 1 && persistedState && typeof persistedState === "object") {
+          return { ...persistedState, slidesPanelSize: 14 };
+        }
+        return persistedState;
+      },
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         isBottomPanelCollapsed: s.isBottomPanelCollapsed,
