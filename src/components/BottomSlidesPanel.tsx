@@ -395,17 +395,17 @@ export function BottomSlidesPanel({
 
   if (isCollapsed) {
     return (
-      <div className="flex h-full min-h-[36px] items-center gap-1 overflow-x-auto bg-card/60 px-2">
+      <div className="flex h-full min-h-[36px] items-stretch overflow-x-auto border-y border-border/50 bg-card/60">
         {ordered.map((slide, index) => (
           <button
             key={slide.id}
             type="button"
             onClick={() => setCurrentSlideId(slide.id)}
             className={cn(
-              "grid h-7 min-w-7 place-items-center rounded border px-1.5 text-[10px] font-medium tabular-nums transition-colors",
+              "flex h-full min-w-11 shrink-0 items-center justify-center border-r border-border/60 px-3 text-sm font-bold tabular-nums transition-colors",
               currentSlideId === slide.id
-                ? "border-primary/60 bg-primary/15 text-primary"
-                : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                ? "bg-primary/15 text-primary"
+                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
             )}
             title={`Slide ${index + 1}`}
           >
@@ -416,7 +416,7 @@ export function BottomSlidesPanel({
           type="button"
           onClick={handleAdd}
           disabled={createSlide.isPending}
-          className="grid h-7 min-w-7 place-items-center rounded border border-dashed border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary disabled:opacity-50"
+          className="flex h-full min-w-11 shrink-0 items-center justify-center px-3 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary disabled:opacity-50"
           title="Add slide"
         >
           <Plus className="h-4 w-4" />
