@@ -49,12 +49,11 @@ function isSingleCharacterEdit(before: string, after: string): boolean {
     (removed.length === 1 && inserted.length === 0);
 }
 
-export function record(slideId: string, before: Snapshot, afterCode: string): void {
-  if (applyingHistory || before.code === afterCode) return;
+export function record(slideId: string, before: Snapshot, after: Snapshot): void {
+  if (applyingHistory || before.code === after.code) return;
   const history = getHistory(slideId);
   const now = Date.now();
-  const after: Snapshot = { ...before, code: afterCode };
-  const coalescible = isSingleCharacterEdit(before.code, afterCode);
+  const coalescible = isSingleCharacterEdit(before.code, after.code);
   const last = history.undo[history.undo.length - 1];
 
   if (last && coalescible && last.coalescible && now - last.timestamp < COALESCE_MS) {
