@@ -47,6 +47,8 @@ export function useUpdateSlideCode() {
       if (current === undefined || current === code) {
         clearLocalCode(slideId);
       }
+      // The dashboard card can show this slide as its first-slide preview.
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (err: Error) => notify.error(`Auto-save failed: ${err.message}`),
   });
@@ -86,6 +88,10 @@ export function useUpdateSlideSettings(projectId: string) {
           ),
         };
       });
+
+      // Names, ordering-related settings, and rendered summaries can appear
+      // on dashboard cards, so refresh the project list on a later visit.
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
 
       const before = context?.before;
       if (!before) return;
@@ -131,6 +137,7 @@ export function useCreateSlide(projectId: string) {
       api.createSlide(projectId, opts),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+      await qc.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (err: Error) =>
       notify.error(`Could not add slide: ${err.message}`),
@@ -143,6 +150,7 @@ export function useDeleteSlide(projectId: string) {
     mutationFn: (slideId: string) => api.deleteSlide(projectId, slideId),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (err: Error) =>
       notify.error(`Could not delete slide: ${err.message}`),
@@ -155,6 +163,7 @@ export function useDuplicateSlide(projectId: string) {
     mutationFn: (slideId: string) => api.duplicateSlide(projectId, slideId),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
       // Set current to duplicated slide (last currentSlideId from backend)
       const newId = project.settings.currentSlideId;
       if (newId) {
@@ -174,6 +183,7 @@ export function useRestoreSlide(projectId: string) {
       api.restoreSlide(projectId, slide, insertAt),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
       notify.success("Slide restored");
     },
     onError: (err: Error) => notify.error(`Restore failed: ${err.message}`),
@@ -186,6 +196,8 @@ export function useReorderSlides(projectId: string) {
     mutationFn: (slideIds: string[]) => api.reorderSlides(projectId, slideIds),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
+      // Reordering can change the first slide used by the dashboard card.
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (err: Error) => {
       notify.error(`Reorder failed: ${err.message}`);

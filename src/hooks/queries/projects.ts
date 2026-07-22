@@ -13,6 +13,10 @@ export function useProjects() {
   return useQuery({
     queryKey: projectKeys.all,
     queryFn: api.getProjects,
+    // The app-wide client intentionally keeps queries fresh indefinitely.
+    // Dashboard summaries can change while editing a project, so always verify
+    // the list whenever the dashboard mounts as a safety net.
+    refetchOnMount: "always",
   });
 }
 
@@ -132,6 +136,8 @@ export function useUpdateTheme(projectId: string) {
     mutationFn: (theme: ThemeName) => api.updateProjectTheme(projectId, theme),
     onSuccess: (project) => {
       qc.setQueryData(projectKeys.detail(projectId), project);
+      // Project cards display the theme, so mark the dashboard summary stale.
+      void qc.invalidateQueries({ queryKey: projectKeys.all });
     },
     onError: (err: Error) =>
       notify.error(`Theme update failed: ${err.message}`),
