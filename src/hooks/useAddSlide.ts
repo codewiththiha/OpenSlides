@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { nextStarterSlideAction } from "@/constants";
 import { useUiStore } from "@/store/useUiStore";
 import { useCreateSlide, useProject, useUpdateSlideSettings } from "@/hooks/queries";
@@ -6,18 +6,20 @@ import { useCreateSlide, useProject, useUpdateSlideSettings } from "@/hooks/quer
 /**
  * Canonical "Add Slide" use-case.
  *
- * Keep starter-deck sequencing, starter highlights, and active-slide selection
- * here so every entry point (slide rail, native menu, command palette, etc.)
- * behaves identically.
+ * Keep starter-deck sequencing, starter highlights, pending state, and
+ * active-slide selection here so every entry point (slide rail, native menu,
+ * command palette, etc.) behaves identically.
  */
 export function useAddSlide(projectId: string) {
   const { data: project } = useProject(projectId);
   const createSlide = useCreateSlide(projectId);
   const updateSettings = useUpdateSlideSettings(projectId);
   const setCurrentSlideId = useUiStore((s) => s.setCurrentSlideId);
+  const inFlightRef = useRef(false);
 
-  return useCallback(async () => {
-    if (!projectId || !project) return;
+  const addSlide = useCallback(async () => {
+    if (!projectId || !project || inFlightRef.current) return;
+    inFlightRef.current = true;
 
     try {
       const ordered = project.slides;
@@ -49,6 +51,13 @@ export function useAddSlide(projectId: string) {
     } catch {
       // Mutation hooks own user-facing error toasts. Swallow here so menu,
       // command-palette, and button handlers do not produce unhandled promises.
+    } finally {
+      inFlightRef.current = false;
     }
   }, [projectId, project, createSlide, updateSettings, setCurrentSlideId]);
+
+  return {
+    addSlide,
+    isPending: createSlide.isPending || updateSettings.isPending || inFlightRef.current,
+  };
 }

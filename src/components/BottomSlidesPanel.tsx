@@ -95,7 +95,7 @@ export function BottomSlidesPanel({
 
   const isCollapsed = collapsed ?? isBottomPanelCollapsed;
 
-  const addSlide = useAddSlide(project.id);
+  const { addSlide, isPending: isAddingSlide } = useAddSlide(project.id);
   const duplicateSlide = useDuplicateSlide(project.id);
   const reorderSlides = useReorderSlides(project.id);
   const { stackSlides, unstackSlides } = useStackSlides(project.id);
@@ -433,6 +433,7 @@ export function BottomSlidesPanel({
         <button
           type="button"
           onClick={() => void addSlide()}
+          disabled={isAddingSlide}
           className="flex h-full min-w-11 shrink-0 items-center justify-center px-3 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary disabled:opacity-50"
           title="Add slide"
         >
@@ -551,6 +552,7 @@ export function BottomSlidesPanel({
             <button
               type="button"
               onClick={() => void addSlide()}
+              disabled={isAddingSlide}
               className="grid h-[132px] w-[152px] shrink-0 self-center place-items-center rounded-md border border-dashed border-border/80 bg-card/30 text-muted-foreground transition-all hover:border-primary/60 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-50"
               title="Add slide"
             >
