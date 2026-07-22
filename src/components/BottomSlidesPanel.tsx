@@ -70,6 +70,7 @@ import {
   useDuplicateSlide,
   useReorderSlides,
   useRestoreSlide,
+  useUpdateSlideCode,
   useUpdateSlideSettings,
   useStackSlides,
   useUnstackSlides,
@@ -98,6 +99,7 @@ export function BottomSlidesPanel({
   const duplicateSlide = useDuplicateSlide(project.id);
   const restoreSlide = useRestoreSlide(project.id);
   const reorder = useReorderSlides(project.id);
+  const updateCode = useUpdateSlideCode();
   const updateSettings = useUpdateSlideSettings(project.id);
   const stackSlides = useStackSlides(project.id);
   const unstackSlides = useUnstackSlides(project.id);
@@ -250,7 +252,7 @@ export function BottomSlidesPanel({
   const { handleRemove, handleDuplicate, handleAdd } = useSlidePanelActions({
     ordered,
     renamingId: rename.renamingId,
-    mutations: { deleteSlide, restoreSlide, duplicateSlide, createSlide },
+    mutations: { deleteSlide, restoreSlide, duplicateSlide, createSlide, updateCode, updateSettings },
     currentSlideId,
     setCurrentSlideId,
     pendingFocusId,
