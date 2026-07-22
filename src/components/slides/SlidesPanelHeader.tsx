@@ -38,14 +38,14 @@ export function SlidesPanelHeader({
         title="Slides"
       >
         Slides ({ordered.length}
-        {searchQuery ? ` \u00b7 ${filteredOrdered.length} filtered` : ""})
+        {searchQuery ? ` · ${filteredOrdered.length} filtered` : ""})
       </span>
       <SearchInput
         value={rawSearchQuery}
         onChange={onSearchChange}
         onClear={onClearSearch}
-        placeholder="Search by name or code\u2026"
-        title={`Search slides (${modKeyLabel()}\u21E7F or /)`}
+        placeholder="Search by name or code…"
+        title={`Search slides (${modKeyLabel()}⇧F or /)`}
         className="relative flex-1 mx-2"
         onKeyDown={onSearchKeyDown}
         inputRef={searchInputRef}

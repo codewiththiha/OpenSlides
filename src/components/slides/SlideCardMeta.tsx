@@ -44,7 +44,7 @@ export function SlideCardMeta({
               (isSelected || progress >= 0) && "opacity-100",
             )}
             title={`${hlCount} highlight${hlCount > 1 ? "s" : ""} — steps through with → before the next slide${
-              progress >= 0 ? ` \u00b7 showing ${progress + 1}/${hlCount}` : ""
+              progress >= 0 ? ` · showing ${progress + 1}/${hlCount}` : ""
             }`}
           >
             <HighlighterIcon

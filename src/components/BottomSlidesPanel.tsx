@@ -44,6 +44,8 @@ import { useSlidePanelActions } from "@/hooks/useSlidePanelActions";
 import { SlideCard } from "./slides/SlideCard";
 import { SortableSlideItem } from "./slides/SortableSlideItem";
 import { SlidesPanelHeader } from "./slides/SlidesPanelHeader";
+import { SlideContextMenu } from "./slides/SlideContextMenu";
+import { ConfirmDialog } from "./ui/confirm-dialog";
 import { CollapsedPanelButton } from "./ui/collapsed-panel-button";
 import { StackExpandedControls } from "./ui/stack/StackExpandedControls";
 import { useUiStore } from "@/store/useUiStore";
@@ -165,6 +167,14 @@ export function BottomSlidesPanel({
     useSlideStripSearch({ projectId: project.id, ordered });
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [selectedSlideIds, setSelectedSlideIds] = useState<Set<string>>(() => new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    slide: Slide;
+    title: string;
+    position: { x: number; y: number };
+  } | null>(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
 
   const rename = useInlineRename(
     useCallback(
@@ -255,6 +265,82 @@ export function BottomSlidesPanel({
     setCurrentSlideId,
     pendingFocusId,
   });
+
+  const selectedInOrder = useCallback(
+    () => ordered.filter((slide) => selectedSlideIds.has(slide.id)).map((slide) => slide.id),
+    [ordered, selectedSlideIds],
+  );
+
+  const toggleSlideSelection = useCallback((id: string) => {
+    setSelectedSlideIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const openContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>, slide: Slide, title: string) => {
+    setCurrentSlideId(slide.id);
+    if (isMultiSelectMode && !selectedSlideIds.has(slide.id)) {
+      setSelectedSlideIds((current) => new Set(current).add(slide.id));
+    }
+    setContextMenu({ slide, title, position: { x: event.clientX, y: event.clientY } });
+  }, [isMultiSelectMode, selectedSlideIds, setCurrentSlideId]);
+
+  const startMultiSelect = useCallback(() => {
+    if (!contextMenu) return;
+    setIsMultiSelectMode(true);
+    setSelectedSlideIds(new Set([contextMenu.slide.id]));
+  }, [contextMenu]);
+
+  const selectAllSlides = useCallback(() => {
+    setIsMultiSelectMode(true);
+    setSelectedSlideIds(new Set(ordered.map((slide) => slide.id)));
+  }, [ordered]);
+
+  const clearSlideSelection = useCallback(() => {
+    setSelectedSlideIds(new Set());
+    setIsMultiSelectMode(false);
+    closeContextMenu();
+  }, [closeContextMenu]);
+
+  const moveSelected = useCallback((destination: "start" | "end") => {
+    const selected = selectedInOrder();
+    if (!selected.length) return;
+    const selectedSet = new Set(selected);
+    const remaining = ordered.filter((slide) => !selectedSet.has(slide.id)).map((slide) => slide.id);
+    reorder.mutate(destination === "start" ? [...selected, ...remaining] : [...remaining, ...selected]);
+    closeContextMenu();
+  }, [closeContextMenu, ordered, reorder, selectedInOrder]);
+
+  const groupSelected = useCallback(() => {
+    const selected = selectedInOrder();
+    if (selected.length < 2) return;
+    stackSlides.mutate({ sourceIds: selected.slice(1), targetId: selected[0] }, {
+      onSuccess: () => setSelectedSlideIds(new Set(selected)),
+    });
+    closeContextMenu();
+  }, [closeContextMenu, selectedInOrder, stackSlides]);
+
+  const deleteSelected = useCallback(() => {
+    const selected = selectedInOrder();
+    if (!selected.length || selected.length >= ordered.length) return;
+    setConfirmBulkDelete(true);
+    closeContextMenu();
+  }, [closeContextMenu, ordered.length, selectedInOrder]);
+
+  const confirmDeleteSelected = useCallback(() => {
+    const selected = selectedInOrder();
+    setConfirmBulkDelete(false);
+    void (async () => {
+      for (const id of selected) await deleteSlide.mutateAsync(id);
+      setSelectedSlideIds(new Set());
+      setIsMultiSelectMode(false);
+    })();
+  }, [deleteSlide, selectedInOrder]);
 
   if (isCollapsed) {
     return (
@@ -350,6 +436,10 @@ export function BottomSlidesPanel({
                           navigationIds={ids}
                           cardRefs={cardRefs}
                           isTabStop={slide.id === tabStopId}
+                          isMultiSelectMode={isMultiSelectMode}
+                          isMultiSelected={selectedSlideIds.has(slide.id)}
+                          onToggleMultiSelect={toggleSlideSelection}
+                          onOpenContextMenu={openContextMenu}
                           theme={theme}
                           language={language}
                           searchQuery={searchQuery}
@@ -382,6 +472,10 @@ export function BottomSlidesPanel({
                   navigationIds={ids}
                   cardRefs={cardRefs}
                   isTabStop={topSlide.id === tabStopId}
+                  isMultiSelectMode={isMultiSelectMode}
+                  isMultiSelected={selectedSlideIds.has(topSlide.id)}
+                  onToggleMultiSelect={toggleSlideSelection}
+                  onOpenContextMenu={openContextMenu}
                   theme={theme}
                   language={language}
                   searchQuery={searchQuery}
@@ -402,6 +496,36 @@ export function BottomSlidesPanel({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <SlideContextMenu
+        open={contextMenu !== null}
+        position={contextMenu?.position ?? { x: 0, y: 0 }}
+        selectionCount={selectedSlideIds.size}
+        totalSlides={ordered.length}
+        selectionMode={isMultiSelectMode}
+        onRename={() => {
+          if (contextMenu) rename.start(contextMenu.slide.id, contextMenu.title);
+          closeContextMenu();
+        }}
+        onStartSelection={startMultiSelect}
+        onSelectAll={selectAllSlides}
+        onClearSelection={clearSlideSelection}
+        onMoveToStart={() => moveSelected("start")}
+        onMoveToEnd={() => moveSelected("end")}
+        onGroup={groupSelected}
+        onDelete={deleteSelected}
+        onClose={closeContextMenu}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selectedSlideIds.size} selected slide${selectedSlideIds.size === 1 ? "" : "s"}?`}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDeleteSelected}
+        onCancel={() => setConfirmBulkDelete(false)}
+      />
     </div>
   );
 }
