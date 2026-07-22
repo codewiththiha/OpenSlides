@@ -23,7 +23,7 @@ const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[
     items: [
       { keys: [...SHORTCUTS.undo.keys], desc: SHORTCUTS.undo.description },
       { keys: [...SHORTCUTS.redo.keys], desc: SHORTCUTS.redo.description },
-      { keys: ["mod", "Y"], desc: "Redo (Windows / Linux)" },
+      { keys: ["mod", "Y"], desc: "Redo (Windows)" },
       { keys: [...SHORTCUTS.zen.keys], desc: SHORTCUTS.zen.description },
       { keys: [...SHORTCUTS.goToSlide.keys], desc: SHORTCUTS.goToSlide.description },
       { keys: [...SHORTCUTS.focusSlideSearch.keys], desc: SHORTCUTS.focusSlideSearch.description },

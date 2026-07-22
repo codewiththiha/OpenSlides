@@ -32,7 +32,7 @@ Everything stays on your computer. That makes OpenSlides useful for private clie
 
 ## Download
 
-Prebuilt installers for macOS, Windows, and Linux are available from the [OpenSlides Releases](https://github.com/codewiththiha/OpenSlides/releases) page.
+Prebuilt installers for macOS and Windows are available from the [OpenSlides Releases](https://github.com/codewiththiha/OpenSlides/releases) page.
 
 ## Tech stack
 

@@ -45,7 +45,7 @@ try {
   /* ignore */
 }
 
-// Native macOS menu bar / Windows-Linux window menu
+// Native macOS menu bar / Windows window menu
 void installAppMenu();
 
 // Quit handshake: Rust intercepts window close / Cmd+Q and asks us to flush
