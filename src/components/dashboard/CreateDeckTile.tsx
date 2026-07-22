@@ -3,7 +3,7 @@ import { Loader2, Plus, X } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CodeThumbnail } from "../ui/code-thumbnail";
-import { useShikiHtml } from "@/hooks/useShikiHtml";
+import { useShikiDisplayHtml } from "@/hooks/useShikiDisplayState";
 import { THEMES } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { NEW_PRESENTATION_CODE } from "@/constants";
@@ -37,15 +37,13 @@ export function CreateDeckTile({
 }: CreateDeckTileProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const html = useShikiHtml({
+  const { html } = useShikiDisplayHtml({
     code: DEFAULT_WELCOME,
     language: "typescript",
     theme: selectedTheme || "dark-plus",
     resetKey: "create-deck-preview",
     debounceMs: 80,
-    errorPolicy: "clear",
-    emptyPolicy: "clear",
-    largeCodePolicy: "clear",
+    policyName: "previewTile",
   });
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 /** Shared Shiki worker hook for the editor HTML overlay. */
-import { useShikiHtml } from "./useShikiHtml";
+import { useShikiDisplayHtml } from "./useShikiDisplayState";
 
 interface Args {
   code: string;
@@ -9,15 +9,13 @@ interface Args {
 }
 
 export function useShikiWorker({ code, language, theme, resetKey }: Args): string | null {
-  return useShikiHtml({
+  return useShikiDisplayHtml({
     code,
     language,
     theme,
     resetKey,
     debounceMs: 80,
     priority: "high",
-    errorPolicy: "clear",
-    emptyPolicy: "clear",
-    largeCodePolicy: "clear",
-  });
+    policyName: "editor",
+  }).html;
 }

@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { requestHtml } from "@/lib/shiki-worker-client";
+import { useMemo } from "react";
+import {
+  useShikiDisplayHtml,
+  type ShikiDisplayPolicy,
+  type ShikiDisplayPolicyName,
+} from "./useShikiDisplayState";
 
 type StaleHtmlPolicy = "clear" | "keep-last";
 
@@ -12,6 +16,7 @@ interface UseShikiHtmlArgs {
   debounceMs?: number;
   priority?: "high" | "low";
   enabled?: boolean;
+  policyName?: ShikiDisplayPolicyName;
   /** What to render when the worker fails for the current request. */
   errorPolicy?: StaleHtmlPolicy;
   /** What to render when `code` is empty. */
@@ -20,11 +25,15 @@ interface UseShikiHtmlArgs {
   largeCodePolicy?: StaleHtmlPolicy;
   /** What to render when the hook is disabled. */
   disabledPolicy?: StaleHtmlPolicy;
+  loadingPolicy?: StaleHtmlPolicy;
   maxCodeLength?: number;
 }
 
-const DEFAULT_MAX_CODE_LENGTH = 20_000;
-
+/**
+ * Backwards-compatible HTML-only facade over the authoritative Shiki display
+ * policy hook. New code that needs loading/error/fallback state should call
+ * `useShikiDisplayHtml` directly.
+ */
 export function useShikiHtml({
   code,
   language,
@@ -33,96 +42,34 @@ export function useShikiHtml({
   debounceMs = 80,
   priority = "high",
   enabled = true,
-  errorPolicy = "keep-last",
-  emptyPolicy = "clear",
-  largeCodePolicy = "clear",
-  disabledPolicy = "clear",
-  maxCodeLength = DEFAULT_MAX_CODE_LENGTH,
+  policyName = "editor",
+  errorPolicy,
+  emptyPolicy,
+  largeCodePolicy,
+  disabledPolicy,
+  loadingPolicy,
+  maxCodeLength,
 }: UseShikiHtmlArgs): string | null {
-  const lastRef = useRef<string | null>(null);
-  const [html, setHtml] = useState<string | null>(null);
-  const activeKeyRef = useRef("");
-  const htmlKeyRef = useRef("");
-  const activeKey = `${resetKey}\u0000${language}\u0000${theme}`;
-  const isEmpty = code.length === 0;
-  const isTooLarge = code.length > maxCodeLength;
+  const policy = useMemo<Partial<ShikiDisplayPolicy>>(() => {
+    const next: Partial<ShikiDisplayPolicy> = {};
+    if (errorPolicy) next.errorPolicy = errorPolicy;
+    if (emptyPolicy) next.emptyPolicy = emptyPolicy;
+    if (largeCodePolicy) next.largeCodePolicy = largeCodePolicy;
+    if (disabledPolicy) next.disabledPolicy = disabledPolicy;
+    if (loadingPolicy) next.loadingPolicy = loadingPolicy;
+    if (maxCodeLength !== undefined) next.maxCodeLength = maxCodeLength;
+    return next;
+  }, [errorPolicy, emptyPolicy, largeCodePolicy, disabledPolicy, loadingPolicy, maxCodeLength]);
 
-  const clearCurrent = () => {
-    lastRef.current = null;
-    htmlKeyRef.current = activeKey;
-    setHtml(null);
-  };
-
-  // A reset key represents a different document. Do not render its previous
-  // document's retained worker HTML during the next request.
-  if (activeKeyRef.current !== activeKey) {
-    activeKeyRef.current = activeKey;
-    lastRef.current = null;
-  }
-
-  useEffect(() => {
-    if (!enabled) {
-      if (disabledPolicy === "clear") clearCurrent();
-      return;
-    }
-    if (isEmpty) {
-      if (emptyPolicy === "clear") clearCurrent();
-      return;
-    }
-    if (isTooLarge) {
-      if (largeCodePolicy === "clear") clearCurrent();
-      return;
-    }
-
-    const isTestEnv =
-      (typeof window !== "undefined" && (window as any).IS_REACT_ACT_ENVIRONMENT) ||
-      (typeof globalThis !== "undefined" && (globalThis as any).IS_REACT_ACT_ENVIRONMENT);
-    const actualDebounce = isTestEnv ? 0 : debounceMs;
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      requestHtml(code, language, theme, controller.signal, priority)
-        .then((response) => {
-          if (controller.signal.aborted || !response.html || activeKeyRef.current !== activeKey) return;
-          lastRef.current = response.html;
-          htmlKeyRef.current = activeKey;
-          setHtml(response.html);
-        })
-        .catch((error) => {
-          if ((error as DOMException)?.name === "AbortError") return;
-          if (activeKeyRef.current !== activeKey) return;
-          if (errorPolicy === "clear" || (error as Error)?.message === "code_too_large") {
-            clearCurrent();
-          }
-        });
-    }, actualDebounce);
-
-    return () => {
-      window.clearTimeout(timer);
-      controller.abort();
-    };
-  }, [
+  return useShikiDisplayHtml({
     code,
     language,
     theme,
-    activeKey,
+    resetKey,
     debounceMs,
     priority,
     enabled,
-    errorPolicy,
-    emptyPolicy,
-    largeCodePolicy,
-    disabledPolicy,
-    maxCodeLength,
-    isEmpty,
-    isTooLarge,
-  ]);
-
-  // Retention is now an explicit policy instead of an accidental hook detail:
-  // resetKey/language/theme changes always isolate documents, while individual
-  // invalid states decide whether to clear or keep the previous same-document HTML.
-  if (htmlKeyRef.current !== activeKey) return null;
-  if (!enabled && disabledPolicy === "clear") return null;
-  if (isEmpty && emptyPolicy === "clear") return null;
-  if (isTooLarge && largeCodePolicy === "clear") return null;
-  return html ?? lastRef.current;
+    policyName,
+    policy,
+  }).html;
 }
