@@ -231,7 +231,7 @@ The quit path has an exactly-once Rust handshake. The first close or quit event 
 ## Project Information
 
 - Application name: OpenSlides
-- Application version: 1.0.0-beta.1
+- Application version: 1.0.1
 - Rust package: openslides
 - Tauri identifier: com.codewiththiha.openslides
 - Repository: https://github.com/codewiththiha/OpenSlides
