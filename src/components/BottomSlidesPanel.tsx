@@ -352,6 +352,9 @@ export function BottomSlidesPanel({
   useEffect(() => {
     if (!isMultiSelectMode) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      // A confirmation dialog is a higher-priority escape target. Let its
+      // overlay consume Escape first; keep the selection toolbar intact.
+      if (confirmBulkDelete) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -372,7 +375,7 @@ export function BottomSlidesPanel({
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [clearSlideSelection, deleteSelected, isMultiSelectMode]);
+  }, [clearSlideSelection, confirmBulkDelete, deleteSelected, isMultiSelectMode]);
 
   const confirmDeleteSelected = useCallback(() => {
     const selected = selectedInOrder();
