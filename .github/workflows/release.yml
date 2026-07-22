@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   extract-notes:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     outputs:
       version: ${{ steps.notes.outputs.version }}
       payloadJson: ${{ steps.notes.outputs.payloadJson }}
@@ -36,9 +36,6 @@ jobs:
           - runner: macos-latest
             args: --target universal-apple-darwin
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
-          - runner: ubuntu-22.04
-            args: ''
-            rust_targets: ''
           - runner: windows-latest
             args: ''
             rust_targets: ''
@@ -52,12 +49,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_targets }}
-      - name: Install Linux dependencies
-        if: matrix.runner == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes \
-            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: npm ci
       - name: Build, bundle, and attach release artifacts
         uses: tauri-apps/tauri-action@v0
@@ -73,7 +64,7 @@ jobs:
 
   update-marketing-site:
     needs: [extract-notes, build-tauri]
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Send release notes to the marketing site
         uses: actions/github-script@v7
