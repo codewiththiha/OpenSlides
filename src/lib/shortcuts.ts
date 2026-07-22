@@ -5,7 +5,7 @@ export const SHORTCUTS = {
   redo: { keys: ["mod", "Shift", "Z"], description: "Redo code edit" },
   zen: { keys: ["mod", "B"], description: "Toggle focus mode" },
   goToSlide: { keys: ["mod", "G"], description: "Go to slide by number or name" },
-  focusSlideSearch: { keys: ["mod", "Shift", "F"], description: "Focus slide search (or / when not typing)" },
+  focusSlideSearch: { keys: ["mod", "F"], description: "Open search" },
   present: { keys: ["mod", "Shift", "P"], description: "Start presentation (menu)" },
   newProject: { keys: ["mod", "N"], description: "New presentation" },
   openDashboard: { keys: ["mod", "Shift", "O"], description: "Go to Dashboard" },
