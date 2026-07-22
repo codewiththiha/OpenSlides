@@ -7,18 +7,18 @@
  */
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
-import { THEME_OPTIONS, type Project, type ThemeName } from "@/types";
+import { type Project, type ThemeName } from "@/types";
 import { useUpdateSettings, useUpdateTheme } from "@/hooks/queries";
 import { useUiStore } from "@/store/useUiStore";
 import { cn } from "@/lib/utils";
 import { showUndoToast } from "@/lib/settings-undo";
 import { Z_INDEX } from "./ui/overlay";
-import { SelectField } from "./ui/select-field";
 import { SettingsSection } from "./ui/settings-section";
 import { SliderField } from "./ui/slider-field";
 import { ToggleField } from "./ui/toggle-field";
 import { CodeAlignPicker } from "./settings/CodeAlignPicker";
 import { GlobalAnimationSection } from "./settings/GlobalAnimationSection";
+import { ThemeGridPicker } from "./settings/ThemeGridPicker";
 
 interface SettingsDrawerProps {
   project: Project;
@@ -102,12 +102,13 @@ export function SettingsDrawer({ project, open, onClose }: SettingsDrawerProps) 
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
-          <SettingsSection title="Theme">
-            <SelectField
-              selectSize="md"
-              options={THEME_OPTIONS}
+          <SettingsSection
+            title="Theme"
+            description="Choose a syntax theme from its live code preview."
+          >
+            <ThemeGridPicker
               value={project.theme}
-              onChange={(e) => updateTheme.mutate(e.target.value as ThemeName)}
+              onChange={(theme) => updateTheme.mutate(theme as ThemeName)}
             />
           </SettingsSection>
 
