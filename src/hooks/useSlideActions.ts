@@ -69,7 +69,8 @@ export function useDeleteSlideWithUndo(
         }
         return { ok: true as const, deletedIds };
       } catch (error) {
-        notify.error(`Could not delete all selected slides: ${(error as Error).message}`);
+        // The underlying delete mutation already owns the user-facing error
+        // toast. Keep the bulk action silent here to avoid duplicate errors.
         return { ok: false as const, deletedIds, error: error as Error };
       }
     },

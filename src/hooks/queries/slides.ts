@@ -40,7 +40,12 @@ export function useUpdateSlideCode() {
       // Serialized per slide (see lib/code-save.ts): guarantees DB write
       // order and completion order match schedule order, so the cache stamp in
       // onSuccess below can never be an older value overwriting a newer one.
+      invalidateProjectList: false,
       onSuccess: (_void, { slideId, code }) => {
+        const affectsDashboardPreview = qc
+          .getQueriesData<Project>({ queryKey: ["project"] })
+          .some(([, project]) => project?.slides?.[0]?.id === slideId);
+
         qc.setQueriesData<Project>({ queryKey: ["project"] }, (old) => {
           if (!old?.slides?.some((s) => s.id === slideId)) return old;
           return {
@@ -55,6 +60,10 @@ export function useUpdateSlideCode() {
         const current = getLocalCodeAtom(slideId);
         if (current === undefined || current === code) {
           clearLocalCode(slideId);
+        }
+
+        if (affectsDashboardPreview) {
+          void qc.invalidateQueries({ queryKey: projectKeys.all });
         }
       },
       onError: (err: Error) => notify.error(`Auto-save failed: ${err.message}`),
