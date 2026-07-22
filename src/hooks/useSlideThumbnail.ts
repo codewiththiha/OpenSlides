@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useShikiHtml } from "./useShikiHtml";
+import { useShikiDisplayHtml } from "./useShikiDisplayState";
 import { api } from "@/lib/tauri-api";
 import { LruMap } from "@/lib/lru-map";
 
@@ -84,7 +84,7 @@ export function useSlideThumbnail({
   }, [key, initialHtml]);
 
   const shouldRequest = enabled && !entry && inView && !!truncatedCode;
-  const freshHtml = useShikiHtml({
+  const { html: freshHtml } = useShikiDisplayHtml({
     code: truncatedCode,
     language,
     theme,
@@ -92,10 +92,7 @@ export function useSlideThumbnail({
     debounceMs,
     priority,
     enabled: shouldRequest,
-    errorPolicy: "clear",
-    emptyPolicy: "clear",
-    largeCodePolicy: "clear",
-    disabledPolicy: "clear",
+    policyName: "thumbnail",
   });
 
   useEffect(() => {

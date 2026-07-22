@@ -1,7 +1,7 @@
 import { Check, ChevronDown, Palette } from "lucide-react";
 import { useState } from "react";
 import { CodeThumbnail } from "../ui/code-thumbnail";
-import { useShikiHtml } from "@/hooks/useShikiHtml";
+import { useShikiDisplayHtml } from "@/hooks/useShikiDisplayState";
 import { THEMES } from "@/lib/themes";
 import type { ThemeName } from "@/types";
 import { cn } from "@/lib/utils";
@@ -25,16 +25,14 @@ function ThemeTile({
   onPreview: () => void;
   onPreviewEnd: () => void;
 }) {
-  const html = useShikiHtml({
+  const { html } = useShikiDisplayHtml({
     code: THEME_SAMPLE,
     language: "typescript",
     theme: value,
     resetKey: `theme-tile-${value}`,
     priority: "low",
     debounceMs: 40,
-    errorPolicy: "clear",
-    emptyPolicy: "clear",
-    largeCodePolicy: "clear",
+    policyName: "previewTile",
   });
 
   return (
