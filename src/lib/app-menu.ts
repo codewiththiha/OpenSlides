@@ -18,7 +18,8 @@ export type AppMenuEvent =
   | "menu://add-slide"
   | "menu://duplicate-slide"
   | "menu://toggle-theme"
-  | "menu://shortcuts"
+  | "menu://shortcuts-app"
+  | "menu://shortcuts-help"
   | "menu://undo"
   | "menu://redo";
 
@@ -85,7 +86,7 @@ export async function installAppMenu(): Promise<void> {
 
     // Help: only Keyboard Shortcuts (no About — same modal was confusing)
     const helpItems = [
-      await item("menu://shortcuts", "Keyboard Shortcuts"),
+      await item("menu://shortcuts-help", "Keyboard Shortcuts"),
     ];
 
     const submenus = [
@@ -100,7 +101,7 @@ export async function installAppMenu(): Promise<void> {
       const appMenu = await Submenu.new({
         text: "OpenSlides",
         items: [
-          await item("menu://shortcuts", "Keyboard Shortcuts"),
+          await item("menu://shortcuts-app", "Keyboard Shortcuts"),
           await PredefinedMenuItem.new({ item: "Separator" }),
           await PredefinedMenuItem.new({ item: "Services" }),
           await PredefinedMenuItem.new({ item: "Separator" }),
