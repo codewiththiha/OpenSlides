@@ -65,7 +65,9 @@ export interface Slide {
   code: string;
   /** Derived from project settings on read — export/API compatibility only.
    *  The per-slide DB column was dropped (migration v6). Never edit or
-   *  display this directly; use resolveProjectLanguage(project). */
+   *  display this directly; use resolveProjectLanguage(project).
+   * @deprecated Use resolveProjectLanguage(project) instead.
+   */
   language: string;
   duration: number;
   transitionDuration: number;

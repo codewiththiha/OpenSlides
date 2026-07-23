@@ -17,7 +17,10 @@ export function chunkConsecutive<T>(
   const result: GroupChunk<T>[] = [];
   if (!items || !Array.isArray(items) || items.length === 0) return result;
 
-  const keyFn = getGroupId || ((item: any) => item?.groupId ?? item?.sectionId ?? null);
+  const keyFn =
+    getGroupId ||
+    ((item: T & { groupId?: string | null; sectionId?: string | null }) =>
+      item?.groupId ?? item?.sectionId ?? null);
 
   let currentChunk: GroupChunk<T> | null = null;
 

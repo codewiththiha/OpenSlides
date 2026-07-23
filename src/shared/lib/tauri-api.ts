@@ -3,14 +3,20 @@
  * All persistent mutations go through these helpers.
  */
 import { invoke } from "@tauri-apps/api/core";
-import type { Project, ProjectSummary, ProjectSettings, Slide } from "$lib/types";
+import type {
+  Highlight,
+  Project,
+  ProjectSummary,
+  ProjectSettings,
+  Slide,
+} from "$lib/types";
 
 export type SlideSettingsPatch = Partial<{
   duration: number;
   transitionDuration: number;
   stagger: number;
   name: string;
-  highlights: import("$lib/types").Highlight[];
+  highlights: Highlight[];
 }>;
 
 export type SettingsPatch = Partial<ProjectSettings>;
@@ -22,8 +28,11 @@ export type SettingsPatch = Partial<ProjectSettings>;
  * callers can branch on the failure kind instead of matching message text
  * across the IPC bridge.
  */
+/** Error codes the backend sends in its structured { code, message } shape. */
+export type CommandErrorCode = "CANCELLED" | "ERROR";
+
 export interface CommandError extends Error {
-  code?: string;
+  code?: CommandErrorCode;
 }
 
 function normalizeCommandError(err: unknown): CommandError {
@@ -32,7 +41,7 @@ function normalizeCommandError(err: unknown): CommandError {
     const e = err as { code?: unknown; message?: unknown };
     if (typeof e.message === "string") {
       const out: CommandError = new Error(e.message);
-      if (typeof e.code === "string") out.code = e.code;
+      if (e.code === "CANCELLED" || e.code === "ERROR") out.code = e.code;
       return out;
     }
   }
