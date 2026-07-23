@@ -17,11 +17,11 @@
     getLocalCode,
     setLocalCode,
     clearLocalCode,
-  } from "../../src/store/slide-code.svelte";
-  import { queryClient } from "../../src/queries/query-client";
-  import { useUpdateSlideCode } from "../../src/queries/slides";
-  import { api } from "../../src/lib/tauri-api";
-  import type { Project } from "../../src/types";
+  } from "../../src/shared/stores/slide-code.svelte";
+  import { queryClient } from "../../src/shared/queries/query-client";
+  import { useUpdateSlideCode } from "../../src/shared/queries/slides";
+  import { api } from "../../src/shared/lib/tauri-api";
+  import type { Project } from "../../src/shared/types";
 
   let { slideId, mode }: { slideId: string; mode: "queued" | "prefix" } = $props();
 

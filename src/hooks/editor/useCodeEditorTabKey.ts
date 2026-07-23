@@ -1,4 +1,4 @@
-import { type Snapshot } from "@/lib/editor-history";
+import { type Snapshot } from "$lib/lib/editor-history";
 
 const TAB_SPACES = "  ";
 

@@ -14,7 +14,7 @@
  * outro durations (incl. custom transitions) are honored instead of a
  * hardcoded timeout.
  */
-import type { Highlight, Slide } from "@/types";
+import type { Highlight, Slide } from "$lib/types";
 
 /** Default outro budgets (match HighlightLayer defaults). */
 const DEFAULT_DIM_MS = 500;

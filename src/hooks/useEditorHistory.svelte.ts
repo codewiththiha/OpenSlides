@@ -2,7 +2,7 @@ import {
   redo as redoEditorHistory,
   undo as undoEditorHistory,
   withoutRecording,
-} from "@/lib/editor-history";
+} from "$lib/lib/editor-history";
 
 export function useEditorHistory(args: {
   slideId: () => string | undefined;

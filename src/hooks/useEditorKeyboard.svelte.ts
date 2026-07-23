@@ -14,8 +14,8 @@ import {
   toggleAutoPlaying,
   toggleShortcutsOpen,
   toggleZenMode,
-} from "@/store/ui-state.svelte";
-import { isModKey, isTypingTarget } from "@/lib/keyboard";
+} from "$lib/stores/ui-state.svelte";
+import { isModKey, isTypingTarget } from "$lib/lib/keyboard";
 
 interface UseEditorKeyboardArgs {
   goNext: () => boolean;

@@ -1,8 +1,8 @@
-import { ui, setPreviewHighlightIndex } from "@/store/ui-state.svelte";
-import { useUpdateSlideSettings } from "@/queries";
-import { selectionToRange } from "@/lib/highlight-tokens";
-import { createDefaultHighlight } from "@/lib/highlight-factory";
-import type { Highlight } from "@/types";
+import { ui, setPreviewHighlightIndex } from "$lib/stores/ui-state.svelte";
+import { useUpdateSlideSettings } from "$lib/queries";
+import { selectionToRange } from "@/features/highlights/highlight-tokens";
+import { createDefaultHighlight } from "@/features/highlights/highlight-factory";
+import type { Highlight } from "$lib/types";
 
 export interface HighlightCrudArgs {
   projectId: string;

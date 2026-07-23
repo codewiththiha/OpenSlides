@@ -1,6 +1,6 @@
 import type { Highlighter } from "shiki";
-import { requestHtml } from "@/lib/shiki-worker-client";
-import { getHighlighter } from "@/lib/shiki-instance";
+import { requestHtml } from "$lib/shiki/shiki-worker-client";
+import { getHighlighter } from "$lib/shiki/shiki-instance";
 
 type RetentionPolicy = "clear" | "keep-last";
 export type ShikiDisplayStatus =

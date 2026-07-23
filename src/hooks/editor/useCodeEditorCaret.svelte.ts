@@ -1,7 +1,7 @@
-import { getLocalCode } from "@/store/slide-code.svelte";
-import { getCaretPosition, setCaretPosition } from "@/store/caretPositions";
-import { type Snapshot } from "@/lib/editor-history";
-import type { Slide } from "@/types";
+import { getLocalCode } from "$lib/stores/slide-code.svelte";
+import { getCaretPosition, setCaretPosition } from "$lib/stores/caret-positions";
+import { type Snapshot } from "$lib/lib/editor-history";
+import type { Slide } from "$lib/types";
 
 interface UseCodeEditorCaretArgs {
   textarea: () => HTMLTextAreaElement | null;

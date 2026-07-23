@@ -1,5 +1,5 @@
-import { api } from "@/lib/tauri-api";
-import type { Slide } from "@/types";
+import { api } from "$lib/lib/tauri-api";
+import type { Slide } from "$lib/types";
 
 export function useSlideStripSearch(args: {
   projectId: string;
