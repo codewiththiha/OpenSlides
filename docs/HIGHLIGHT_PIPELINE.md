@@ -1,0 +1,55 @@
+# Highlight pipeline
+
+How "highlight these lines/characters with a dim/spotlight effect" renders.
+
+## Syntax highlighting (Shiki)
+
+- One Shiki highlighter per (theme, language) display, created off the UI
+  thread by `shared/shiki/shiki.worker.ts`; `worker-client.ts` talks to it
+  (`isTestEnv()` swaps to an in-process fallback for node tests).
+- Display state machines live in `shared/shiki/` as a facade
+  `shiki-display.svelte.ts` over three modules:
+  - `shiki-policies.ts` — retention policies per consumer
+    (`resolvePolicy`, `ShikiDisplayPolicyName`),
+  - `shiki-html-display.svelte.ts` — plain HTML displays
+    (`shikiDisplayHtml`, `editorShikiHtml`),
+  - `shiki-highlighter-display.svelte.ts` — the magic-move display used by
+    `SlidePreview` (`magicMoveShikiDisplay`).
+- Consumers: CodeEditor (editor pre layer), SlidePreview (magic move),
+  slide thumbnails (`slide-thumbnail.svelte.ts`), dashboard cards
+  (ProjectThumb), theme/create tiles.
+- `extract-html.ts` normalizes worker and fallback output to the inner
+  `<code>` markup so both paths agree.
+
+## Tokens → spans
+
+`features/highlights/highlight-tokens.ts` is the pure, fully tested core:
+
+- `decompose` — turns a highlight's line start/end + char precision
+  ranges into per-line token slices,
+- `sliceTokenLine` — clips a tokenized line to a range,
+- `renderTokensToSpans` — emits span metadata with colors resolved from
+  the Shiki palette (dark themes mix toward black via `mixTowardBlack`).
+
+Tests (`test:highlight`, 13 cases) import these directly.
+
+## CRUD and interaction
+
+- `highlight-crud.svelte.ts` (`createHighlightCrud`) — add/remove/toggle
+  highlights from CodeMirror selections; keeps `ui.previewHighlightIndex`
+  in sync; the strip context menu and editor menu call into it.
+- `highlight-measurement.svelte.ts` + `highlight-plan.svelte.ts` — map
+  highlight ranges to rendered line rects and compute per-frame dim plans.
+- `highlight-nav.svelte.ts` — next/previous-step navigation for
+  presentation autoplay.
+- `HighlightLayer.svelte` — overlaid span layer on the preview;
+  `HighlightSettingsForm` previews edits instantly through the
+  `ui.previewHighlights` shadow (`previewMergedHighlights`, see STATE.md).
+- `HighlightContextMenu.svelte` — right-click actions
+  (`role="menu" aria-label="Highlight actions"`).
+
+## Presentation
+
+During presentation the same layer drives the "everything dims except the
+active highlight" step reveal; `HighlightStepIndicator` shows progress and
+`PresentOverlay`/`PreviewPane` pass `activeHighlightIndex` down.
