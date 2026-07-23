@@ -1,10 +1,6 @@
-<script lang="ts" module>
-  import { NEW_PRESENTATION_CODE } from "$lib/constants";
-  export const DEFAULT_WELCOME = NEW_PRESENTATION_CODE;
-</script>
-
 <script lang="ts">
   import { Loader2, Plus, X } from "@lucide/svelte";
+  import { NEW_PRESENTATION_CODE } from "$lib/constants";
   import Button from "$lib/ui/Button.svelte";
   import Input from "$lib/ui/Input.svelte";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
@@ -39,7 +35,7 @@
   let inputEl = $state<HTMLInputElement | null>(null);
 
   const preview = shikiDisplayHtml(() => ({
-    code: DEFAULT_WELCOME,
+    code: NEW_PRESENTATION_CODE,
     language: "typescript",
     theme: selectedTheme || "dark-plus",
     resetKey: "create-deck-preview",

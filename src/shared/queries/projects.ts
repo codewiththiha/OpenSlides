@@ -3,7 +3,7 @@ import { notify } from "$lib/lib/toast";
 import { api, isCancelledError, type SettingsPatch } from "$lib/lib/tauri-api";
 import { projectKeys } from "./keys";
 import { queryClient } from "./query-client";
-import { projectMutation } from "./mutation-policy";
+import { projectListMutation } from "./mutation-policy";
 import { showUndoToast } from "$lib/lib/settings-undo";
 import { clearPreviewProjectSetting } from "$lib/stores/ui-state.svelte";
 import type { PreviewProjectSettings } from "$lib/stores/types";
@@ -35,7 +35,7 @@ export function projectQuery(projectId: string | undefined) {
 }
 
 export function createProjectMutation() {
-  return projectMutation((name: string) => api.createProject(name), {
+  return projectListMutation((name: string) => api.createProject(name), {
     onSuccess: () => notify.success("Presentation created"),
     onError: (err: Error) =>
       notify.error(`Couldn't create presentation: ${err.message}`),
@@ -43,21 +43,21 @@ export function createProjectMutation() {
 }
 
 export function duplicateProjectMutation() {
-  return projectMutation((id: string) => api.duplicateProject(id), {
+  return projectListMutation((id: string) => api.duplicateProject(id), {
     onSuccess: () => notify.success("Presentation duplicated"),
     onError: (err: Error) => notify.error(`Couldn't duplicate: ${err.message}`),
   });
 }
 
 export function deleteProjectMutation() {
-  return projectMutation((id: string) => api.deleteProject(id), {
+  return projectListMutation((id: string) => api.deleteProject(id), {
     onSuccess: () => notify.success("Presentation deleted"),
     onError: (err: Error) => notify.error(`Couldn't delete: ${err.message}`),
   });
 }
 
 export function renameProjectMutation() {
-  return projectMutation(
+  return projectListMutation(
     ({ projectId, name }: { projectId: string; name: string }) =>
       api.renameProject(projectId, name),
     {
@@ -103,7 +103,7 @@ function describeProjectChange(
 }
 
 export function updateProjectSettingsMutation(projectId: string) {
-  return projectMutation<Project, SettingsPatch, { before?: ProjectSettings }>(
+  return projectListMutation<Project, SettingsPatch, { before?: ProjectSettings }>(
     (settings) => api.updateProjectSettings(projectId, settings),
     {
       onMutate: () => {
@@ -146,7 +146,7 @@ export function updateProjectSettingsMutation(projectId: string) {
 }
 
 export function updateProjectThemeMutation(projectId: string) {
-  return projectMutation(
+  return projectListMutation(
     (theme: ThemeName) => api.updateProjectTheme(projectId, theme),
     {
       onSuccess: (project) => {
@@ -174,7 +174,7 @@ export function exportProjectMutation() {
 }
 
 export function importProjectMutation() {
-  return projectMutation<Project, void>(
+  return projectListMutation<Project, void>(
     () => api.importProjectFromJson(),
     {
       onSuccess: () => {

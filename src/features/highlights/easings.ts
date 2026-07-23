@@ -53,7 +53,3 @@ function cubicBezier(p1x: number, p1y: number, p2x: number, p2y: number): Easing
 export const EASE_DIM: EasingFn = cubicBezier(0.25, 0.1, 0.25, 1);
 /** framer backOut — used for the highlight scale pop. */
 export const EASE_SCALE: EasingFn = cubicBezier(0.34, 1.56, 0.64, 1);
-
-/** Literal CSS equivalents for inline `transition:` styles. */
-export const EASE_DIM_CSS = "cubic-bezier(0.25, 0.1, 0.25, 1)";
-export const EASE_SCALE_CSS = "cubic-bezier(0.34, 1.56, 0.64, 1)";

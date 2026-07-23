@@ -11,9 +11,6 @@ interface ProjectListInvalidatingMutationOptions<TData, TVariables, TContext>
   invalidateProjectList?: boolean;
 }
 
-type ProjectMutationOptions<TData, TVariables, TContext> =
-  ProjectListInvalidatingMutationOptions<TData, TVariables, TContext>;
-
 interface SlideMutationOptions<TData, TVariables, TContext>
   extends ProjectListInvalidatingMutationOptions<TData, TVariables, TContext> {
   /** Refetch the active project detail after local cache updates/onSuccess run. */
@@ -44,19 +41,6 @@ export function projectListMutation<TData, TVariables, TContext = unknown>(
     }),
     () => queryClient,
   );
-}
-
-/**
- * Shared mutation policy for project-affecting commands.
- *
- * The app keeps query data fresh indefinitely, so mutations that can alter a
- * dashboard card opt into app-wide project-list invalidation by default.
- */
-export function projectMutation<TData, TVariables, TContext = unknown>(
-  mutationFn: (variables: TVariables) => Promise<TData>,
-  options: ProjectMutationOptions<TData, TVariables, TContext> = {},
-) {
-  return projectListMutation(mutationFn, options);
 }
 
 /**

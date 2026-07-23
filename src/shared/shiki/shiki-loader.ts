@@ -6,8 +6,8 @@ import {
 } from "shiki";
 import { merustmarLanguage } from "./merustmar-language";
 
-export const DEFAULT_SHIKI_THEME = "dark-plus";
-export const DEFAULT_SHIKI_LANGUAGE = "typescript";
+const DEFAULT_SHIKI_THEME = "dark-plus";
+const DEFAULT_SHIKI_LANGUAGE = "typescript";
 
 export function createShikiLoader() {
   let highlighterPromise: Promise<Highlighter> | null = null;

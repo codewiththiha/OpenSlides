@@ -1,25 +1,7 @@
 /**
- * Custom transitions for the highlight layer: partial-opacity dim fade and
- * scale-to-target grow. Durations are in MILLISECONDS.
+ * Custom transitions for the highlight layer: scale-to-target grow.
+ * Durations are in MILLISECONDS.
  */
-
-export interface DimFadeParams {
-  duration?: number;
-  easing?: (t: number) => number;
-  /** Target opacity for the intro (0→target, target→0 on outro). */
-  target?: number;
-}
-
-export function dimFade(
-  _node: Element,
-  { duration = 400, easing = (t) => t, target = 1 }: DimFadeParams,
-) {
-  return {
-    duration,
-    easing,
-    css: (t: number) => `opacity: ${t * target}`,
-  };
-}
 
 export interface GrowParams {
   duration?: number;

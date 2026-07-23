@@ -48,8 +48,7 @@
       target.closest("button") ||
         target.closest("input") ||
         target.closest("a") ||
-        target.closest(".hover-actions") ||
-        target.closest("[data-no-stack-click]"),
+        target.closest(".hover-actions"),
     );
   }
 

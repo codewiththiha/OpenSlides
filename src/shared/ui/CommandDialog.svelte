@@ -3,7 +3,7 @@
   // Root/Input/List/Empty/Group/Item architecture and default filtering.
   import { Command } from "bits-ui";
   import type { Snippet } from "svelte";
-  import Overlay, { OVERLAY_Z } from "./Overlay.svelte";
+  import Overlay, { Z_INDEX } from "./Overlay.svelte";
 
   let {
     open,
@@ -31,7 +31,7 @@
 </script>
 
 {#if open}
-  <Overlay onClose={onClose} z={OVERLAY_Z.command} placement="top" closeOnEsc class={className}>
+  <Overlay onClose={onClose} z={Z_INDEX.command} placement="top" closeOnEsc class={className}>
     <Command.Root {label} class="w-full overflow-hidden rounded-xl border bg-card shadow-2xl">
       <Command.Input
         autofocus

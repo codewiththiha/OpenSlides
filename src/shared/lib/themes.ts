@@ -34,7 +34,7 @@ export function themeBackground(theme: string): string {
   return THEME_MAP.get(theme as ThemeName)?.background ?? "#1e1e1e";
 }
 
-export function isLightTheme(theme: string): boolean {
+function isLightTheme(theme: string): boolean {
   return THEME_MAP.get(theme as ThemeName)?.light ?? false;
 }
 
@@ -45,7 +45,3 @@ export function isDarkTheme(theme: string): boolean {
 export function fallbackForeground(theme: string): string {
   return isDarkTheme(theme) ? "#abb2bf" : "#383a42";
 }
-
-export const LIGHT_THEMES = new Set<string>(
-  THEMES.filter((t) => t.light).map((t) => t.value)
-);

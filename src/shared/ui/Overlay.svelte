@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  export const OVERLAY_Z = {
+  export const Z_INDEX = {
     editorExpanded: 90,
     drawerBackdrop: 40,
     drawer: 50,
@@ -10,10 +10,7 @@
     hoverPreview: 200,
     command: 200,
     shortcuts: 210,
-    tooltip: 300,
   } as const;
-
-  export const Z_INDEX = OVERLAY_Z;
 </script>
 
 <script lang="ts">
@@ -24,7 +21,7 @@
 
   let {
     onClose,
-    z = OVERLAY_Z.command,
+    z = Z_INDEX.command,
     placement = "center",
     closeOnEsc = false,
     class: className,
