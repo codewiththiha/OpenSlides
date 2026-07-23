@@ -25,9 +25,13 @@
    * is what would have been killed, not the visible clone's outro).
    *
    * `onExitComplete` mirrors AnimatePresence: a counter is armed by every
-   * outrostart and released by its outroend; when it drains to zero the
-   * callback fires once (createHighlightNav's finishPending is idempotent, and
-   * its fail-safe timer covers the "nothing animated" case).
+   * outrostart AND every underlay restore, and released by its
+   * outroend/restore-settle; when it drains to zero the callback fires
+   * once (createHighlightNav's finishPending is idempotent, and its
+   * fail-safe timer covers the "nothing animated" case). Restores are
+   * part of the count so a queued slide morph never starts while an
+   * original token span is still mid-restore or carrying the inline
+   * transition that would break shiki-magic-move's class transitions.
    */
   import type { Highlighter } from "shiki";
   import type { Highlight } from "$lib/types";
@@ -176,16 +180,15 @@
     shown = true;
   });
 
-  // Fade the original text chunk under the clone (under-fade to 0).
-  // Gated by `shown` so originals fade back in even though `visual` is
-  // retained (see note above).
-  createHighlightUnderlay({
-    codeContainer: () => codeContainer(),
-    measurement: () => (shown ? (visual?.measurement ?? null) : null),
-    dimMs: () => visual?.dimMs ?? dimMs,
-  });
-
-  /* AnimatePresence-style exit bookkeeping. */
+  /**
+   * AnimatePresence-style exit bookkeeping. Armed by the dim/clone outros
+   * AND by every underlay restore (the restore's inline transition must be
+   * wiped before a queued slide morph may start — see the restore contract
+   * in highlight-underlay); released as each completes. When the counter
+   * drains to zero, `onExitComplete` fires once (createHighlightNav's
+   * finishPending is idempotent, and its fail-safe timer covers the
+   * "nothing animated" case).
+   */
   let pendingExits = 0;
 
   function handleOutroStart() {
@@ -196,6 +199,19 @@
     pendingExits = Math.max(0, pendingExits - 1);
     if (pendingExits === 0) onExitComplete?.();
   }
+
+  // Fade the original text chunk under the clone (under-fade to 0).
+  // Gated by `shown` so originals fade back in even though `visual` is
+  // retained (see note above). Restores arm the exit counter above so a
+  // slide morph queued behind the outro only starts once the originals
+  // are fully visible and pristine again.
+  createHighlightUnderlay({
+    codeContainer: () => codeContainer(),
+    measurement: () => (shown ? (visual?.measurement ?? null) : null),
+    dimMs: () => visual?.dimMs ?? dimMs,
+    onRestoreStart: handleOutroStart,
+    onRestoreEnd: handleOutroEnd,
+  });
 </script>
 
 {#if hl}
