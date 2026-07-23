@@ -2,7 +2,8 @@
   import { ArrowRight, Copy, Download, Pencil, Trash2 } from "@lucide/svelte";
   import Card from "$lib/ui/Card.svelte";
   import { formatRelative } from "$lib/lib/utils";
-  import { themeBackground, type ProjectSummary } from "$lib/types";
+  import { type ProjectSummary } from "$lib/types";
+  import { createCodeCardTheme } from "$lib/ui/code-card/code-card-theme.svelte";
   import { PROJECT_CARD_HEIGHT } from "./layout";
   import ProjectThumb from "./ProjectThumb.svelte";
   import HoverActions from "$lib/ui/HoverActions.svelte";
@@ -39,8 +40,7 @@
     commitBusy: boolean;
   } = $props();
 
-  const codeBackground = $derived(themeBackground(project.theme));
-  const softCodeBackground = $derived(`${codeBackground}df`);
+  const cardTheme = createCodeCardTheme(() => project.theme);
 </script>
 
 <Card
@@ -59,7 +59,7 @@
 
   <div
     class="pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pb-9 pt-3"
-    style="background: linear-gradient(to bottom, {codeBackground} 0%, {softCodeBackground} 46%, transparent 100%);"
+    style="background: {cardTheme.topGradient};"
   >
     <div class="pointer-events-auto pr-24 text-white mix-blend-difference">
       {#if isRenaming}
@@ -132,7 +132,7 @@
 
   <div
     class="absolute inset-x-0 bottom-0 z-10 px-3 pb-2.5 pt-9"
-    style="background: linear-gradient(to top, {codeBackground} 0%, {softCodeBackground} 58%, transparent 100%);"
+    style="background: {cardTheme.bottomGradient};"
   >
     <div class="flex items-center justify-between text-white mix-blend-difference">
       <span class="text-[11px] font-medium opacity-80">{project.theme}</span>

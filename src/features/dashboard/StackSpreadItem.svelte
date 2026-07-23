@@ -13,26 +13,8 @@
   import { computeFanLayout } from "$lib/lib/stacking";
   import ProjectCard from "./ProjectCard.svelte";
   import { beginProjectDrag, projectDnd } from "@/features/dashboard/project-dnd.svelte";
-  import { EASE_DIM } from "$lib/lib/easings";
+  import { riseFade } from "$lib/ui/transitions/rise-fade";
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
-
-  /** Intro: slide up + fade combined, staggered per index. */
-  function riseFade(
-    _node: Element,
-    {
-      duration = 300,
-      delay = 0,
-      y = 18,
-      easing = EASE_DIM,
-    }: { duration?: number; delay?: number; y?: number; easing?: (t: number) => number } = {},
-  ) {
-    return {
-      duration,
-      delay,
-      easing,
-      css: (t: number) => `opacity: ${t}; transform: translateY(${(1 - t) * y}px);`,
-    };
-  }
 
   const SPRING_OPTS = { stiffness: 325, damping: 25 };
 

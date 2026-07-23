@@ -5,7 +5,8 @@
 
 <script lang="ts">
   import { cn } from "$lib/lib/utils";
-  import { slideDisplayName, themeBackground, type Slide } from "$lib/types";
+  import { slideDisplayName, type Slide } from "$lib/types";
+  import { createCodeCardTheme } from "$lib/ui/code-card/code-card-theme.svelte";
   import { createSlideThumbnail } from "$lib/shiki/slide-thumbnail.svelte";
   import { ui, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
   import { effectiveSlideCode } from "$lib/stores/slide-code.svelte";
@@ -102,10 +103,7 @@
   const title = $derived(slideDisplayName(slide, index));
   const hlCount = $derived(slide.highlights?.length ?? 0);
   const progress = $derived(isSelected ? highlightProgress : -1);
-  const codeBackground = $derived(themeBackground(theme));
-  // Theme backgrounds are six-digit hex values; the alpha suffix keeps the
-  // title and metadata fades visually connected to the code preview.
-  const softCodeBackground = $derived(`${codeBackground}e0`);
+  const cardTheme = createCodeCardTheme(() => theme);
 
   /** Registers this card's root in the panel-wide ref map (roving focus). */
   function registerCardNode(node: HTMLElement) {
@@ -226,7 +224,7 @@
   <!-- The title sits over the code with a soft fade rather than taking layout space. -->
   <div
     class="pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pb-8 pt-2"
-    style="background: linear-gradient(to bottom, {codeBackground} 0%, {softCodeBackground} 45%, transparent 100%);"
+    style="background: {cardTheme.topGradient};"
   >
     <div class="pointer-events-auto pr-14 text-white mix-blend-difference">
       <SlideCardHeader
@@ -254,7 +252,7 @@
 
   <div
     class="absolute inset-x-0 bottom-0 z-10 px-2 pb-1.5 pt-7"
-    style="background: linear-gradient(to top, {codeBackground} 0%, {softCodeBackground} 48%, transparent 100%);"
+    style="background: {cardTheme.bottomGradient};"
   >
     <div class="text-white mix-blend-difference">
       <SlideCardMeta {language} {hlCount} {progress} {isSelected} />

@@ -11,7 +11,7 @@
   import Button from "$lib/ui/Button.svelte";
   import { cn } from "$lib/lib/utils";
   import HighlightSettingsForm from "./HighlightSettingsForm.svelte";
-  import { EASE_DIM } from "$lib/lib/easings";
+  import { expand } from "$lib/ui/transitions/expand";
   import type { Highlight } from "$lib/types";
 
   let {
@@ -48,21 +48,6 @@
       : snippet.replace(/\s+/g, " ").trim() || "(empty selection)",
   );
 
-  /** framer's height 0→auto + fade in 150ms, as a Svelte transition. */
-  function expand(
-    node: Element,
-    { duration = 150, easing = EASE_DIM }: { duration?: number; easing?: (t: number) => number } = {},
-  ) {
-    const el = node as HTMLElement;
-    const height = el.offsetHeight;
-    const opacity = +getComputedStyle(el).opacity;
-    return {
-      duration,
-      easing,
-      css: (t: number) =>
-        `overflow: hidden; height: ${t * height}px; opacity: ${t * opacity}`,
-    };
-  }
 </script>
 
 <div
