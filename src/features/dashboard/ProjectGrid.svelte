@@ -1,15 +1,11 @@
 <script lang="ts">
   /**
    * Virtualized project grid with pointer-based stack DnD.
-   *
-   * React ran @tanstack/react-virtual rows + a dnd-kit DndContext whose only
-   * capability was "drop on cell → stack" (no reorder). The Svelte port:
-   *  - @tanstack/svelte-virtual (createVirtualizer store) for the same rows
-   *  - projectDnd pointer sessions (8px threshold, rect-intersection targets)
-   *  - one DragOverlay-equivalent clone anchored to the grabbed rect
+   *  - rows: createProjectRowVirtualizer (virtual-rows.svelte.ts)
+   *  - drag: projectDnd pointer sessions (8px threshold, rect targets)
+   *  - spread: createStackSpreadState (stack-spread-state.svelte.ts)
+   *  - one non-interactive overlay clone anchored to the grabbed rect
    */
-  import { createVirtualizer } from "@tanstack/svelte-virtual";
-  import { get } from "svelte/store";
   import DroppableProjectCell from "./DroppableProjectCell.svelte";
   import ProjectCard from "./ProjectCard.svelte";
   import StackSpread from "./StackSpread.svelte";
@@ -26,6 +22,8 @@
     type ProjectDragSession,
     type ProjectDragPayload,
   } from "@/features/dashboard/project-dnd.svelte";
+  import { createProjectRowVirtualizer } from "./virtual-rows.svelte";
+  import { createStackSpreadState } from "./stack-spread-state.svelte";
   import { portal } from "$lib/actions/portal";
   import type { ProjectSummary } from "$lib/types";
 
@@ -56,18 +54,6 @@
     commitBusy: boolean;
   } = $props();
 
-  /* Responsive columns (media via window width, same breakpoints) */
-  let columnCount = $state(3);
-  $effect(() => {
-    const update = () =>
-      (columnCount = window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  });
-
-  let parentEl = $state<HTMLDivElement | null>(null);
-
   const stackMut = stackProjectsMutation();
   const unstackMut = unstackProjectsMutation();
 
@@ -79,69 +65,23 @@
   );
 
   const chunks = $derived(chunkConsecutive(projects));
-  const rowCount = $derived(Math.ceil(chunks.length / columnCount));
 
-  const rowVirtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
-    count: 0,
-    getScrollElement: () => parentEl,
-    estimateSize: () => 220,
-    overscan: 5,
-    measureElement: (el) => el.getBoundingClientRect().height,
+  const grid = createProjectRowVirtualizer({
+    rowCount: () => Math.ceil(chunks.length / grid.columnCount),
   });
-
-  $effect(() => {
-    const count = rowCount;
-    // The instance is read NON-reactively (get(), not $rowVirtualizer):
-    // svelte-virtual's setOptions always ends with a store.set() that marks
-    // subscribers dirty (objects are never "equal"), so a tracked read here
-    // would re-trigger this very effect forever — Svelte's
-    // effect_update_depth_exceeded guard fired and the dashboard froze.
-    get(rowVirtualizer).setOptions({
-      count,
-      getScrollElement: () => parentEl,
-      estimateSize: () => 220,
-      overscan: 5,
-      measureElement: (el: HTMLElement) => el.getBoundingClientRect().height,
-    });
-  });
-
+  const rowVirtualizer = grid.rowVirtualizer;
+  const columnCount = $derived(grid.columnCount);
   const virtualRows = $derived($rowVirtualizer.getVirtualItems());
   const totalSize = $derived($rowVirtualizer.getTotalSize());
+  const measureRow = grid.measureRow;
 
-  /** ref={rowVirtualizer.measureElement} as a Svelte action. */
-  function measureRow(node: HTMLDivElement) {
-    $rowVirtualizer.measureElement(node);
-  }
-
-  /* ------------------------- Stack DnD plumbing ------------------------- */
-  let expandedChunkInfo = $state<{
-    chunk: GroupChunk<ProjectSummary>;
-    el: HTMLElement | null;
-  } | null>(null);
+  const spread = createStackSpreadState({ chunks: () => chunks });
+  const currentExpandedChunk = $derived(spread.currentExpandedChunk);
 
   function chunkId(chunk: GroupChunk<ProjectSummary>): string {
     return chunk.kind === "stack" && chunk.items.length > 1
       ? chunk.groupId!
       : chunk.items[0].id;
-  }
-
-  // Keep expanded chunk synchronized with latest project data
-  const currentExpandedChunk = $derived.by(() => {
-    const info = expandedChunkInfo;
-    if (!info) return null;
-    const latest = chunks.find(
-      (c) =>
-        (c.groupId && c.groupId === info.chunk.groupId) ||
-        (!c.groupId && c.items[0]?.id === info.chunk.items[0]?.id),
-    );
-    if (!latest || latest.items.length <= 1) return null;
-    return latest;
-  });
-
-  function closeIfNearlyEmpty() {
-    if (currentExpandedChunk && currentExpandedChunk.items.length <= 2) {
-      expandedChunkInfo = null;
-    }
   }
 
   function sourceIdsOf(payload: ProjectDragPayload): string[] {
@@ -153,7 +93,7 @@
     const targetChunkId = session.hoverChunkId;
     const payload = session.payload;
 
-    // Stack drop (React useStackDragEnd guard semantics)
+    // Stack drop: only "drop on cell → stack" exists (no reorder).
     if (targetChunkId) {
       const targetChunk = chunks.find((c) => chunkId(c) === targetChunkId);
       const targetId = targetChunk?.items[0]?.id ?? null;
@@ -167,17 +107,17 @@
         !sourceIds.includes(targetId)
       ) {
         stackMut.mutate({ sourceIds, targetId });
-        closeIfNearlyEmpty();
+        spread.closeIfNearlyEmpty();
         return;
       }
     }
 
-    // Fan item dragged far away from any cell → unstack it
+    // Fan item dragged far away from any cell → unstack it.
     if (payload.kind === "fan-item") {
       const dist = Math.hypot(session.x - session.startX, session.y - session.startY);
       if (dist > 120) {
         unstackMut.mutate([payload.project.id]);
-        closeIfNearlyEmpty();
+        spread.closeIfNearlyEmpty();
       }
     }
   }
@@ -186,10 +126,6 @@
     setProjectDropHandler(handleDrop);
     return () => setProjectDropHandler(null);
   });
-
-  function handleOpenSpread(chunk: GroupChunk<ProjectSummary>, el: HTMLElement | null) {
-    expandedChunkInfo = { chunk, el };
-  }
 
   const session = $derived(projectDnd.session);
   const dragWidth = $derived(session?.width ?? null);
@@ -216,7 +152,7 @@
 {#if projects.length === 0}
   <!-- nothing (parent shows the empty state) -->
 {:else}
-  <div bind:this={parentEl} class="flex-1 overflow-auto">
+  <div bind:this={grid.parentEl} class="flex-1 overflow-auto">
     <div class="mx-auto max-w-7xl px-6 py-8 pb-12">
       <div class="mb-8">
         <h1 class="text-3xl font-bold tracking-tight">Your Presentations</h1>
@@ -250,7 +186,7 @@
                   {onDelete}
                   {duplicateBusy}
                   {commitBusy}
-                  onOpenSpread={handleOpenSpread}
+                  onOpenSpread={(chunk, el) => spread.open(chunk, el)}
                 />
               {/each}
             </div>
@@ -263,8 +199,8 @@
   {#if currentExpandedChunk}
     <StackSpread
       chunk={currentExpandedChunk}
-      deckElement={expandedChunkInfo?.el ?? null}
-      onClose={() => (expandedChunkInfo = null)}
+      deckElement={spread.expandedChunkInfo?.el ?? null}
+      onClose={() => spread.close()}
       isRenaming={(pid) => rename.renamingId === pid}
       renameValue={rename.value}
       onRenameValueChange={rename.setValue}
@@ -281,7 +217,7 @@
     />
   {/if}
 
-  <!-- DragOverlay equivalent: non-interactive clone following the pointer -->
+  <!-- Drag overlay: non-interactive clone following the pointer -->
   {#if session?.active}
     <div use:portal>
       <div
