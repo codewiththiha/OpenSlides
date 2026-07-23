@@ -36,6 +36,64 @@ const errors: unknown[] = [];
 process.on("uncaughtException", (e) => errors.push(e));
 process.on("unhandledRejection", (e) => errors.push(e));
 
+/**
+ * Realistic WAAPI stub for THIS suite: jsdom-env's global stub never fires
+ * `onfinish`, so outrostart/outroend and everything they arm (exit
+ * bookkeeping, exit-complete → finishPending) never runs. Here animations
+ * complete on a real timer at their duration — the same signals a browser
+ * produces — so machinery driven by transition events is actually tested.
+ */
+{
+  const proto = window.HTMLElement.prototype as unknown as Record<
+    string,
+    unknown
+  >;
+  proto.animate = function (
+    _keyframes: unknown,
+    opts?: number | KeyframeAnimationOptions,
+  ) {
+    const timing =
+      (typeof opts === "number" ? opts : (opts?.duration ?? 0)) +
+      (typeof opts === "object" ? (opts?.delay ?? 0) : 0);
+    let onfinish: ((this: unknown) => void) | null = null;
+    let timer = 0;
+    const anim: Record<string, unknown> = {
+      cancel() {
+        window.clearTimeout(timer);
+        onfinish = null;
+      },
+      finish() {
+        window.clearTimeout(timer);
+        const f = onfinish;
+        onfinish = null;
+        f?.call(anim);
+      },
+      pause() {},
+      play() {},
+      reverse() {},
+      addEventListener() {},
+      removeEventListener() {},
+      currentTime: 0,
+      playbackRate: 1,
+      playState: "pending",
+      effect: null,
+      timeline: null,
+    };
+    anim.finished = Promise.resolve(anim);
+    anim.ready = Promise.resolve(anim);
+    Object.defineProperty(anim, "onfinish", {
+      configurable: true,
+      get: () => onfinish,
+      set: (f) => {
+        onfinish = f;
+        window.clearTimeout(timer);
+        if (f) timer = window.setTimeout(() => anim.finish(), timing);
+      },
+    });
+    return anim;
+  };
+}
+
 // Surface Svelte runtime warnings (derived_inert, effect depth, ...) as test
 // failures — they signal stale reads / runaway effects the user can't see.
 const origWarn = console.warn;
@@ -273,6 +331,189 @@ test("direct enterPresent (menu://present path) renders overlay; ESC control exi
   await settle();
   assert.equal(ui.isPresenting, false, "exited presenting");
   assertNoAppErrors("exit present");
+
+  await unmount(app);
+  target.remove();
+});
+
+test("editor: reveal highlight via number key, then back to clean (0) — no render crash", async () => {
+  resetFullApiMocks();
+  seedProjects([makeProject()]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(EditorInner, { target, props: { projectId: "p1" } });
+
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("button")].some((b) =>
+        b.textContent?.trim().startsWith("Present"),
+      ),
+    "toolbar Present button",
+  );
+  assertNoAppErrors("project load");
+
+  const pressKey = (k: string) => {
+    window.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: k, cancelable: true }),
+    );
+    flushSync();
+  };
+
+  // Reveal highlight 1 in the editor preview (number keys work outside present).
+  pressKey("1");
+  await settle();
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("[role='status']")].some(
+        (el) => el.getAttribute("aria-label") === "Highlight 1 of 2",
+      ),
+    "highlight 1 revealed in editor",
+    4000,
+  );
+  assertNoAppErrors("reveal highlight 1 (editor)");
+  await settle(300);
+
+  // Back to clean slide: the clone+dim outro must play without crashing.
+  pressKey("0");
+  await settle(1200); // outro + fail-safe window
+  assertNoAppErrors("back to clean slide after highlight");
+  assert.ok(
+    !target.textContent?.includes("Rendering error"),
+    "preview must NOT hit the render boundary after going backward",
+  );
+
+  await unmount(app);
+  target.remove();
+});
+
+test("present: forward then BACKWARD through highlights (ArrowLeft) — no render crash", async () => {
+  resetFullApiMocks();
+  seedProjects([makeProject()]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(EditorInner, { target, props: { projectId: "p1" } });
+
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("button")].some((b) =>
+        b.textContent?.trim().startsWith("Present"),
+      ),
+    "toolbar Present button",
+  );
+  const presentBtn = [...target.querySelectorAll("button")].find((b) =>
+    b.textContent?.trim().startsWith("Present"),
+  ) as HTMLButtonElement;
+  click(presentBtn);
+  flushSync();
+  await waitFor(
+    () => Boolean(target.querySelector("#openslides-present-root")),
+    "presentation overlay root",
+  );
+
+  const pressKey = (k: string) => {
+    window.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: k, cancelable: true }),
+    );
+    flushSync();
+  };
+
+  pressKey("ArrowRight"); // reveal h1
+  await settle();
+  pressKey("ArrowRight"); // reveal h2
+  await settle();
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("[role='status']")].some(
+        (el) => el.getAttribute("aria-label") === "Highlight 2 of 2",
+      ),
+    "highlight 2 revealed",
+    4000,
+  );
+  assertNoAppErrors("forward reveals");
+  await settle(300);
+
+  pressKey("ArrowLeft"); // backward step h2 → h1 (force re-tokenize + swap)
+  await settle(800);
+  assertNoAppErrors("backward step h2 -> h1");
+
+  pressKey("ArrowLeft"); // backward h1 → clean (outro-to-clean)
+  await settle(1200);
+  assertNoAppErrors("backward h1 -> clean");
+  assert.ok(
+    !target.textContent?.includes("Rendering error"),
+    "preview must NOT hit the render boundary after going backward",
+  );
+
+  await unmount(app);
+  target.remove();
+});
+
+test("editor: size-up highlight toggled rapidly forward/backward — no render crash", async () => {
+  resetFullApiMocks();
+  const proj = makeProject();
+  proj.slides[0]!.highlights = proj.slides[0]!.highlights.map((h) => ({
+    ...h,
+    sizeUpEnabled: true,
+    sizeUpAmount: 150,
+    useCustomTransition: true,
+    dimTransition: 700,
+    sizeUpTransition: 900,
+  }));
+  seedProjects([proj]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(EditorInner, { target, props: { projectId: "p1" } });
+
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("button")].some((b) =>
+        b.textContent?.trim().startsWith("Present"),
+      ),
+    "toolbar Present button",
+  );
+
+  const pressKey = (k: string) => {
+    window.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: k, cancelable: true }),
+    );
+    flushSync();
+  };
+
+  pressKey("1");
+  await settle(250); // mid-intro
+  pressKey("0"); // back to clean mid-intro
+  await settle(300);
+  pressKey("2"); // jump straight to highlight 2 from clean
+  await settle(250);
+  pressKey("1"); // backward step h2 → h1 (re-tokenize + swap)
+  await settle(300);
+  pressKey("0"); // h1 → clean
+  await settle(1600); // let custom outros + fail-safe fully elapse
+  pressKey("1"); // forward again after everything
+  await settle(300);
+  pressKey("0");
+  await settle(1600);
+
+  assertNoAppErrors("rapid forward/backward with size-up");
+  assert.ok(
+    !target.textContent?.includes("Rendering error"),
+    "preview must NOT hit the render boundary",
+  );
 
   await unmount(app);
   target.remove();

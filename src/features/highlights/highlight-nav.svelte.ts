@@ -8,8 +8,9 @@
  *        fully measured, so the outgoing clone ALWAYS plays its outro)
  *   3. → after the LAST highlight, its outro plays fully and ONLY THEN
  *        does the slide advance
- *   4. ← mirrors the steps backward; ← from a clean slide lands clean
- *      on the previous slide
+ *   4. ← mirrors the steps backward; ← from the FIRST highlight plays its
+ *        outro fully and ONLY THEN lands clean on the previous slide
+ *        (mirrors the forward outro→advance)
  *
  * Slide changes that follow an outro are driven by the highlight layer's
  * exit-complete signal (via `handleExitComplete`), so the real per-highlight
@@ -155,8 +156,10 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
       return true;
     }
     if (idx === 0) {
-      // Outro back to a clean slide (stay put).
-      pending = { advance: false, dir: -1 };
+      // Mirror the forward flow: outro the FIRST highlight fully, then move
+      // to the previous slide (lands clean — highlights reveal forward only).
+      // On the first slide there's nowhere to go, so just outro and stay.
+      pending = { advance: i > 0, dir: -1 };
       armFailSafe(list[i]?.highlights[idx]);
       setIdx(-1);
       return true;
