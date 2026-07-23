@@ -1,5 +1,6 @@
 /** Shiki Web Worker — one prioritized tokenization pipeline. */
 import { createShikiLoader } from "$lib/shiki/shiki-loader";
+import { extractShikiCodeHtml } from "./extract-html";
 
 const loader = createShikiLoader();
 
@@ -143,8 +144,7 @@ async function processRequest(request: QueuedRequest): Promise<void> {
       return;
     }
 
-    const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-    (self as any).postMessage({ id, html: match ? match[1] : html } as WorkerResponse);
+    (self as any).postMessage({ id, html: extractShikiCodeHtml(html) } as WorkerResponse);
   } catch (error) {
     if (isAborted(id)) {
       abortedIds.delete(id);

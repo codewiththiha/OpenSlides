@@ -21,7 +21,7 @@
   import { createRenameState } from "$lib/lib/rename-state.svelte";
   import { isModKey, isTypingTarget } from "$lib/lib/keyboard";
   import { modKeyLabel } from "$lib/lib/platform";
-  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { setWindowTitle } from "$lib/lib/window-title";
   import {
     subscribeToAppMenu,
     type AppMenuHandlers,
@@ -50,9 +50,7 @@
 
   // Native + document window title for the dashboard route.
   $effect(() => {
-    const t = "OpenSlides — Presentations";
-    document.title = t;
-    getCurrentWindow().setTitle(t).catch(() => undefined);
+    setWindowTitle("OpenSlides — Presentations");
   });
 
   $effect(() => {

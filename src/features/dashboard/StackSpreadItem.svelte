@@ -14,6 +14,7 @@
   import ProjectCard from "./ProjectCard.svelte";
   import { beginProjectDrag, projectDnd } from "@/features/dashboard/project-dnd.svelte";
   import { EASE_DIM } from "$lib/lib/easings";
+  import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
   /** Intro: slide up + fade combined, staggered per index. */
   function riseFade(
@@ -33,8 +34,6 @@
     };
   }
 
-  const CARD_WIDTH = 220;
-  const CARD_HEIGHT = 180;
   const SPRING_OPTS = { stiffness: 325, damping: 25 };
 
   let {
@@ -84,18 +83,18 @@
   const fan = $derived(computeFanLayout(total, index));
 
   const originLeft = $derived(
-    (deckRect?.left ?? fanCenterX - CARD_WIDTH / 2) +
-      (deckRect?.width ?? CARD_WIDTH) / 2 -
-      CARD_WIDTH / 2,
+    (deckRect?.left ?? fanCenterX - PROJECT_CARD_WIDTH / 2) +
+      (deckRect?.width ?? PROJECT_CARD_WIDTH) / 2 -
+      PROJECT_CARD_WIDTH / 2,
   );
   const originTop = $derived(
-    (deckRect?.top ?? fanCenterY - CARD_HEIGHT / 2) +
-      (deckRect?.height ?? CARD_HEIGHT) / 2 -
-      CARD_HEIGHT / 2,
+    (deckRect?.top ?? fanCenterY - PROJECT_CARD_HEIGHT / 2) +
+      (deckRect?.height ?? PROJECT_CARD_HEIGHT) / 2 -
+      PROJECT_CARD_HEIGHT / 2,
   );
 
-  const targetLeft = $derived(fanCenterX - CARD_WIDTH / 2 + fan.x);
-  const targetTop = $derived(fanCenterY - CARD_HEIGHT / 2 + fan.y);
+  const targetLeft = $derived(fanCenterX - PROJECT_CARD_WIDTH / 2 + fan.x);
+  const targetTop = $derived(fanCenterY - PROJECT_CARD_HEIGHT / 2 + fan.y);
 
   const session = $derived(projectDnd.session);
   const isDragging = $derived(
@@ -151,7 +150,7 @@
 
   function onPointerDown(e: PointerEvent) {
     beginProjectDrag({ kind: "fan-item", project, groupId }, e, {
-      width: itemEl?.getBoundingClientRect().width ?? CARD_WIDTH,
+      width: itemEl?.getBoundingClientRect().width ?? PROJECT_CARD_WIDTH,
       originLeft: itemEl?.getBoundingClientRect().left ?? 0,
       originTop: itemEl?.getBoundingClientRect().top ?? 0,
     });
@@ -163,7 +162,7 @@
   onpointerdown={onPointerDown}
   role="presentation"
   class="absolute touch-none"
-  style="width: {CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
+  style="width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
     ? 60
     : 30 + index}; left: {pos.current.left}px; top: {pos.current.top}px; transform: scale({pos
     .current.scale}) rotate({pos.current.rotate}deg); opacity: {pos.current.opacity};"

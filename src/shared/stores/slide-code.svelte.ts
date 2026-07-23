@@ -8,6 +8,20 @@
 
 export const localCode = $state<Record<string, string>>({});
 
+interface SlideLike {
+  id: string;
+  code: string;
+}
+
+/**
+ * Canonical read of a slide's effective code — the editor's local override
+ * wins over the persisted slide code. Call inside `$derived(...)` at the
+ * component level for fine-grained tracking.
+ */
+export function effectiveSlideCode(slide: SlideLike | undefined): string {
+  return slide ? (localCode[slide.id] ?? slide.code) : "";
+}
+
 export function getLocalCode(id: string): string | undefined {
   return localCode[id];
 }

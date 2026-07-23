@@ -6,6 +6,9 @@
  * the worker alive for the rest of the app.
  */
 import { getHighlighter } from "$lib/shiki/shiki-instance";
+import { isTestEnv } from "$lib/lib/env";
+import { extractShikiCodeHtml } from "./extract-html";
+import type { BundledLanguage } from "shiki";
 import type {
   WorkerRequest,
   WorkerResponse,
@@ -93,16 +96,15 @@ export async function requestHtml(
   signal?: AbortSignal,
   priority: "high" | "low" = "high",
 ): Promise<WorkerResponse> {
-  if (
-    typeof Worker === "undefined" ||
-    (typeof window !== "undefined" && (window as any).__OPENSLIDES_TEST_ENV__) ||
-    (typeof globalThis !== "undefined" && (globalThis as any).__OPENSLIDES_TEST_ENV__)
-  ) {
+  if (typeof Worker === "undefined" || isTestEnv()) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const h = await getHighlighter(theme, language);
     return {
       id: -1,
-      html: h.codeToHtml(code, { lang: language, theme }),
+      // Strip to the inner <code> contents, same as the worker path.
+      html: extractShikiCodeHtml(
+        h.codeToHtml(code, { lang: language as BundledLanguage, theme }),
+      ),
     };
   }
   return send({ code, lang: language, theme, priority }, signal);

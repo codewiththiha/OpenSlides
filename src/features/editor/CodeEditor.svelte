@@ -21,7 +21,7 @@
   import { untrack } from "svelte";
   import { createCodeEditorState } from "./code-editor-state.svelte";
   import { createCodeSave } from "./save.svelte";
-  import { localCode, setLocalCode } from "$lib/stores/slide-code.svelte";
+  import { effectiveSlideCode, setLocalCode } from "$lib/stores/slide-code.svelte";
   import { setCaretPosition } from "$lib/stores/caret-positions";
   import { updateProjectSettingsMutation } from "$lib/queries";
   import { record as recordEditorHistory, type Snapshot } from "$lib/lib/editor-history";
@@ -39,6 +39,7 @@
   import CodeEditorHeader from "@/features/editor/CodeEditorHeader.svelte";
   import CodeEditorBody from "@/features/editor/CodeEditorBody.svelte";
   import CodeEditorFooter from "@/features/editor/CodeEditorFooter.svelte";
+  import { onFindInCode, emitOpenSearch } from "$lib/lib/app-events";
 
   let {
     project,
@@ -57,7 +58,7 @@
   const currentIndex = $derived(currentSlide.activeIndex);
   const slideId = $derived(slide?.id);
 
-  const code = $derived(slide ? (localCode[slide.id] ?? slide.code) : "");
+  const code = $derived(effectiveSlideCode(slide));
 
   const st = createCodeEditorState();
 
@@ -124,12 +125,7 @@
   const openFind = findReplace.openFind;
 
   $effect(() => {
-    const openCodeFind = (event: Event) => {
-      const query = (event as CustomEvent<{ query?: string }>).detail?.query;
-      openFind(query);
-    };
-    window.addEventListener("openslides:find-in-code", openCodeFind);
-    return () => window.removeEventListener("openslides:find-in-code", openCodeFind);
+    return onFindInCode((query) => openFind(query));
   });
 
   const { applyHistorySnapshot } = createEditorHistory({
@@ -154,7 +150,7 @@
     }
     if (isMod && key === "f" && !e.shiftKey) {
       e.preventDefault();
-      window.dispatchEvent(new Event("openslides:open-search"));
+      emitOpenSearch();
       return;
     }
     if (e.key === "Escape" && isFindOpen) {

@@ -1,6 +1,7 @@
 import type { Highlighter } from "shiki";
 import { requestHtml } from "$lib/shiki/shiki-worker-client";
 import { getHighlighter } from "$lib/shiki/shiki-instance";
+import { isTestEnv } from "$lib/lib/env";
 
 type RetentionPolicy = "clear" | "keep-last";
 export type ShikiDisplayStatus =
@@ -142,10 +143,7 @@ export function shikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
     status = "loading";
     if (policy.loadingPolicy === "clear") clearCurrent(key);
 
-    const isTestEnv =
-      (typeof window !== "undefined" && (window as any).__OPENSLIDES_TEST_ENV__) ||
-      (typeof globalThis !== "undefined" && (globalThis as any).__OPENSLIDES_TEST_ENV__);
-    const actualDebounce = isTestEnv ? 0 : debounceMs;
+    const actualDebounce = isTestEnv() ? 0 : debounceMs;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
       requestHtml(code, a.language, a.theme, controller.signal, priority)

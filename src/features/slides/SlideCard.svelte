@@ -8,7 +8,7 @@
   import { slideDisplayName, themeBackground, type Slide } from "$lib/types";
   import { createSlideThumbnail } from "$lib/shiki/slide-thumbnail.svelte";
   import { ui, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
-  import { localCode } from "$lib/stores/slide-code.svelte";
+  import { effectiveSlideCode } from "$lib/stores/slide-code.svelte";
   import SearchSnippet from "./SearchSnippet.svelte";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
   import SlideCardHeader from "./SlideCardHeader.svelte";
@@ -70,7 +70,7 @@
   // Fine-grained $derived keeps list updates cheap: this card only updates
   // when ITS slide id / localCode key flips, not on every keystroke.
   const isSelected = $derived(ui.currentSlideId === slide.id);
-  const thumbnailCode = $derived(localCode[slide.id] ?? slide.code);
+  const thumbnailCode = $derived(effectiveSlideCode(slide));
   const preview = $derived(thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty");
 
   let cardRootEl = $state<HTMLDivElement | null>(null);

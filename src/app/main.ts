@@ -2,32 +2,19 @@ import { mount } from "svelte";
 import App from "./App.svelte";
 import { installAppMenu } from "$lib/lib/app-menu";
 import { flushPendingSave } from "$lib/lib/code-save";
+import { initInitialTheme } from "$lib/stores/ui-persistence";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import "../index.css";
 
-// Default to dark UI chrome (persisted UI state may override below)
-document.documentElement.classList.add("dark");
+// Hydrate the persisted theme before first paint (ui-persistence owns the
+// localStorage wire format).
+initInitialTheme();
 // Prevent Grammarly/LanguageTool/Microsoft Editor from intercepting the document;
 // the editor textarea carries the actual spellcheck/autocorrect controls.
 document.documentElement.setAttribute("data-gramm", "false");
 document.documentElement.setAttribute("data-gramm_editor", "false");
 document.documentElement.setAttribute("data-enable-grammarly", "false");
-
-// Hydrate the persisted theme before first paint (same localStorage wire
-// format that ui-state.svelte.ts reads and writes).
-try {
-  const raw = localStorage.getItem("openslides-ui");
-  if (raw) {
-    const parsed = JSON.parse(raw) as { state?: { isDarkUi?: boolean } };
-    if (parsed.state?.isDarkUi === false) {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-    }
-  }
-} catch {
-  /* ignore */
-}
 
 // Native macOS menu bar / Windows window menu
 void installAppMenu();

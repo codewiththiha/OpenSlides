@@ -16,6 +16,7 @@ import {
   toggleZenMode,
 } from "$lib/stores/ui-state.svelte";
 import { isModKey, isTypingTarget } from "$lib/lib/keyboard";
+import { emitOpenSearch } from "$lib/lib/app-events";
 
 interface UseEditorKeyboardArgs {
   goNext: () => boolean;
@@ -92,7 +93,7 @@ export function createEditorKeyboard(args: () => UseEditorKeyboardArgs) {
         !isGoToSlideOpen
       ) {
         e.preventDefault();
-        window.dispatchEvent(new Event("openslides:open-search"));
+        emitOpenSearch();
         return;
       }
 

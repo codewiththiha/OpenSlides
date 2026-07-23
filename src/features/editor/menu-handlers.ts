@@ -12,6 +12,7 @@ import {
   toggleTheme,
 } from "$lib/stores/ui-state.svelte";
 import type { AppMenuHandlers } from "$lib/lib/app-menu.svelte";
+import { emitUndo, emitRedo } from "$lib/lib/app-events";
 
 export function createEditorMenuHandlers(args: {
   projectId: () => string | undefined;
@@ -48,11 +49,7 @@ export function createEditorMenuHandlers(args: {
     "menu://toggle-theme": () => toggleTheme(),
     "menu://shortcuts-app": () => setIsShortcutsOpen(true),
     "menu://shortcuts-help": () => setIsShortcutsOpen(true),
-    "menu://undo": () => {
-      window.dispatchEvent(new Event("openslides:undo"));
-    },
-    "menu://redo": () => {
-      window.dispatchEvent(new Event("openslides:redo"));
-    },
+    "menu://undo": () => emitUndo(),
+    "menu://redo": () => emitRedo(),
   };
 }

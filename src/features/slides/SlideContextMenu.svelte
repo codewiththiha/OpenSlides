@@ -6,6 +6,7 @@
   import { CheckSquare, Pencil, SquareDashedMousePointer } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { EASE_DIM } from "$lib/lib/easings";
+  import { clampMenuPosition } from "$lib/lib/menu-position";
 
   let {
     open,
@@ -47,15 +48,12 @@
     void position.y;
     positioned = false;
     const rect = menuEl.getBoundingClientRect();
-    const gap = 8;
-    const edge = 8;
-    let left = position.x + gap;
-    let top = position.y - rect.height - gap;
-    if (left + rect.width > window.innerWidth - edge) {
-      left = Math.max(edge, window.innerWidth - rect.width - edge);
-    }
-    if (top < edge) top = Math.min(window.innerHeight - rect.height - edge, position.y + gap);
-    resolved = { x: left, y: top };
+    resolved = clampMenuPosition({
+      x: position.x,
+      y: position.y,
+      width: rect.width,
+      height: rect.height,
+    });
     positioned = true;
   });
 

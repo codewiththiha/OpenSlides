@@ -3,6 +3,7 @@
   import Card from "$lib/ui/Card.svelte";
   import { formatRelative } from "$lib/lib/utils";
   import { themeBackground, type ProjectSummary } from "$lib/types";
+  import { PROJECT_CARD_HEIGHT } from "./layout";
   import ProjectThumb from "./ProjectThumb.svelte";
   import HoverActions from "$lib/ui/HoverActions.svelte";
   import HoverActionButton from "$lib/ui/HoverActionButton.svelte";
@@ -43,7 +44,8 @@
 </script>
 
 <Card
-  class="group relative h-[180px] cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+  class="group relative cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+  style="height: {PROJECT_CARD_HEIGHT}px"
   onclick={() => {
     if (!isRenaming) onOpen(project.id);
   }}
