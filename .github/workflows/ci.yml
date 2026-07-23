@@ -1,0 +1,26 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: svelte-check
+        run: ./node_modules/.bin/svelte-check --tsconfig ./tsconfig.json
+      - name: Tests
+        run: |
+          npm run test:stack-targeting
+          npm run test:highlight
+          npm run test:save-race
+          npm run test:app-flow
+      - name: Build
+        run: npm run build
