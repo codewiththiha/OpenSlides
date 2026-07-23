@@ -29,7 +29,8 @@
       "$lib/*": [
         "./src/shared/*"
       ]
-    }
+    },
+    "noUncheckedIndexedAccess": true
   },
   "include": [
     "src"

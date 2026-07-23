@@ -31,7 +31,7 @@
           class="pointer-events-none"
           style="width: {dragWidth ?? undefined}px;"
         >
-          <ProjectCard project={session.payload.chunk.items[0]} static />
+          <ProjectCard project={session.payload.chunk.items[0]!} static />
         </StackDeck>
       {:else if session.payload.chunk.items[0]}
         <div style="width: {dragWidth ?? undefined}px;">

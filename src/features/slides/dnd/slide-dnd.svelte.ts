@@ -195,7 +195,7 @@ export function createSlideStripDnd(args: {
 
       case "stack": {
         dndItems = base; // revert the reorder preview
-        const sourceIds = args.resolveSourceIds(source!.slides[0].id);
+        const sourceIds = args.resolveSourceIds(source!.slides[0]!.id);
         if (sourceIds.length > 0 && !sourceIds.includes(decision.targetId)) {
           args.onStack(sourceIds, decision.targetId);
         }

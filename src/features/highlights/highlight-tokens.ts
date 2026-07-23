@@ -92,7 +92,7 @@ export function decompose(code: string, range: SelectionRange): LineRange[] {
 
   const out: LineRange[] = [];
   for (let i = startLine; i <= endLine; i++) {
-    const lineLen = codeLines[i].length; // JS length = UTF-16 units ✓
+    const lineLen = codeLines[i]!.length; // JS length = UTF-16 units ✓
     const rawStart = i === startLine ? range.startChar : 0;
     const rawEnd = i === endLine ? range.endChar : Number.MAX_SAFE_INTEGER;
     const start = clampI(rawStart, 0, lineLen);
@@ -227,7 +227,7 @@ export function buildPlan(
   const lines: HighlightPlanLine[] = [];
 
   for (const lr of spans) {
-    const rawLine = codeLines[lr.lineIndex];
+    const rawLine = codeLines[lr.lineIndex]!;
     const plain = rawLine.slice(lr.start, lr.end);
     const isEmpty = lr.start >= lr.end;
 
@@ -256,7 +256,7 @@ export function buildPlan(
   return {
     lines,
     eraserColor: mixTowardBlack(themeBg, dimPercent),
-    selectedText: spans.map(s => codeLines[s.lineIndex].slice(s.start, s.end)).join("\n"),
+    selectedText: spans.map(s => codeLines[s.lineIndex]!.slice(s.start, s.end)).join("\n"),
   };
 }
 
@@ -268,7 +268,7 @@ export function sliceSnippets(
   const codeLines = code.split("\n");
   return ranges.map((r) =>
     decompose(code, r)
-      .map((lr) => codeLines[lr.lineIndex].slice(lr.start, lr.end))
+      .map((lr) => codeLines[lr.lineIndex]!.slice(lr.start, lr.end))
       .join("\n"),
   );
 }

@@ -42,7 +42,11 @@
     {step}
     {disabled}
     value={[value]}
-    onValueChange={([v]) => onPreview?.(v)}
-    onValueCommit={([v]) => onCommit(v)}
+    onValueChange={([v]) => {
+      if (v !== undefined) onPreview?.(v);
+    }}
+    onValueCommit={([v]) => {
+      if (v !== undefined) onCommit(v);
+    }}
   />
 </div>

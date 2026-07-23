@@ -22,7 +22,7 @@
 
   const cardActions = consumeProjectCardActions();
 
-  const topProject = $derived(chunk.items[0]);
+  const topProject = $derived(chunk.items[0]!);
   const isStack = $derived(chunk.kind === "stack" && chunk.items.length > 1);
   const id = $derived(isStack ? chunk.groupId! : topProject.id);
 

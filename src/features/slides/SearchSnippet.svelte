@@ -7,7 +7,7 @@
   const lineStarts = $derived.by(() => {
     const starts = [0];
     for (let i = 0; i < lines.length - 1; i++) {
-      starts.push(starts[i] + lines[i].length + 1);
+      starts.push(starts[i]! + lines[i]!.length + 1);
     }
     return starts;
   });
@@ -15,7 +15,7 @@
   const lineIndex = $derived(
     match < 0
       ? -1
-      : lineStarts.findIndex((start, index) => match < start + lines[index].length + 1),
+      : lineStarts.findIndex((start, index) => match < start + lines[index]!.length + 1),
   );
   const firstVisible = $derived(Math.max(0, lineIndex - 2));
   const visible = $derived(lines.slice(firstVisible, lineIndex + 3));
