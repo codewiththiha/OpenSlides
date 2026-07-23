@@ -1,6 +1,7 @@
 <script lang="ts">
   import Overlay, { Z_INDEX } from "./Overlay.svelte";
   import Button from "./Button.svelte";
+  import { focusTrap } from "$lib/actions/focus-trap";
 
   let {
     open,
@@ -36,8 +37,14 @@
 
 {#if open}
   <Overlay onClose={onCancel} z={Z_INDEX.command} placement="center" closeOnEsc>
-    <div class="w-full max-w-sm rounded-xl border bg-card p-5 shadow-2xl">
-      <h3 class="text-sm font-semibold">{title}</h3>
+    <div
+      use:focusTrap
+      class="w-full max-w-sm rounded-xl border bg-card p-5 shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+    >
+      <h3 id="confirm-dialog-title" class="text-sm font-semibold">{title}</h3>
       {#if description}
         <p class="mt-2 text-xs text-muted-foreground">{description}</p>
       {/if}

@@ -25,6 +25,7 @@
       use:autofocus
       class="h-6 w-32 rounded border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring sm:w-48"
       placeholder="Find"
+      aria-label="Find"
       value={fr.searchTerm}
       oninput={(e) => (fr.searchTerm = e.currentTarget.value)}
       onkeydown={onFindKeyDown}
@@ -43,6 +44,7 @@
     <input
       class="h-6 w-32 rounded border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring sm:w-48"
       placeholder="Replace"
+      aria-label="Replace"
       value={fr.replaceTerm}
       oninput={(e) => (fr.replaceTerm = e.currentTarget.value)}
     />

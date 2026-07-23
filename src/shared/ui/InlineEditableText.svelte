@@ -14,6 +14,7 @@
     class: className,
     buttonSize = "md",
     stopPropagation = true,
+    label = "Edit name",
   }: {
     value: string;
     onChange: (value: string) => void;
@@ -32,6 +33,8 @@
      * Default true — rename clicks must not select the parent card.
      */
     stopPropagation?: boolean;
+    /** Accessible name for the input (it renders no visible label). */
+    label?: string;
   } = $props();
 
   // select-text overrides select-none ancestors (project cards became
@@ -45,6 +48,7 @@
 {#snippet inputSnippet()}
   <input
     use:autofocus
+    aria-label={label}
     class={cn(inputClass, withButtons ? "h-8 flex-1 min-w-0" : "h-7 w-full", className)}
     {value}
     oninput={(e) => onChange(e.currentTarget.value)}

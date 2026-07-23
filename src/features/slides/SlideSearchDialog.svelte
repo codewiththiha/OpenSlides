@@ -10,6 +10,7 @@
   import { modKeyLabel } from "$lib/lib/platform";
   import { rise } from "$lib/ui/transitions/rise";
   import { EASE_DIM } from "$lib/lib/easings";
+  import { focusTrap } from "$lib/actions/focus-trap";
 
   let {
     open,
@@ -55,8 +56,12 @@
   >
     <button type="button" class="absolute inset-0 cursor-default" aria-label="Close search" onclick={onClose}></button>
     <div
+      use:focusTrap
       class="relative w-full max-w-lg overflow-hidden rounded-xl border bg-card shadow-2xl"
       transition:rise={{ duration: 150, dy: 8, from: 0.98 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search slides"
     >
       <div class="flex items-center gap-2 border-b px-4 py-3">
         <Search class="h-4 w-4 text-muted-foreground" />
@@ -67,6 +72,7 @@
           placeholder={scope === "slides"
             ? "Find slides by name or code…"
             : "Find in the current editor…"}
+          aria-label={scope === "slides" ? "Find slides by name or code" : "Find in the current editor"}
           class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
         <span class="text-[10px] text-muted-foreground">{modKeyLabel()}F</span>
