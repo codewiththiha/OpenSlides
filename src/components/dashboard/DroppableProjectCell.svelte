@@ -82,7 +82,7 @@
   onpointerdown={onPointerDown}
   role="presentation"
   class={cn(
-    "relative touch-pan-y rounded-xl transition-all duration-200",
+    "relative touch-pan-y select-none rounded-xl transition-all duration-200",
     isSelfDragging && "pointer-events-none scale-95 opacity-40",
     isHovered &&
       "z-20 scale-[1.02] bg-primary/10 shadow-xl ring-2 ring-primary ring-offset-2 ring-offset-background",

@@ -9,7 +9,7 @@
    *    slide / collapsed stack / fanned-out stack wrapper. Reorders map back
    *    to chunk-level arrayMove exactly like the React version.
    *  - Stack drops are detected with a pointer tracker: center-region
-   *    overlays (data-stack-target, pointer-events:auto only during drags)
+   *    overlays (data-stack-target feedback; hit zones via data-stack-card)
    *    are hit-tested via elementsFromPoint — same "center means stack,
    *    edges mean reorder" rule as the dnd-kit droppables.
    *  - The dragged clone (lib-generated) replaces DragOverlay; a dashed
@@ -74,6 +74,14 @@
 
   const FLIP_MS = 150;
   const DRAGGED_CLONE_SELECTOR = "#dnd-action-dragged-el";
+
+  /* Stack targeting geometry — fractions of a card rect.
+     ENTER = visible dashed zone; EXIT = larger "stay" region so pointer
+     jitter near the edge doesn't drop the target (hysteresis). */
+  const STACK_ENTER_X = 0.16;
+  const STACK_ENTER_Y = 0.12;
+  const STACK_EXIT_X = 0.05;
+  const STACK_EXIT_Y = 0.04;
 
   const isCollapsed = $derived(collapsed ?? ui.isBottomPanelCollapsed);
 
@@ -232,18 +240,35 @@
     });
   });
 
+  let hoverRaf = 0;
   function updateStackHover() {
-    if (!draggingId) {
+    if (!draggingId || !dragSource) {
       stackHoverId = null;
       return;
     }
-    const hits = document.elementsFromPoint(pointer.x, pointer.y);
+    const draggedSection = dragSource.slides[0]?.sectionId?.trim() || null;
+    const draggedIds = new Set(dragSource.slides.map((s) => s.id));
+    const els = document.querySelectorAll<HTMLElement>("[data-stack-card]");
     let found: string | null = null;
-    for (const el of hits) {
-      if (el.id === "dnd-action-dragged-el" || el.closest?.(DRAGGED_CLONE_SELECTOR)) continue;
-      const target = el.closest?.("[data-stack-target]");
-      if (target) {
-        found = target.getAttribute("data-stack-target");
+    for (const el of els) {
+      // Ignore the lib-generated dragged clone and the dragged source itself.
+      if (el.closest(DRAGGED_CLONE_SELECTOR)) continue;
+      const targetId = el.getAttribute("data-stack-card");
+      if (!targetId || draggedIds.has(targetId)) continue;
+      // Stacking onto a sibling of the same section is meaningless.
+      const section = el.dataset.stackSection?.trim();
+      if (draggedSection && section && section === draggedSection) continue;
+      const r = el.getBoundingClientRect();
+      // Hysteresis: the currently-hovered card keeps its larger "stay" region.
+      const ix = stackHoverId === targetId ? STACK_EXIT_X : STACK_ENTER_X;
+      const iy = stackHoverId === targetId ? STACK_EXIT_Y : STACK_ENTER_Y;
+      if (
+        pointer.x >= r.left + r.width * ix &&
+        pointer.x <= r.right - r.width * ix &&
+        pointer.y >= r.top + r.height * iy &&
+        pointer.y <= r.bottom - r.height * iy
+      ) {
+        found = targetId;
         break;
       }
     }
@@ -253,7 +278,13 @@
   function onPointerMove(e: PointerEvent) {
     pointer.x = e.clientX;
     pointer.y = e.clientY;
-    updateStackHover();
+    // One hit-test per frame max — keeps 60fps during drag.
+    if (!hoverRaf) {
+      hoverRaf = requestAnimationFrame(() => {
+        hoverRaf = 0;
+        updateStackHover();
+      });
+    }
   }
 
   function handleConsider(e: CustomEvent<DndEvent<StripItem>>) {
@@ -295,6 +326,10 @@
   function handleFinalize(e: CustomEvent<DndEvent<StripItem>>) {
     const { items: next } = e.detail;
     window.removeEventListener("pointermove", onPointerMove);
+    if (hoverRaf) {
+      cancelAnimationFrame(hoverRaf);
+      hoverRaf = 0;
+    }
     const source = dragSource;
     const stackTarget = stackHoverId;
     draggingId = null;
@@ -495,17 +530,18 @@
 </script>
 
 {#snippet stackTargetOverlay(targetId: string, ownerItemId: string)}
-  <!-- Center-only target: card edges stay available to the zone's reorder
-       hit area, while the center means stack (dnd-kit droppable equivalent). -->
+  <!-- Hit testing lives in updateStackHover() (rect math) — this element is
+       pure feedback, so it never intercepts the dnd zone's pointer events. -->
+  {@const isDraggingOther = draggingId !== null && draggingId !== ownerItemId}
   <div
     data-stack-target={targetId}
     class={cn(
-      "absolute inset-x-[24%] inset-y-[20%] z-30 rounded-md transition-all duration-150",
+      "pointer-events-none absolute inset-x-[16%] inset-y-[12%] z-30 rounded-lg border-2 border-dashed transition-all duration-150",
+      isDraggingOther ? "opacity-100" : "opacity-0",
       stackHoverId === targetId
-        ? "pointer-events-auto bg-primary/15 shadow-md ring-2 ring-primary ring-offset-1 ring-offset-background"
-        : "pointer-events-none",
+        ? "scale-[1.03] border-solid border-primary bg-primary/20 shadow-lg ring-2 ring-primary ring-offset-1 ring-offset-background"
+        : "border-primary/40 bg-primary/[0.05]",
     )}
-    style:pointer-events={draggingId && draggingId !== ownerItemId ? "auto" : "none"}
   ></div>
 {/snippet}
 
@@ -618,14 +654,22 @@
                   onClose={() => (expandedSectionId = null)}
                 />
                 {#each item.slides as slide (slide.id)}
-                  <div class="relative shrink-0">
+                  <div
+                    class="relative shrink-0"
+                    data-stack-card={slide.id}
+                    data-stack-section={slide.sectionId?.trim() ?? ""}
+                  >
                     {@render stackTargetOverlay(slide.id, item.id)}
                     {@render cardFor(slide)}
                   </div>
                 {/each}
               </div>
             {:else if item.slides.length > 1}
-              <div class="relative shrink-0">
+              <div
+                class="relative shrink-0"
+                data-stack-card={item.slides[0].id}
+                data-stack-section={item.slides[0].sectionId?.trim() ?? ""}
+              >
                 {@render stackTargetOverlay(item.slides[0].id, item.id)}
                 <StackDeck
                   count={item.slides.length}
@@ -639,7 +683,11 @@
                 </StackDeck>
               </div>
             {:else}
-              <div class="relative shrink-0">
+              <div
+                class="relative shrink-0"
+                data-stack-card={item.slides[0].id}
+                data-stack-section={item.slides[0].sectionId?.trim() ?? ""}
+              >
                 {@render stackTargetOverlay(item.slides[0].id, item.id)}
                 {@render cardFor(item.slides[0])}
               </div>

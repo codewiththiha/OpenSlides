@@ -33,8 +33,10 @@
     stopPropagation?: boolean;
   } = $props();
 
+  // select-text overrides select-none ancestors (project cards became
+  // unselectable so drag-to-stack can't highlight their labels).
   const inputClass =
-    "rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring";
+    "select-text rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring";
 
   let inputEl: HTMLInputElement | null = null;
 
