@@ -17,6 +17,7 @@
 </script>
 
 <script lang="ts">
+  import { escapeKey } from "$lib/actions/escape-key";
   import type { Snippet } from "svelte";
   import { fade } from "svelte/transition";
   import { cn } from "$lib/lib/utils";
@@ -37,17 +38,10 @@
     children?: Snippet;
   } = $props();
 
-  $effect(() => {
-    if (!closeOnEsc) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
 </script>
 
 <div
+  use:escapeKey={{ onEscape: () => { if (closeOnEsc) onClose(); } }}
   class={cn(
     "fixed inset-0 flex bg-black/50 backdrop-blur-sm",
     placement === "center"

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { autofocus } from "$lib/actions/autofocus";
   import { Check, X } from "@lucide/svelte";
   import { cn } from "$lib/lib/utils";
   import Button from "./Button.svelte";
@@ -38,17 +39,12 @@
   const inputClass =
     "select-text rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring";
 
-  let inputEl: HTMLInputElement | null = null;
 
-  // autoFocus equivalent
-  $effect(() => {
-    inputEl?.focus();
-  });
 </script>
 
 {#snippet inputSnippet()}
   <input
-    bind:this={inputEl}
+    use:autofocus
     class={cn(inputClass, withButtons ? "h-8 flex-1 min-w-0" : "h-7 w-full", className)}
     {value}
     oninput={(e) => onChange(e.currentTarget.value)}

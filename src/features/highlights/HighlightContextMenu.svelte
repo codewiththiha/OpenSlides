@@ -3,6 +3,8 @@
    * Custom context menu that appears when highlight mode is enabled
    * and the user right-clicks with text selected in the code editor.
    */
+  import { clickOutside } from "$lib/actions/click-outside";
+  import { escapeKey } from "$lib/actions/escape-key";
   import { Highlighter as HighlightIcon, X } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { EASE_DIM } from "@/features/highlights/easings";
@@ -23,7 +25,6 @@
     onClose: () => void;
   } = $props();
 
-  let menuEl = $state<HTMLDivElement | null>(null);
 
   function pop(
     _node: Element,
@@ -37,36 +38,12 @@
     };
   }
 
-  $effect(() => {
-    if (!visible) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuEl && !menuEl.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
-    // Delay adding listeners to avoid the right-click itself closing the menu
-    const t = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }, 50);
-
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  });
 </script>
 
 {#if visible}
   <div
-    bind:this={menuEl}
+    use:clickOutside={{ onOutside: onClose, delayMs: 50 }}
+    use:escapeKey={{ onEscape: onClose, delayMs: 50 }}
     class="fixed min-w-[180px] rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
     style="left: {position.x}px; top: {position.y}px; z-index: {Z_INDEX.contextMenu};"
     transition:pop={{}}
