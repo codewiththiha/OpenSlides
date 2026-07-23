@@ -6,7 +6,7 @@
  * under test is implemented.
  */
 
-import { resetCodeSaveQueue } from "../../src/lib/code-save.ts";
+import { resetCodeSaveQueue } from "../../src/shared/lib/code-save.ts";
 
 export interface DeferredSave {
   slideId: string;
@@ -35,7 +35,9 @@ export function resolveSaveAt(i: number): void {
 export function resetApiMocks(): void {
   saveCalls.length = 0;
   pendingSaves.length = 0;
-  try { resetCodeSaveQueue(); } catch {}
+  try {
+    resetCodeSaveQueue();
+  } catch {}
 }
 
 export const api = {
@@ -67,11 +69,14 @@ const extraApi = {
 };
 Object.assign(api, extraApi);
 
-
 export type SettingsPatch = Record<string, unknown>;
 export interface CommandError extends Error {
   code?: string;
 }
 export function isCancelledError(err: unknown): boolean {
-  return !!(err && typeof err === "object" && (err as CommandError).code === "CANCELLED");
+  return !!(
+    err &&
+    typeof err === "object" &&
+    (err as CommandError).code === "CANCELLED"
+  );
 }

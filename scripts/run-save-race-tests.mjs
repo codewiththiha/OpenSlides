@@ -1,25 +1,22 @@
 #!/usr/bin/env node
 /**
- * Bundles the save-race regression suite (React 19 + react-query + zustand
- * running in jsdom, with `lib/tauri-api` / `lib/toast` swapped for manual
- * mocks) using the repo's esbuild, then runs it with node's test runner.
+ * Bundles the save-race / editor-typing regression suites (real Svelte 5
+ * components mounted in jsdom via scripts/lib/esbuild-svelte.mjs, with
+ * `lib/tauri-api` / `lib/toast` / `lib/shiki-instance` swapped for manual
+ * mocks) using the repo's esbuild, then runs them with node's test runner.
  *
  * - Everything is bundled except jsdom (dynamic require — not bundleable).
- *   IMPORTANT: react/react-dom are bundled on purpose. Externals evaluate
- *   before the bundle body — and react-dom inspects `window`/`document` at
- *   module-evaluation time (feature detection of the event system), while
- *   jsdom-env.mts installs those globals in the bundle body. Bundling
- *   react-dom keeps module evaluation topological (env first), which is
- *   what the probes proved necessary — with react-dom external, synthetic
- *   input events silently never reach onChange.
- * - The mock plugin resolves `tauri-api` / `toast` imports to tests/mocks/*
- *   before any other resolution rule can see them.
+ * - The mock plugin resolves `tauri-api` / `toast` / `shiki-instance`
+ *   imports to tests/mocks/* before any other resolution rule can see them.
+ * - `.svelte` components and `.svelte.js`/`.svelte.ts` rune modules are
+ *   precompiled with svelte/compiler (native TS support) — no React, no jsx.
  */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { build } from "esbuild";
+import { sveltePlugin, SVELTE_CONDITIONS } from "./lib/esbuild-svelte.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = join(repo, ".cache-tests");
@@ -53,14 +50,17 @@ await build({
   platform: "node",
   external: ["jsdom"],
   loader: { ".mts": "tsx" },
-  jsx: "automatic",
-  alias: { "@": join(repo, "src") },
-  plugins: [mockPlugin],
+  alias: {
+    "@": join(repo, "src"),
+    $lib: join(repo, "src", "shared"),
+  },
+  conditions: SVELTE_CONDITIONS,
+  plugins: [mockPlugin, sveltePlugin()],
   logLevel: "warning",
 });
 
-// --test-force-exit: react-dom's scheduler holds a jsdom MessageChannel
-// whose ports otherwise keep the event loop alive after the last test.
+// --test-force-exit: jsdom globals and timer chains can hold the event loop
+// alive after the last test.
 execFileSync(
   process.execPath,
   [

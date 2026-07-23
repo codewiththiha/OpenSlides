@@ -3,7 +3,7 @@ name: Release Tauri App
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -37,8 +37,8 @@ jobs:
             args: --target universal-apple-darwin
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
           - runner: windows-latest
-            args: ''
-            rust_targets: ''
+            args: ""
+            rust_targets: ""
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4

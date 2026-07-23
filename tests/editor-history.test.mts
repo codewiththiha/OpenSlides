@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { record, redo, undo, type Snapshot } from "../src/lib/editor-history";
+import {
+  record,
+  redo,
+  undo,
+  type Snapshot,
+} from "../src/shared/lib/editor-history";
 
 test("redo restores the actual post-edit caret snapshot", () => {
   const slideId = `history-caret-${Date.now()}`;
