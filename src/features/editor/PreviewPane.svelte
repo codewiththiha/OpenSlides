@@ -25,6 +25,7 @@
       <RenderBoundary>
         <SlidePreview
           {project}
+          slideId={activeSlide?.id}
           activeHighlightIndex={effectiveHighlight}
           {onHighlightExitComplete}
         />

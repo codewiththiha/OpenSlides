@@ -25,17 +25,20 @@
 
   let {
     project,
+    slideId,
     isPresenting = false,
     activeHighlightIndex = -1,
     onHighlightExitComplete,
   }: {
     project: Project;
+    /** Slide to show; falls back to ui.currentSlideId when omitted (§7.3). */
+    slideId?: string;
     isPresenting?: boolean;
     activeHighlightIndex?: number;
     onHighlightExitComplete?: () => void;
   } = $props();
 
-  const currentSlide = createCurrentSlide(() => project);
+  const currentSlide = createCurrentSlide(() => project, () => slideId);
   const slide = $derived(currentSlide.activeSlide);
   const code = $derived(effectiveSlideCode(slide));
 
