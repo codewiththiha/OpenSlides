@@ -19,7 +19,7 @@ Whether you are recording a tutorial, teaching a class, streaming a live build, 
 - Create, organize, rename, duplicate, import, and export slide projects.
 - Arrange slides in stacks and reorder them with drag and drop.
 - Apply syntax highlighting and choose light or dark presentation themes.
-- Create stepped highlights and control their emphasis.
+- Create stepped highlights and control their emphasis: dim amount, size-up scale, and custom transition timings per highlight.
 - Search across slides, use thumbnails and hover previews, and navigate by keyboard.
 - Present in full screen with optional autoplay and per-slide timing.
 - Keep working confidently with local projects, saved layouts, and per-slide undo/redo.
@@ -37,9 +37,12 @@ Prebuilt installers for macOS and Windows are available from the [OpenSlides Rel
 ## Tech stack
 
 - **Desktop app:** Tauri 2 and Rust
-- **Interface:** React, TypeScript, Vite, and Tailwind CSS
-- **Local storage:** SQLite
+- **Interface:** Svelte 5 (runes), TypeScript, Vite 7, and Tailwind CSS 4
+- **Component toolkit:** bits-ui, paneforge, and @lucide/svelte
+- **Data and flow:** @tanstack/svelte-query, svelte-spa-router, and persistent rune stores
+- **Motion and DnD:** Svelte transitions/springs, svelte-dnd-action, and custom pointer drag-and-drop
 - **Code rendering:** Shiki and shiki-magic-move
+- **Local storage:** SQLite (via sqlx, Rust side)
 
 ## Run from source
 
@@ -60,6 +63,21 @@ To run the interface in a browser:
 npm run dev
 ```
 
+### Development checks
+
+The same gates CI enforces on every push and pull request:
+
+```bash
+npm run check              # svelte-check: 0 errors, 0 warnings
+npm run lint               # eslint
+npm run format:check       # prettier (svelte + tailwind plugins)
+npm run test:highlight     # highlight token pipeline (11 tests)
+npm run test:save-race     # editor save/debounce races (14 tests)
+npm run test:app-flow      # real app flows in jsdom: dashboard -> editor -> present (9 tests)
+npm run test:stack-targeting  # slide stack drop-zone geometry (4 tests)
+npm run build              # production bundle
+```
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
