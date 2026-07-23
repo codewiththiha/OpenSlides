@@ -14,32 +14,26 @@
     fallbackForeground,
     type Project,
   } from "$lib/types";
-  import {
-    ui,
-    setCurrentSlideId,
-  } from "$lib/stores/ui-state.svelte";
+  import { ui } from "$lib/stores/ui-state.svelte";
+  import HighlightContextMenu from "@/features/highlights/HighlightContextMenu.svelte";
   import { untrack } from "svelte";
   import { createCodeEditorState } from "./code-editor-state.svelte";
   import { createCodeSave } from "./save.svelte";
-  import { effectiveSlideCode, setLocalCode } from "$lib/stores/slide-code.svelte";
-  import { setCaretPosition } from "$lib/stores/caret-positions";
+  import { effectiveSlideCode } from "$lib/stores/slide-code.svelte";
   import { updateProjectSettingsMutation } from "$lib/queries";
-  import { record as recordEditorHistory, type Snapshot } from "$lib/lib/editor-history";
-  import { markSavePending } from "$lib/lib/code-save";
-  import HighlightContextMenu from "@/features/highlights/HighlightContextMenu.svelte";
   import { editorShikiHtml } from "$lib/shiki/shiki-display.svelte";
-  import { createEditorHistory } from "@/features/editor/editor-history.svelte";
-  import { createHighlightCrud } from "@/features/highlights/highlight-crud.svelte";
   import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
-  import FindReplaceBar from "@/features/editor/FindReplaceBar.svelte";
-  import { createFindReplace } from "@/features/editor/find-replace.svelte";
   import { createCaretSync } from "@/features/editor/caret.svelte";
   import { createScrollSync } from "@/features/editor/scroll-sync";
-  import { createTabKeyHandler } from "@/features/editor/tab-key";
+  import { createCodeEditorApply } from "./code-editor/code-editor-apply.svelte";
+  import { createCodeEditorFind } from "./code-editor/code-editor-find.svelte";
+  import { createCodeEditorKeyboard } from "./code-editor/code-editor-keyboard.svelte";
+  import { createCodeEditorHighlighting } from "./code-editor/code-editor-highlighting.svelte";
+  import { createCodeEditorSlideNav } from "./code-editor/code-editor-slide-nav.svelte";
+  import FindReplaceBar from "@/features/editor/FindReplaceBar.svelte";
   import CodeEditorHeader from "@/features/editor/CodeEditorHeader.svelte";
   import CodeEditorBody from "@/features/editor/CodeEditorBody.svelte";
   import CodeEditorFooter from "@/features/editor/CodeEditorFooter.svelte";
-  import { onFindInCode, emitOpenSearch } from "$lib/lib/app-events";
 
   let {
     project,
@@ -96,94 +90,47 @@
 
   const save = createCodeSave({ slideId: () => slideId });
 
-  function applyCode(value: string, beforeOverride?: Snapshot) {
-    if (!slideId) return;
-    const el = st.textareaEl;
-    const before = beforeOverride ?? st.editorSnapshot.current;
-    const caretStart = el?.selectionStart ?? value.length;
-    const caretEnd = el?.selectionEnd ?? caretStart;
-    const after = { code: value, caretStart, caretEnd };
-    recordEditorHistory(slideId, before, after);
-    st.editorSnapshot.current = after;
-    setLocalCode(slideId, value);
-    markSavePending(slideId, value);
-    save.schedule(slideId, value);
-  }
+  const { applyCode: handleChange } = createCodeEditorApply({
+    slideId: () => slideId,
+    textareaEl: () => st.textareaEl,
+    editorSnapshot: st.editorSnapshot,
+    save,
+  });
 
-  const handleChange = applyCode;
-
-  const findReplace = createFindReplace({
+  const { findReplace, isFindOpen, closeFind, openFind } = createCodeEditorFind({
     code: () => code,
-    textarea: () => st.textareaEl,
-    applyCode,
+    textareaEl: () => st.textareaEl,
+    applyCode: handleChange,
     saveCaret,
     editorFontSize: () => editorFontSize,
     lineHeight: () => lineHeight,
   });
-  const isFindOpen = $derived(findReplace.open);
-  const { close: closeFind } = findReplace;
-  const openFind = findReplace.openFind;
 
-  $effect(() => {
-    return onFindInCode((query) => openFind(query));
-  });
-
-  const { applyHistorySnapshot } = createEditorHistory({
+  const { handleKeyDown } = createCodeEditorKeyboard({
     slideId: () => slideId,
-    textarea: () => st.textareaEl,
+    textareaEl: () => st.textareaEl,
     handleChange,
     saveCaret,
+    isFindOpen: () => isFindOpen,
+    closeFind,
   });
 
-  const handleTabKey = createTabKeyHandler({ slideId: () => slideId, handleChange });
-
-  function handleKeyDown(e: KeyboardEvent & { currentTarget: HTMLTextAreaElement }) {
-    const isMod = e.metaKey || e.ctrlKey;
-    const key = e.key.toLowerCase();
-    if (isMod && (key === "z" || key === "y")) {
-      e.preventDefault();
-      const direction = key === "y" || (key === "z" && e.shiftKey) ? "redo" : "undo";
-      if (!applyHistorySnapshot(direction)) {
-        document.execCommand(direction);
-      }
-      return;
-    }
-    if (isMod && key === "f" && !e.shiftKey) {
-      e.preventDefault();
-      emitOpenSearch();
-      return;
-    }
-    if (e.key === "Escape" && isFindOpen) {
-      e.preventDefault();
-      closeFind();
-      return;
-    }
-    if (e.key !== "Tab" || !slideId) return;
-    handleTabKey(e);
-  }
-
-  function goSlide(dir: -1 | 1) {
-    try {
-      const el = st.textareaEl;
-      if (el && slideId) {
-        setCaretPosition(slideId, el.selectionStart, el.selectionEnd);
-      }
-    } catch {
-      /* ignore */
-    }
-    save.flush();
-    const next = project.slides[currentIndex + dir];
-    if (next) setCurrentSlideId(next.id);
-  }
+  const { goSlide } = createCodeEditorSlideNav({
+    slides: () => project.slides,
+    currentIndex: () => currentIndex,
+    slideId: () => slideId,
+    textareaEl: () => st.textareaEl,
+    save,
+  });
 
   const currentHighlights = $derived(slide?.highlights ?? []);
-  const crud = createHighlightCrud({
+  const crud = createCodeEditorHighlighting({
     projectId,
     slideId: () => slideId,
     highlights: () => currentHighlights,
     code: () => code,
     highlightMode: () => st.highlightMode,
-    textarea: () => st.textareaEl,
+    textareaEl: () => st.textareaEl,
     saveCaret,
   });
 
