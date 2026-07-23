@@ -12,7 +12,7 @@
  * The strip therefore converts consider events into pointer-based
  * placement: the shadow may only advance to a slot the pointer itself has
  * reached, so a receiver card can never leapfrog the pointer. Combined
- * with the stack-zone hover suppression in BottomSlidesPanel, hovering a
+ * with the stack-zone hover suppression in the slide-strip dnd controller, hovering a
  * card pins it completely until you drop (stack) or leave (reorder
  * resumes).
  */
