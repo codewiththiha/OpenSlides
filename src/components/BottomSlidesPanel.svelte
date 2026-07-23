@@ -77,11 +77,15 @@
 
   const isCollapsed = $derived(collapsed ?? ui.isBottomPanelCollapsed);
 
-  const addSlideHook = useAddSlide(project.id, () => project);
-  const duplicateSlide = useDuplicateSlide(project.id);
-  const reorderSlides = useReorderSlides(project.id);
-  const { stackSlides, unstackSlides } = useStackSlides(project.id);
-  const updateSettings = useUpdateSlideSettings(project.id);
+  // Stable per mount (the panel lives under the project-keyed EditorInner) —
+  // untrack() marks the one-time id capture shared by the hooks below.
+  const projectId = untrack(() => project.id);
+
+  const addSlideHook = useAddSlide(projectId, () => project);
+  const duplicateSlide = useDuplicateSlide(projectId);
+  const reorderSlides = useReorderSlides(projectId);
+  const { stackSlides, unstackSlides } = useStackSlides(projectId);
+  const updateSettings = useUpdateSlideSettings(projectId);
   const theme = $derived(project.theme);
   const language = $derived(resolveProjectLanguage(project));
 
@@ -132,7 +136,7 @@
   });
 
   const search = useSlideStripSearch({
-    projectId: project.id,
+    projectId,
     ordered: () => ordered,
   });
   const searchQuery = $derived(search.searchQuery);
@@ -177,7 +181,7 @@
     });
   });
 
-  const deleter = useDeleteSlideWithUndo(project.id, {
+  const deleter = useDeleteSlideWithUndo(projectId, {
     ordered: () => ordered,
     renamingId: () => rename.renamingId,
     pendingFocusId,

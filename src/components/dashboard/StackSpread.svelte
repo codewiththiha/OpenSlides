@@ -5,6 +5,7 @@
    * 220ms close-then-unmount choreography, and dnd-kit fan-item dragging
    * are preserved via svelte/motion + the shared pointer-drag manager.
    */
+  import { untrack } from "svelte";
   import { Spring, Tween } from "svelte/motion";
   import { Ungroup, X } from "@lucide/svelte";
   import { type ProjectSummary } from "@/types";
@@ -51,7 +52,10 @@
   } = $props();
 
   let isClosing = $state(false);
-  let currentDeckRect = $state<DOMRect | null>(deckElement?.getBoundingClientRect() ?? null);
+  // Initial anchor only — re-measured in triggerClose() before every close.
+  let currentDeckRect = $state<DOMRect | null>(
+    untrack(() => deckElement?.getBoundingClientRect() ?? null),
+  );
   let closeTimer: number | undefined;
 
   function triggerClose() {

@@ -80,6 +80,7 @@
   bind:this={cellEl}
   data-chunk-id={id}
   onpointerdown={onPointerDown}
+  role="presentation"
   class={cn(
     "relative touch-pan-y rounded-xl transition-all duration-200",
     isSelfDragging && "pointer-events-none scale-95 opacity-40",

@@ -22,6 +22,7 @@
     setCurrentSlideId,
     setSaveStatus,
   } from "@/store/ui-state.svelte";
+  import { untrack } from "svelte";
   import { localCode, setLocalCode } from "@/store/slide-code.svelte";
   import { setCaretPosition } from "@/store/caretPositions";
   import { useUpdateSettings, useUpdateSlideCode } from "@/queries";
@@ -76,7 +77,10 @@
 
   let highlightMode = $state(false);
   const codeMutation = useUpdateSlideCode();
-  const projectSettingsMutation = useUpdateSettings(project.id);
+  // Stable per mount (the editor is rebuilt on project switch) — untrack()
+  // marks the one-time id capture as deliberate.
+  const projectId = untrack(() => project.id);
+  const projectSettingsMutation = useUpdateSettings(projectId);
   const language = $derived(resolveProjectLanguage(project));
   const theme = $derived(project.theme);
 
@@ -234,7 +238,7 @@
 
   const currentHighlights = $derived(slide?.highlights ?? []);
   const crud = useHighlightCrud({
-    projectId: project.id,
+    projectId,
     slideId: () => slideId,
     highlights: () => currentHighlights,
     code: () => code,

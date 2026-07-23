@@ -35,9 +35,19 @@
         class="h-5 min-w-0 flex-1 rounded px-1 text-xs font-medium"
       />
     {:else}
+      <!-- Rename affordance: same action as the context-menu rename.
+           Enter/Space mirrors the double-click for keyboard users. -->
       <span
         class="truncate text-xs font-medium"
         title="{title} — double-click or right-click to rename"
+        role="button"
+        tabindex="0"
+        onkeydown={(e) => {
+          if (!onRename || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onRename(slideId, title);
+        }}
         ondblclick={(e) => {
           if (!onRename) return;
           e.stopPropagation();

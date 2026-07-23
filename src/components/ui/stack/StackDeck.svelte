@@ -88,6 +88,10 @@
   }
 </script>
 
+<!-- The deck is ONLY interactive when count > 1 (fan-expand button then);
+     role/tabindex are conditional, which the static a11y analyzer can't
+     evaluate, so the tabindex rule is suppressed right here. -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
   class={cn("relative isolate", count > 1 && "cursor-pointer", className)}
   onmouseenter={() => (hovered = true)}
@@ -101,6 +105,7 @@
     if (count <= 1 && onDoubleClick) onDoubleClick(e);
   }}
   onkeydown={handleKeyDown}
+  role={count > 1 ? "button" : undefined}
   tabindex={count > 1 ? 0 : undefined}
   aria-label={ariaLabel ||
     (count > 1 ? `Stack of ${count}, press Enter to expand` : undefined)}

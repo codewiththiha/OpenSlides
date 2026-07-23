@@ -8,6 +8,7 @@
    * Removal fades the element out from its current opacity (svelte `fade`
    * reads it at outro start).
    */
+  import { untrack } from "svelte";
   import { Tween } from "svelte/motion";
   import { fade } from "svelte/transition";
   import { EASE_DIM } from "./easings";
@@ -24,7 +25,9 @@
     onOutroEnd?: () => void;
   } = $props();
 
-  const opacity = new Tween(0, { duration: dimMs, easing: EASE_DIM });
+  // Constructor default duration only; every set() passes the live dimMs
+  // again. untrack() marks the capture as deliberate.
+  const opacity = new Tween(0, { duration: untrack(() => dimMs), easing: EASE_DIM });
 
   $effect(() => {
     void opacity.set(dimAmount, {

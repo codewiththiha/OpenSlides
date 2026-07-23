@@ -57,7 +57,9 @@
   style="z-index: {z}"
   transition:fade={{ duration: 120 }}
 >
-  <div class="absolute inset-0" onclick={onClose}></div>
+  <!-- Backdrop dismiss is a pointer-only affordance (dialogs close via
+       Esc / their own buttons), so it carries presentation semantics. -->
+  <div class="absolute inset-0" onclick={onClose} role="presentation"></div>
   <div class={cn("relative", className)}>
     {@render children?.()}
   </div>

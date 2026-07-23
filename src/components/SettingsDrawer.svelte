@@ -6,6 +6,7 @@
    * preview instantly via previewProject overrides (Zustand → runes), while
    * DB save happens only on commit.
    */
+  import { untrack } from "svelte";
   import { X } from "@lucide/svelte";
   import Button from "./ui/Button.svelte";
   import { type Project, type ThemeName } from "@/types";
@@ -38,8 +39,11 @@
     onClose: () => void;
   } = $props();
 
-  const updateSettings = useUpdateSettings(project.id);
-  const updateTheme = useUpdateTheme(project.id);
+  // The drawer is mounted under the project-keyed EditorInner, so project.id
+  // is stable for this mount — untrack() marks the one-time capture.
+  const projectId = untrack(() => project.id);
+  const updateSettings = useUpdateSettings(projectId);
+  const updateTheme = useUpdateTheme(projectId);
 
   const previewProject = $derived(previewProjectSettings());
 
