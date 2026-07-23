@@ -4,12 +4,17 @@ import type { Project, Slide } from "$lib/types";
 
 const EMPTY_SLIDES: Slide[] = [];
 
-export function createCurrentSlide(project: () => Project | undefined) {
+export function createCurrentSlide(
+  project: () => Project | undefined,
+  slideId?: () => string | undefined,
+) {
+  // Explicit callers (§7.3) pass their own slide id; the editor defaults
+  // to the rune store's currentSlideId.
+  const id = $derived(slideId?.() ?? ui.currentSlideId);
   const slides = $derived(project()?.slides ?? EMPTY_SLIDES);
   const maps = $derived(slideMaps(slides));
   const activeSlide = $derived(
-    (ui.currentSlideId ? maps.slideMap.get(ui.currentSlideId) : undefined) ??
-      slides[0],
+    (id ? maps.slideMap.get(id) : undefined) ?? slides[0],
   );
   const activeIndex = $derived(
     activeSlide ? (maps.indexMap.get(activeSlide.id) ?? -1) : -1,
@@ -17,7 +22,7 @@ export function createCurrentSlide(project: () => Project | undefined) {
 
   return {
     get currentSlideId() {
-      return ui.currentSlideId;
+      return id;
     },
     get slides() {
       return slides;

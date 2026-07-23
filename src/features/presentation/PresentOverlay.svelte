@@ -83,6 +83,7 @@
     <div class="relative aspect-video h-full max-h-full w-full max-w-full">
       <SlidePreview
         {project}
+        slideId={activeSlide?.id}
         isPresenting
         {activeHighlightIndex}
         {onHighlightExitComplete}
