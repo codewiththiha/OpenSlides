@@ -130,6 +130,7 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     if (from < 0 || to < 0 || to >= highlights.length) return;
     const next = [...highlights];
     const [item] = next.splice(from, 1);
+    if (!item) return;
     next.splice(to, 0, item);
     mutation.mutate({ slideId, payload: { highlights: next } });
     const previewIndex = ui.previewHighlightIndex;

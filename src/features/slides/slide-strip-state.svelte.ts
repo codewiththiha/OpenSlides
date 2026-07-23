@@ -74,7 +74,7 @@ export function createSlideStripState(args: {
       const isStack = chunk.kind === "stack" && chunk.items.length > 1;
       const expanded = isStack && chunk.groupId === expandedSectionId;
       return {
-        id: isStack ? `stack:${chunk.groupId}` : chunk.items[0].id,
+        id: isStack ? `stack:${chunk.groupId}` : chunk.items[0]!.id,
         slides: chunk.items,
         groupId: isStack ? (chunk.groupId ?? null) : null,
         expanded,

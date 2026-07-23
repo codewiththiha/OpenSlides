@@ -124,7 +124,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
         armFailSafe(slide.highlights[idx]);
         setIdx(-1);
       } else {
-        args.setCurrentSlideId(list[i + 1].id);
+        args.setCurrentSlideId(list[i + 1]!.id);
       }
       return true;
     }
@@ -160,7 +160,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
     }
     if (i > 0) {
       // Land clean on the previous slide — highlights reveal forward only.
-      args.setCurrentSlideId(list[i - 1].id);
+      args.setCurrentSlideId(list[i - 1]!.id);
       return true;
     }
     return false;

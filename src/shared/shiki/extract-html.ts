@@ -5,5 +5,5 @@
  */
 export function extractShikiCodeHtml(html: string): string {
   const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
-  return match ? match[1] : html;
+  return match?.[1] ?? html;
 }

@@ -40,7 +40,7 @@ export function handleSlideCardKeyDown(
           ? navigationIds.length - 1
           : (currentIndex + (e.key === "ArrowRight" ? 1 : -1) + navigationIds.length) %
             navigationIds.length;
-    const next = cardRefs.get(navigationIds[nextIndex]);
+    const next = cardRefs.get(navigationIds[nextIndex]!);
     next?.focus();
     next?.scrollIntoView({ inline: "nearest", block: "nearest" });
     return;

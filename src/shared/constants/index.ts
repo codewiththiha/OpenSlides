@@ -119,7 +119,7 @@ void present();`,
 ] as const;
 
 /** The first starter slide is created with every new presentation. */
-export const NEW_PRESENTATION_CODE = STARTER_PRESENTATION[0].code;
+export const NEW_PRESENTATION_CODE = STARTER_PRESENTATION[0]!.code;
 
 export type StarterSlideAction = { kind: "append"; slide: StarterSlide };
 
@@ -132,6 +132,6 @@ export function nextStarterSlideAction(slides: readonly Slide[]): StarterSlideAc
     slides.every((slide, index) => slide.name === STARTER_PRESENTATION[index]?.name);
 
   return isStarterSequence
-    ? { kind: "append", slide: STARTER_PRESENTATION[nextIndex] }
+    ? { kind: "append", slide: STARTER_PRESENTATION[nextIndex]! }
     : null;
 }

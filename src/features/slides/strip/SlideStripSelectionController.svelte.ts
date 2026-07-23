@@ -92,7 +92,7 @@ export function createSlideStripSelection(args: {
   function groupSelected() {
     const selected = selectedInOrder();
     if (selected.length < 2) return;
-    args.stackSlides(selected.slice(1), selected[0], {
+    args.stackSlides(selected.slice(1), selected[0]!, {
       onSuccess: () => {
         selectedSlideIds.clear();
         for (const id of selected) selectedSlideIds.add(id);

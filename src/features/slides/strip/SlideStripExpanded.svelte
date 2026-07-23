@@ -160,12 +160,13 @@
       {/each}
     </div>
   {:else}
+    {@const firstSlide = item.slides[0]!}
     <div
       class="relative shrink-0"
-      data-stack-card={item.slides[0].id}
-      data-stack-section={item.slides[0].sectionId?.trim() ?? ""}
+      data-stack-card={firstSlide.id}
+      data-stack-section={firstSlide.sectionId?.trim() ?? ""}
     >
-      {@render stackTargetOverlay(item.slides[0].id, item.id)}
+      {@render stackTargetOverlay(firstSlide.id, item.id)}
       {#if item.slides.length > 1}
         <StackDeck
           count={item.slides.length}
@@ -173,12 +174,12 @@
           class="shrink-0"
           style="height: {ITEM_HEIGHT}px;"
           onExpand={() => (strip.expandedSectionId = item.groupId)}
-          onOpenTop={() => setCurrentSlideId(item.slides[0].id)}
+          onOpenTop={() => setCurrentSlideId(firstSlide.id)}
         >
-          {@render cardFor(item.slides[0])}
+          {@render cardFor(firstSlide)}
         </StackDeck>
       {:else}
-        {@render cardFor(item.slides[0])}
+        {@render cardFor(firstSlide)}
       {/if}
     </div>
   {/if}

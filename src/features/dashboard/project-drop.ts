@@ -22,7 +22,7 @@ const UNSTACK_DISTANCE = 120;
 export function chunkIdOf(chunk: GroupChunk<ProjectSummary>): string {
   return chunk.kind === "stack" && chunk.items.length > 1
     ? chunk.groupId!
-    : chunk.items[0].id;
+    : chunk.items[0]!.id;
 }
 
 function sourceIdsOf(payload: ProjectDragPayload): string[] {

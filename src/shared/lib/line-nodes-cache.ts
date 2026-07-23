@@ -43,13 +43,13 @@ function collectLineTextNodesUncached(root: HTMLElement): Text[][] {
         if (t.data === "\n") {
           current.push([]);
         } else if (t.data) {
-          current[current.length - 1].push(t);
+          current[current.length - 1]!.push(t);
         }
       }
     });
   };
   walk(root);
-  while (current.length > 1 && current[current.length - 1].length === 0) {
+  while (current.length > 1 && current[current.length - 1]!.length === 0) {
     current.pop();
   }
   return current;
@@ -74,7 +74,7 @@ export function getLineTextNodes(root: HTMLElement): Text[][] {
   if (lineSpans.length > 0 && cached && cached.lineSpans.length === lineSpans.length) {
     const nodes = lineSpans.map((span, index) =>
       span === cached.lineSpans[index]
-        ? cached.nodes[index]
+        ? (cached.nodes[index] ?? collectLineSpanTextNodes(span))
         : collectLineSpanTextNodes(span),
     );
     nodesCache.set(root, { lineSpans, nodes, dirty: false });

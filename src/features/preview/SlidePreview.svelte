@@ -74,7 +74,7 @@
 
   const activeHighlight = $derived(
     activeHighlightIndex >= 0 && activeHighlightIndex < highlights.length
-      ? highlights[activeHighlightIndex]
+      ? (highlights[activeHighlightIndex] ?? null)
       : null,
   );
 

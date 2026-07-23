@@ -24,7 +24,7 @@
  */
 export function pointerInsertIndex(pointerX: number, childCenters: number[]): number {
   for (let i = 0; i < childCenters.length; i++) {
-    if (childCenters[i] > pointerX) return i;
+    if (childCenters[i]! > pointerX) return i;
   }
   return childCenters.length;
 }

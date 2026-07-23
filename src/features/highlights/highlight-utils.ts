@@ -77,6 +77,7 @@ function rectForCharRange(
   if (!started) return null;
   if (!endSet) {
     const last = nodes[nodes.length - 1];
+    if (!last) return null;
     try {
       range.setEnd(last, last.data.length);
     } catch {
@@ -153,6 +154,7 @@ export function measureHighlight(
 
   if (segments.length === 0) return null;
 
+  const first = segments[0]!;
   const union = segments.reduce(
     (acc, s) => ({
       x: Math.min(acc.x, s.rect.x),
@@ -161,10 +163,10 @@ export function measureHighlight(
       bottom: Math.max(acc.bottom, s.rect.y + s.rect.height),
     }),
     {
-      x: segments[0].rect.x,
-      y: segments[0].rect.y,
-      right: segments[0].rect.x + segments[0].rect.width,
-      bottom: segments[0].rect.y + segments[0].rect.height,
+      x: first.rect.x,
+      y: first.rect.y,
+      right: first.rect.x + first.rect.width,
+      bottom: first.rect.y + first.rect.height,
     },
   );
 
@@ -218,6 +220,7 @@ export function measureHighlightPureMath(
 
   if (segments.length === 0) return null;
 
+  const first = segments[0]!;
   const union = segments.reduce(
     (acc, s) => ({
       x: Math.min(acc.x, s.rect.x),
@@ -226,10 +229,10 @@ export function measureHighlightPureMath(
       bottom: Math.max(acc.bottom, s.rect.y + s.rect.height),
     }),
     {
-      x: segments[0].rect.x,
-      y: segments[0].rect.y,
-      right: segments[0].rect.x + segments[0].rect.width,
-      bottom: segments[0].rect.y + segments[0].rect.height,
+      x: first.rect.x,
+      y: first.rect.y,
+      right: first.rect.x + first.rect.width,
+      bottom: first.rect.y + first.rect.height,
     },
   );
 
