@@ -61,10 +61,13 @@ active highlight" step reveal; `HighlightStepIndicator` shows progress and
   `nav.spotlightActive` is threaded down so only the dim overlay survives
   the gap (`HighlightLayer` also caches the last highlight so a held dim
   keeps its custom amount/duration).
-- There is **no eraser panel**: everything dims uniformly and the clone
-  pops bright on top. (Painting an opaque box over the original text read
-  as a black slab, so the mechanism was deleted along with
-  `mixTowardBlack`/`plan.eraserColor`.)
+- There are **no painted panels over the code** (the old eraser boxes /
+  `mixTowardBlack` read as black slabs and were deleted). Instead
+  `createHighlightUnderlay` fades the ORIGINAL token spans of the
+  selection to opacity 0 in sync with the dim (`dimMs` + EASE_DIM), using
+  the same cached line text nodes the measurer uses — so only the bright
+  clone shows in that spot, and the originals fade back in on step
+  change/removal.
 - The last highlight's outro plays fully before the slide advances (the
   layer's exit-complete signal drives the advance, with the fail-safe
   timer as backstop).

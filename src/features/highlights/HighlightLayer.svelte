@@ -10,8 +10,10 @@
    *  - clone layer: {#key highlight.id} — swap on steps
    *
    * There is deliberately NO eraser panel under the clone: painting an
-   * opaque box over the original text read as a black slab. Everything dims
-   * uniformly and the clone pops bright on top.
+   * opaque box over the original text read as a black slab. Instead the
+   * ORIGINAL token spans of the selection fade to opacity 0 in sync with
+   * the dim (createHighlightUnderlay), so only the bright clone shows in
+   * that spot — no box, no echo.
    *
    * Step changes are sequenced by createHighlightNav (outro fully, then
    * intro): the nav parks the index at -1 with `spotlightActive` still true,
@@ -26,6 +28,7 @@
   import type { Highlight } from "$lib/types";
   import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
   import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
+  import { createHighlightUnderlay } from "@/features/highlights/highlight-underlay.svelte";
   import HighlightDimOverlay from "@/features/highlights/HighlightDimOverlay.svelte";
   import HighlightCloneLayer from "@/features/highlights/HighlightCloneLayer.svelte";
 
@@ -107,6 +110,13 @@
 
   const plan = $derived(planCtl.plan);
   const measurement = $derived(measurementCtl.measurement);
+
+  // Fade the original text chunk under the clone (under-fade to 0).
+  createHighlightUnderlay({
+    codeContainer: () => codeContainer(),
+    measurement: () => measurementCtl.measurement,
+    dimMs: () => dimMs,
+  });
   const hasSegments = $derived(
     Boolean(plan && measurement && measurement.segments.length > 0),
   );
