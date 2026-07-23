@@ -1,0 +1,31 @@
+/**
+ * slide-code — per-slide local code overrides (editor shadow while typing).
+ *
+ * React version (localCodeAtoms.ts, 89 lines) built a per-slide external
+ * store with listenersMap + subscribeLocalCodeAtom + useSyncExternalStore
+ * exactly to get what Svelte 5 gives by default: property-level reactivity.
+ * Reading `localCode[id]` in a component tracks ONLY that key — typing in
+ * slide A re-runs slide A's card, not 20 selector calls + 20 renders.
+ */
+
+export const localCode = $state<Record<string, string>>({});
+
+export function getLocalCode(id: string): string | undefined {
+  return localCode[id];
+}
+
+export function setLocalCode(id: string, code: string) {
+  if (localCode[id] === code) return;
+  localCode[id] = code;
+}
+
+export function clearLocalCode(id: string) {
+  if (!(id in localCode)) return;
+  delete localCode[id];
+}
+
+export function clearAllLocalCode() {
+  for (const id of Object.keys(localCode)) {
+    delete localCode[id];
+  }
+}

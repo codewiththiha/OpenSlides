@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { toast } from "svelte-sonner";
 const DUR = { default: 4000, success: 3200, error: 5200 } as const;
 const SHELL = "group toast-openslides toast-fixed relative flex items-center gap-3 rounded-xl border bg-card text-card-foreground shadow-lg";
 type Opts = { description?: string; duration?: number; glow?: boolean; action?: { label: string; onClick: () => void }; id?: string | number; tone?: keyof typeof DUR };
@@ -9,7 +9,7 @@ function show(t: keyof typeof DUR, title: string, o: Opts = {}) {
   const noAct = !o.action ? " toast-no-action" : "";
   return toast(title, {
     id: o.id, description: desc, duration: o.duration ?? DUR[t],
-    className: `${SHELL} ${toneCls}${noAct}`, unstyled: true,
+    class: `${SHELL} ${toneCls}${noAct}`, unstyled: true,
     action: o.action ?? { label: "\u00a0\u00a0\u00a0\u00a0", onClick: () => {} },
   });
 }

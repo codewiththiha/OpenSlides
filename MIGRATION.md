@@ -1,0 +1,76 @@
+# React 19 → Svelte 5 Migration
+
+Complete rewrite of the frontend from React 19 to Svelte 5 (runes mode).
+`src-tauri/` is untouched; all Tauri commands, the SQLite layer, and the
+native menu protocol are identical.
+
+## Library mapping
+
+| React (before)                        | Svelte 5 (after)                                   |
+| ------------------------------------- | -------------------------------------------------- |
+| react, react-dom                      | svelte                                             |
+| zustand (+ persist, slices, selectors)| `$state` runes (`src/store/ui-state.svelte.ts`)    |
+| @tanstack/react-query                 | @tanstack/svelte-query (singleton client, explicit)|
+| react-router-dom (HashRouter)         | svelte-spa-router (hash-based, same URLs)          |
+| @dnd-kit/*                            | svelte-dnd-action + custom pointer DnD (dashboard) |
+| framer-motion                         | svelte/transition + svelte/motion (Spring/Tween)   |
+| @radix-ui/*                           | bits-ui                                            |
+| cmdk                                  | cmdk-sv                                            |
+| sonner                                | svelte-sonner                                      |
+| lucide-react                          | lucide-svelte                                      |
+| react-resizable-panels                | paneforge                                          |
+| @tanstack/react-virtual               | @tanstack/svelte-virtual (Readable store)          |
+| use-debounce                          | `$effect` + `setTimeout` (editor saves, search)    |
+| clsx + tailwind-merge, CVA, shiki,    | unchanged                                          |
+| workers, Tailwind v4                  |                                                    |
+
+## Structure
+
+- `src/main.ts` — Svelte `mount()`, dark-class bootstrap, quit-save flush.
+- `src/App.svelte` — routes `/`, `/editor/:projectId`, `*` (redirect).
+- `src/store/ui-state.svelte.ts` — the app store; persisted slice keeps the
+  exact zustand-persist localStorage wire format (`{ state, version }`).
+- `src/queries/` — TanStack query/mutation hooks (was `src/hooks/queries/`).
+- `*.svelte.ts` — rune modules (hooks/services). Plain `.ts` files must NOT
+  use runes (the Svelte compiler only transforms `.svelte` / `.svelte.*`).
+- Component tree mirrors the old one 1:1 (`src/components/**`).
+
+## Notable behavioural parity decisions
+
+- **CodeEditor textarea is uncontrolled** (value written once at mount /
+  slide switch by `useCodeEditorCaret`). The old controlled round-trip (cache
+  stamp → value assignment → caret teleport) cannot recur; the regression
+  suites (`tests/editor-save-race`, `tests/codeeditor-typing`) mount the real
+  component in jsdom and assert it end-to-end.
+- Drag-and-drop: slide rail uses svelte-dnd-action; dashboard project grid
+  uses a custom pointer-DnD manager (`src/lib/project-dnd.svelte.ts`)
+  reproducing dnd-kit's 8 px threshold + rect-collision semantics, including
+  drops through the StackSpread backdrop.
+- Outro/exit animations that React coordinated via AnimatePresence are driven
+  by `|global` transitions + explicit exit-complete signals (see
+  `useHighlightNav`, `HighlightLayer`).
+- framer springs retuned to equivalent unit-mass Svelte spring constants;
+  durations converted seconds → ms.
+- cmdk-sv's root component is `Command.Root` (not bare `<Command>`).
+- bits-ui v2 Slider has no `Track` subcomponent (plain span inside the
+  Root's children snippet; `Thumb` requires `index`).
+- paneforge `expand()` takes no size argument (unlike
+  react-resizable-panels): expand + resize instead.
+- lucide-svelte ships legacy `SvelteComponentTyped` classes, so icon-taking
+  props use the `IconComponent` type from `src/lib/icon-types.ts`.
+
+## Tests
+
+Run with: `npm run test:highlight`, `npm run test:save-race`.
+
+The React/jsdom suites were ported to mount real Svelte components:
+`scripts/lib/esbuild-svelte.mjs` precompiles `.svelte` and `.svelte.ts`
+modules for esbuild; `tests/harness/*` mirrors the app wiring
+(`EditorInner` → live query cache → `CodeEditor`). 27 tests, all passing.
+
+## Verification
+
+- `npx svelte-check --tsconfig ./tsconfig.json` → 0 errors
+  (32 warnings: a11y notices carried over from the React markup, and
+  intentional initial-value captures for project-scoped hooks).
+- `npm run build` → clean.

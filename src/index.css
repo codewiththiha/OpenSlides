@@ -80,7 +80,7 @@
 
   html,
   body,
-  #root {
+  #app {
     height: 100%;
     margin: 0;
     overflow: hidden;
@@ -110,17 +110,17 @@
   }
 }
 
-/* Resize handles */
-[data-panel-resize-handle-id] {
+/* Resize handles (paneforge) */
+[data-pane-resizer] {
   transition: background 0.15s ease;
   position: relative;
 }
-[data-panel-group-direction="horizontal"] > [data-panel-resize-handle-id]::after {
+[data-pane-group][data-direction="horizontal"] > [data-pane-resizer]::after {
   content: "";
   position: absolute;
   inset: 0 -3px;
 }
-[data-panel-group-direction="vertical"] > [data-panel-resize-handle-id]::after {
+[data-pane-group][data-direction="vertical"] > [data-pane-resizer]::after {
   content: "";
   position: absolute;
   inset: -3px 0;
@@ -345,4 +345,11 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .openslides-progress-anim { animation: none !important; transform: scaleX(1); }
+}
+
+/* Pointer-drag sessions (dashboard project stacks) */
+.project-dnd-active,
+.project-dnd-active * {
+  user-select: none !important;
+  cursor: grabbing !important;
 }
