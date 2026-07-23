@@ -7,6 +7,15 @@
    * transition per property, so the node is split in two nested divs:
    * outer = opacity fade, inner = scale grow. The parent wraps this
    * component in {#key highlight.id} so step changes crossfade.
+   *
+   * The inner div carries a persistent `transform: scale(scaleTarget)` as its
+   * resting state: Svelte transitions only style the node while the WAAPI
+   * animation runs and cancel it on finish, so without an inline transform
+   * the clone would snap back to scale 1 the instant the intro ends. The
+   * running animation overrides the inline style (1 → scaleTarget), then the
+   * hand-off at the identical end value is seamless. The outro (scaleTarget →
+   * 1) therefore only plays when the keyed block swaps or the highlight is
+   * removed — never right after the intro.
    */
   import { fade } from "svelte/transition";
   import type { HighlightMeasurement } from "@/features/highlights/highlight-utils";
@@ -45,7 +54,7 @@
 >
   <div
     class="h-full w-full"
-    style="transform-origin: center center; will-change: transform;"
+    style="transform-origin: center center; transform: scale({scaleTarget}); will-change: transform;"
     transition:grow|global={{
       duration: sizeMs,
       easing: EASE_SCALE,
