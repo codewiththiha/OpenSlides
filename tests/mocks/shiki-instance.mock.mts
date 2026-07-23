@@ -30,7 +30,23 @@ const MARKER = "#7ee787"; // proves "colored" in assertions
 export function getHighlighter(): Promise<{
   getLoadedLanguages: () => string[];
   codeToHtml: (src: string, opts: { lang: string; theme: string }) => string;
+  codeToTokens: (
+    src: string,
+    opts: { lang: string; theme: string },
+  ) => { tokens: Array<Array<{ content: string; color: string; offset: number; fontStyle: number }>> };
+  codeToTokensBase: (
+    src: string,
+    opts: { lang: string; theme: string },
+  ) => Array<Array<{ content: string; color: string; offset: number; fontStyle: number }>>;
 }> {
+  const tokensBase = (src: string) => {
+    let offset = 0;
+    return src.split("\n").map((line) => {
+      const t = [{ content: line, color: MARKER, offset, fontStyle: 0 }];
+      offset += line.length + 1;
+      return t;
+    });
+  };
   return Promise.resolve({
     getLoadedLanguages: () => [...LOADED],
     codeToHtml: (src, opts) => {
@@ -44,6 +60,14 @@ export function getHighlighter(): Promise<{
         )
         .join("\n");
       return `<pre class="shiki"><code>${lines}</code></pre>`;
+    },
+    codeToTokens: (src, opts) => {
+      if (!LOADED.includes(opts.lang)) throw new Error("not loaded");
+      return { tokens: tokensBase(src) };
+    },
+    codeToTokensBase: (src, opts) => {
+      if (!LOADED.includes(opts.lang)) throw new Error("not loaded");
+      return tokensBase(src);
     },
   });
 }

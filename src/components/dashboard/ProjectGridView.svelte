@@ -9,6 +9,7 @@
    *  - one DragOverlay-equivalent clone anchored to the grabbed rect
    */
   import { createVirtualizer } from "@tanstack/svelte-virtual";
+  import { get } from "svelte/store";
   import DroppableProjectCell from "./DroppableProjectCell.svelte";
   import ProjectCard from "./ProjectCard.svelte";
   import StackSpread from "./StackSpread.svelte";
@@ -87,7 +88,12 @@
 
   $effect(() => {
     const count = rowCount;
-    $rowVirtualizer.setOptions({
+    // The instance is read NON-reactively (get(), not $rowVirtualizer):
+    // svelte-virtual's setOptions always ends with a store.set() that marks
+    // subscribers dirty (objects are never "equal"), so a tracked read here
+    // would re-trigger this very effect forever — Svelte's
+    // effect_update_depth_exceeded guard fired and the dashboard froze.
+    get(rowVirtualizer).setOptions({
       count,
       getScrollElement: () => parentEl,
       estimateSize: () => 220,

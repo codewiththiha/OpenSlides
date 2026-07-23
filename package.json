@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test:highlight": "node scripts/run-highlight-tests.mjs",
-    "test:save-race": "node scripts/run-save-race-tests.mjs"
+    "test:save-race": "node scripts/run-save-race-tests.mjs",
+    "test:app-flow": "node scripts/run-present-tests.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.25.0",

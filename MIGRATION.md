@@ -65,12 +65,31 @@ native menu protocol are identical.
 
 ## Tests
 
-Run with: `npm run test:highlight`, `npm run test:save-race`.
+Run with: `npm run test:highlight`, `npm run test:save-race`,
+`npm run test:app-flow`.
 
 The React/jsdom suites were ported to mount real Svelte components:
 `scripts/lib/esbuild-svelte.mjs` precompiles `.svelte` and `.svelte.ts`
 modules for esbuild; `tests/harness/*` mirrors the app wiring
 (`EditorInner` → live query cache → `CodeEditor`). 27 tests, all passing.
+
+The app-flow suite (`npm run test:app-flow`) mounts the REAL `App.svelte`
+(hash router + Dashboard + EditorInner) against a full in-memory
+`tauri-api` mock and drives the complete user journey — dashboard card
+click → editor → Present → stage clicks stepping highlights → slide
+advance → exit. It caught a genuine post-migration freeze:
+
+- **Dashboard effect loop (fixed).** `ProjectGridView` synced row options
+  via `$effect(() => { $rowVirtualizer.setOptions(...) })`. svelte-virtual's
+  `setOptions` ends with an unconditional store notification, and Svelte
+  stores always treat object values as changed — so the tracked `$store`
+  read made the effect re-run forever until the
+  `effect_update_depth_exceeded` guard fired, wedging the dashboard (cards
+  unclickable). The instance is now read non-reactively with
+  `get(rowVirtualizer)`; only `rowCount` is tracked.
+- **Care-taking after unmount (fixed).** `saveCaret` read a slide-id
+  derived that could already belong to the destroyed editor branch; it now
+  bails out on a detached textarea first.
 
 ## Verification
 
@@ -78,3 +97,5 @@ modules for esbuild; `tests/harness/*` mirrors the app wiring
   (32 warnings: a11y notices carried over from the React markup, and
   intentional initial-value captures for project-scoped hooks).
 - `npm run build` → clean.
+- `npm run test:highlight` → 13/13; `npm run test:save-race` → 14/14;
+  `npm run test:app-flow` → 4/4.
