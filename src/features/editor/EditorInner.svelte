@@ -6,8 +6,8 @@
    *  - EditorToolbar (TitleBar + save badge + slide name + actions)
    *  - EditorLayout (resizable preview/code/slides)
    *  - PresentOverlay (fullscreen stage)
-   *  - useEditorKeyboard (reads getState()-style via the ui $state inside)
-   *  - usePresentFullscreen (enter/exit/fullscreenchange)
+   *  - createEditorKeyboard (reads getState()-style via the ui $state inside)
+   *  - createPresentFullscreen (enter/exit/fullscreenchange)
    *  - ui-state runes replacing the old Zustand slices
    *
    * `projectId` is a fixed prop (the route wrapper keys this component on
@@ -32,7 +32,7 @@
     clearAllPreviewSettings,
     resetEditorUi,
   } from "$lib/stores/ui-state.svelte";
-  import { useCurrentSlide } from "@/hooks/useCurrentSlide.svelte";
+  import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
   import Button from "$lib/ui/Button.svelte";
   import TitleBar from "$lib/components/TitleBar.svelte";
   import SettingsDrawer from "@/features/settings/SettingsDrawer.svelte";
@@ -44,19 +44,19 @@
   import EditorLayout from "./EditorLayout.svelte";
   import PresentOverlay from "@/features/presentation/PresentOverlay.svelte";
   import {
-    useProject,
-    useCreateProject,
-    useExportProject,
-    useUpdateTheme,
+    projectQuery,
+    createProjectMutation,
+    exportProjectMutation,
+    updateProjectThemeMutation,
   } from "$lib/queries";
-  import { useAddSlide } from "@/hooks/useAddSlide.svelte";
-  import { useDuplicateSlide } from "@/hooks/useSlideActions.svelte";
+  import { createAddSlide } from "@/features/slides/add-slide.svelte";
+  import { createSlideDuplicator } from "@/features/slides/slide-actions.svelte";
   import { api } from "$lib/lib/tauri-api";
-  import { useAppMenu } from "@/hooks/useAppMenu.svelte";
-  import { useHighlightNav } from "@/hooks/useHighlightNav.svelte";
-  import { useEditorKeyboard } from "@/hooks/useEditorKeyboard.svelte";
-  import { usePresentFullscreen } from "@/hooks/usePresentFullscreen.svelte";
-  import { useWindowTitle } from "@/hooks/useWindowTitle.svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import { subscribeToAppMenu } from "$lib/lib/app-menu.svelte";
+  import { createHighlightNav } from "@/features/highlights/highlight-nav.svelte";
+  import { createEditorKeyboard } from "@/features/editor/keyboard.svelte";
+  import { createPresentFullscreen } from "@/features/presentation/fullscreen.svelte";
   import { dismissAllUndoToasts } from "$lib/lib/settings-undo";
 
   let { projectId }: { projectId?: string } = $props();
@@ -67,20 +67,24 @@
   const pid = untrack(() => projectId ?? "");
 
   // Project data (TanStack) — owns slides / theme / settings
-  const projectQuery = useProject(pid);
-  const project = $derived(projectQuery.data);
+  const projQuery = projectQuery(pid);
+  const project = $derived(projQuery.data);
 
-  const exportMutation = useExportProject();
-  const duplicateSlide = useDuplicateSlide(pid);
-  const updateTheme = useUpdateTheme(pid);
-  const createProject = useCreateProject();
-  const { addSlide } = useAddSlide(pid, () => project);
+  const exportMutation = exportProjectMutation();
+  const duplicateSlide = createSlideDuplicator(pid);
+  const updateTheme = updateProjectThemeMutation(pid);
+  const createProject = createProjectMutation();
+  const { addSlide } = createAddSlide(pid, () => project);
 
   let editorExpanded = $state(false);
 
   // -- Side effects: title, initial slide, debounced currentSlide persistence --
   const title = $derived(project ? `OpenSlides — ${project.name}` : "OpenSlides");
-  useWindowTitle(() => title);
+  // Native + document window title follows the open project's name.
+  $effect(() => {
+    document.title = title;
+    getCurrentWindow().setTitle(title).catch(() => undefined);
+  });
 
   $effect(() => {
     const p = project;
@@ -114,11 +118,11 @@
   // -- Highlight navigation --
   const slides = $derived(project?.slides ?? []);
 
-  const cs = useCurrentSlide(() => project);
+  const cs = createCurrentSlide(() => project);
   const activeSlide = $derived(cs.activeSlide);
   const currentIndex = $derived(cs.activeIndex);
 
-  const nav = useHighlightNav({
+  const nav = createHighlightNav({
     slides: () => slides,
     currentIndex: () => currentIndex,
     currentSlideId: () => ui.currentSlideId,
@@ -127,10 +131,10 @@
   const activeHighlightIndex = $derived(nav.highlightIndex);
 
   // -- Fullscreen present --
-  const { enterPresent, exitPresent } = usePresentFullscreen();
+  const { enterPresent, exitPresent } = createPresentFullscreen();
 
   // -- Keyboard (number keys 1-9 jump to highlight) --
-  useEditorKeyboard(() => ({
+  createEditorKeyboard(() => ({
     goNext: nav.goNext,
     goPrev: nav.goPrev,
     goToHighlight: nav.goToHighlight,
@@ -158,7 +162,7 @@
 
   // -- Native app menu --
   // React kept refs + a memoized map to stabilize listeners; the Svelte
-  // useAppMenu subscribes once and handlers read fresh state from `ui`
+  // subscribeToAppMenu subscribes once and handlers read fresh state from `ui`
   // directly, so no refs are needed.
   const menuHandlers = {
     "menu://new-project": () => {
@@ -190,21 +194,21 @@
       window.dispatchEvent(new Event("openslides:redo"));
     },
   };
-  useAppMenu(() => menuHandlers);
+  subscribeToAppMenu(() => menuHandlers);
 </script>
 
-{#if projectQuery.isLoading}
+{#if projQuery.isLoading}
   <div class="flex h-full flex-col">
     <TitleBar title="OpenSlides" />
     <AsyncState isLoading isError={false} loadingLabel="Loading project…" />
   </div>
-{:else if projectQuery.isError || !project}
+{:else if projQuery.isError || !project}
   <div class="flex h-full flex-col">
     <TitleBar title="OpenSlides" />
     <AsyncState
       isLoading={false}
       isError
-      error={(projectQuery.error as Error | null) ?? null}
+      error={(projQuery.error as Error | null) ?? null}
     >
       {#snippet errorAction()}
         <Button onclick={() => void push("/")}>Back to Dashboard</Button>

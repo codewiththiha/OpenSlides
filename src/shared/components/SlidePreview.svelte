@@ -5,19 +5,19 @@
    * (previewProject / previewSlides / previewHighlights) so
    * fontSize / lineHeight / transitions update live during drag.
    */
-  import { useShikiDisplay } from "@/hooks/useShikiDisplay";
+  import { magicMoveShikiDisplay } from "$lib/shiki/shiki-display.svelte";
   import {
     themeBackground,
     resolveProjectLanguage,
     type Project,
   } from "$lib/types";
-  import { useEffectiveSettings } from "@/hooks/useEffectiveSettings.svelte";
+  import { createEffectiveSettings } from "@/features/settings/effective-settings.svelte";
   import {
     previewMergedHighlights,
     previewProjectSetting,
-  } from "@/hooks/usePreviewSettings";
+  } from "@/features/settings/preview-settings";
   import { localCode } from "$lib/stores/slide-code.svelte";
-  import { useCurrentSlide } from "@/hooks/useCurrentSlide.svelte";
+  import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
   import HighlightLayer from "@/features/highlights/HighlightLayer.svelte";
   import MagicMoveBlock from "@/features/editor/preview/MagicMoveBlock.svelte";
   import PreviewFallback from "@/features/editor/preview/PreviewFallback.svelte";
@@ -35,7 +35,7 @@
     onHighlightExitComplete?: () => void;
   } = $props();
 
-  const currentSlide = useCurrentSlide(() => project);
+  const currentSlide = createCurrentSlide(() => project);
   const slide = $derived(currentSlide.activeSlide);
   const code = $derived(slide ? (localCode[slide.id] ?? slide.code) : "");
 
@@ -43,7 +43,7 @@
   let codeContainerEl = $state<HTMLDivElement | null>(null);
 
   // --- instant preview overrides ---
-  const effective = useEffectiveSettings(() => project, () => slide);
+  const effective = createEffectiveSettings(() => project, () => slide);
 
   const language = $derived(resolveProjectLanguage(project));
   const theme = $derived(previewProjectSetting("theme") ?? project.theme);
@@ -51,7 +51,7 @@
     previewProjectSetting("useBlackCodeBackground"),
   );
 
-  const shiki = useShikiDisplay(() => ({ theme, language }));
+  const shiki = magicMoveShikiDisplay(() => ({ theme, language }));
 
   const s = $derived(project.settings);
   const fontSize = $derived(effective.settings.fontSize);

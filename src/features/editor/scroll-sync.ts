@@ -5,7 +5,7 @@ interface UseCodeEditorScrollSyncArgs {
   crud: { closeContextMenu: () => void };
 }
 
-export function useCodeEditorScrollSync(args: UseCodeEditorScrollSyncArgs) {
+export function createScrollSync(args: UseCodeEditorScrollSyncArgs) {
   function syncScroll() {
     args.crud.closeContextMenu();
     const el = args.textarea();

@@ -11,44 +11,52 @@
   import ProjectGridView from "@/features/dashboard/ProjectGridView.svelte";
   import ConfirmDialog from "$lib/ui/ConfirmDialog.svelte";
   import {
-    useProjects,
-    useCreateProject,
-    useDuplicateProject,
-    useDeleteProject,
-    useExportProject,
-    useImportProject,
-    useRenameProject,
+    projectsQuery,
+    createProjectMutation,
+    duplicateProjectMutation,
+    deleteProjectMutation,
+    exportProjectMutation,
+    importProjectMutation,
+    renameProjectMutation,
   } from "$lib/queries";
-  import { useInlineRename } from "@/hooks/useInlineRename.svelte";
-  import { useWindowTitle } from "@/hooks/useWindowTitle.svelte";
-  import { useBaseAppMenuHandlers } from "@/hooks/useBaseAppMenuHandlers";
+  import { createRenameState } from "$lib/lib/rename-state.svelte";
   import { isModKey, isTypingTarget } from "$lib/lib/keyboard";
   import { modKeyLabel } from "$lib/lib/platform";
-  import { useAppMenu } from "@/hooks/useAppMenu.svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
+  import {
+    subscribeToAppMenu,
+    type AppMenuHandlers,
+  } from "$lib/lib/app-menu.svelte";
   import {
     ui,
     applyUiTheme,
     setIsCommandOpen,
     setIsShortcutsOpen,
+    toggleTheme,
   } from "$lib/stores/ui-state.svelte";
   import { api } from "$lib/lib/tauri-api";
   import { notify } from "$lib/lib/toast";
 
-  const projectsQuery = useProjects();
-  const projects = $derived(projectsQuery.data ?? []);
-  const createMutation = useCreateProject();
-  const duplicateMutation = useDuplicateProject();
-  const deleteMutation = useDeleteProject();
-  const exportMutation = useExportProject();
-  const importMutation = useImportProject();
-  const renameMutation = useRenameProject();
+  const listQuery = projectsQuery();
+  const projects = $derived(listQuery.data ?? []);
+  const createMutation = createProjectMutation();
+  const duplicateMutation = duplicateProjectMutation();
+  const deleteMutation = deleteProjectMutation();
+  const exportMutation = exportProjectMutation();
+  const importMutation = importProjectMutation();
+  const renameMutation = renameProjectMutation();
 
   let creating = $state(false);
   let newName = $state("Untitled Presentation");
   let selectedTheme = $state("dark-plus");
   let deleteTarget = $state<{ id: string; name: string } | null>(null);
 
-  useWindowTitle(() => "OpenSlides — Presentations");
+  // Native + document window title for the dashboard route.
+  $effect(() => {
+    const t = "OpenSlides — Presentations";
+    document.title = t;
+    getCurrentWindow().setTitle(t).catch(() => undefined);
+  });
 
   $effect(() => {
     applyUiTheme(ui.isDarkUi);
@@ -77,7 +85,7 @@
     }
   }
 
-  const rename = useInlineRename(async (id: string, name: string) => {
+  const rename = createRenameState(async (id: string, name: string) => {
     await renameMutation.mutateAsync({
       projectId: id,
       name: name || "Untitled Presentation",
@@ -116,14 +124,19 @@
     }
   }
 
-  const menuHandlers = useBaseAppMenuHandlers({
-    onNewProject: () => (creating = true),
-    onExport: () => {
+  const menuHandlers: AppMenuHandlers = {
+    "menu://new-project": () => (creating = true),
+    "menu://open-dashboard": () => void push("/"),
+    "menu://command-palette": () => setIsCommandOpen(true),
+    "menu://toggle-theme": () => toggleTheme(),
+    "menu://shortcuts-app": () => setIsShortcutsOpen(true),
+    "menu://shortcuts-help": () => setIsShortcutsOpen(true),
+    "menu://export": () => {
       const first = projects[0];
       if (first) exportMutation.mutate(first.id);
     },
-  });
-  useAppMenu(() => menuHandlers);
+  };
+  subscribeToAppMenu(() => menuHandlers);
 
   const mod = modKeyLabel();
 </script>
@@ -161,7 +174,7 @@
     {/snippet}
   </TitleBar>
 
-  {#if creating && !projectsQuery.isLoading && !projectsQuery.isError}
+  {#if creating && !listQuery.isLoading && !listQuery.isError}
     <div class="mx-auto max-w-7xl px-6 pt-8">
       <CreateDeckTile
         isExpanded={creating || projects.length === 0}
@@ -178,15 +191,15 @@
   {/if}
 
   <DashboardStates
-    isLoading={projectsQuery.isLoading}
-    isError={projectsQuery.isError}
-    error={(projectsQuery.error as Error | null) ?? null}
+    isLoading={listQuery.isLoading}
+    isError={listQuery.isError}
+    error={(listQuery.error as Error | null) ?? null}
     projectCount={projects.length}
     onCreate={() => (creating = true)}
     onImport={() => void handleImport()}
     showEmptyState={!creating}
   >
-    {#if !projectsQuery.isLoading && !projectsQuery.isError && projects.length > 0}
+    {#if !listQuery.isLoading && !listQuery.isError && projects.length > 0}
       <ProjectGridView
         {projects}
         rename={{

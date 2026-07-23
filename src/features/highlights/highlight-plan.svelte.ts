@@ -1,5 +1,5 @@
 /**
- * useHighlightPlan — compute render plan for active highlight step.
+ * createHighlightPlan — compute render plan for active highlight step.
  * AbortController cancels stale Shiki work; direct plainTokenLines fallback.
  */
 import type { BundledLanguage, BundledTheme, Highlighter } from "shiki";
@@ -57,7 +57,7 @@ async function getTokenLines(
   return plainTokenLines(code);
 }
 
-export function useHighlightPlan(args: UseHighlightPlanArgs) {
+export function createHighlightPlan(args: UseHighlightPlanArgs) {
   let entry = $state<{ id: string; plan: HighlightPlan } | null>(null);
 
   $effect(() => {

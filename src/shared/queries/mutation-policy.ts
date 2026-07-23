@@ -27,7 +27,7 @@ interface SlideMutationOptions<TData, TVariables, TContext>
  * The singleton queryClient is passed explicitly so these factories work from
  * any component without needing a QueryClientProvider ancestor.
  */
-export function useProjectListInvalidatingMutation<TData, TVariables, TContext = unknown>(
+export function projectListMutation<TData, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options: ProjectListInvalidatingMutationOptions<TData, TVariables, TContext> = {},
 ) {
@@ -52,11 +52,11 @@ export function useProjectListInvalidatingMutation<TData, TVariables, TContext =
  * The app keeps query data fresh indefinitely, so mutations that can alter a
  * dashboard card opt into app-wide project-list invalidation by default.
  */
-export function useProjectMutation<TData, TVariables, TContext = unknown>(
+export function projectMutation<TData, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options: ProjectMutationOptions<TData, TVariables, TContext> = {},
 ) {
-  return useProjectListInvalidatingMutation(mutationFn, options);
+  return projectListMutation(mutationFn, options);
 }
 
 /**
@@ -65,7 +65,7 @@ export function useProjectMutation<TData, TVariables, TContext = unknown>(
  * Individual hooks still decide how to update the open project cache, but they
  * no longer need to remember dashboard invalidation or optional detail refetch.
  */
-export function useSlideMutation<TData, TVariables, TContext = unknown>(
+export function slideMutation<TData, TVariables, TContext = unknown>(
   projectId: string,
   mutationFn: (variables: TVariables) => Promise<TData>,
   options: SlideMutationOptions<TData, TVariables, TContext> = {},
@@ -76,7 +76,7 @@ export function useSlideMutation<TData, TVariables, TContext = unknown>(
     ...mutationOptions
   } = options;
 
-  return useProjectListInvalidatingMutation<TData, TVariables, TContext>(mutationFn, {
+  return projectListMutation<TData, TVariables, TContext>(mutationFn, {
     ...mutationOptions,
     onSuccess: async (data, variables, onMutateResult, context) => {
       await onSuccess?.(data, variables, onMutateResult, context);

@@ -6,7 +6,7 @@
    *
    * mode "queued":  current wiring — UNCONTROLLED textarea (the Svelte editor
    *                 never writes `value` programmatically after mount), local
-   *                 code shadow + the real queued useUpdateSlideCode hook.
+   *                 code shadow + the real queued updateSlideCodeMutation hook.
    * mode "prefix":  characterization of the pre-fix bug — CONTROLLED-ish
    *                 textarea (framework re-assigns value on every computed
    *                 change, like the old React component did) + an unqueued
@@ -19,7 +19,7 @@
     clearLocalCode,
   } from "../../src/shared/stores/slide-code.svelte";
   import { queryClient } from "../../src/shared/queries/query-client";
-  import { useUpdateSlideCode } from "../../src/shared/queries/slides";
+  import { updateSlideCodeMutation } from "../../src/shared/queries/slides";
   import { api } from "../../src/shared/lib/tauri-api";
   import type { Project } from "../../src/shared/types";
 
@@ -36,7 +36,7 @@
     () => queryClient,
   );
 
-  const queued = useUpdateSlideCode();
+  const queued = updateSlideCodeMutation();
 
   /** Pre-fix save path, kept verbatim: mutationFn fired the IPC directly
    *  (no queue), same onSuccess logic the code shipped with before the fix. */

@@ -7,7 +7,7 @@
  *
  * The suite drives the exact production wiring:
  *   toolbar "Present" button → enterPresent() → ui.isPresenting →
- *   PresentOverlay → stage click → useHighlightNav stepping → slide advance.
+ *   PresentOverlay → stage click → createHighlightNav stepping → slide advance.
  *
  * Any mount-time throw in the overlay chain is captured via process-level
  * handlers and fails the test with the underlying error.

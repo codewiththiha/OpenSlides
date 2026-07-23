@@ -1,4 +1,4 @@
-import { useShikiDisplayHtml } from "./useShikiDisplayState.svelte";
+import { shikiDisplayHtml } from "$lib/shiki/shiki-display.svelte";
 import { api } from "$lib/lib/tauri-api";
 import { LruMap } from "$lib/lib/lru-map";
 
@@ -27,7 +27,7 @@ export interface SlideThumbnailArgs {
   debounceMs?: number;
 }
 
-export function useSlideThumbnail(args: () => SlideThumbnailArgs) {
+export function createSlideThumbnail(args: () => SlideThumbnailArgs) {
   let el = $state<HTMLDivElement | null>(null);
   let entry = $state<ThumbnailEntry | null>(null);
   let inView = $state(typeof IntersectionObserver === "undefined");
@@ -86,7 +86,7 @@ export function useSlideThumbnail(args: () => SlideThumbnailArgs) {
     (args().enabled ?? true) && !entry && inView && !!truncatedCode,
   );
 
-  const display = useShikiDisplayHtml(() => ({
+  const display = shikiDisplayHtml(() => ({
     code: truncatedCode,
     language: args().language,
     theme: args().theme,

@@ -2,12 +2,12 @@ import { slideDisplayName, type Slide } from "$lib/types";
 import { notify } from "$lib/lib/toast";
 import { ui, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
 import {
-  useDeleteSlide as useDeleteSlideMutation,
-  useDuplicateSlide as useDuplicateSlideMutation,
-  useReorderSlides as useReorderSlidesMutation,
-  useRestoreSlide,
-  useStackSlides as useStackSlidesMutation,
-  useUnstackSlides as useUnstackSlidesMutation,
+  deleteSlideMutation,
+  duplicateSlideMutation,
+  reorderSlidesMutation,
+  restoreSlideMutation,
+  stackSlidesMutation,
+  unstackSlidesMutation,
 } from "$lib/queries";
 
 interface DeleteSlideArgs {
@@ -17,12 +17,12 @@ interface DeleteSlideArgs {
 }
 
 /** User action: delete one slide, select the backend fallback, and offer Undo. */
-export function useDeleteSlideWithUndo(
+export function createSlideDeleter(
   projectId: string,
   { ordered, renamingId = () => null, pendingFocusId }: DeleteSlideArgs,
 ) {
-  const deleteSlide = useDeleteSlideMutation(projectId);
-  const restoreSlide = useRestoreSlide(projectId);
+  const deleteSlide = deleteSlideMutation(projectId);
+  const restoreSlide = restoreSlideMutation(projectId);
 
   function deleteSlideWithUndo(id: string) {
     const list = ordered();
@@ -81,16 +81,16 @@ export function useDeleteSlideWithUndo(
 }
 
 /** User action: duplicate a slide and let the mutation policy select the new slide. */
-export function useDuplicateSlide(projectId: string) {
-  const duplicateSlide = useDuplicateSlideMutation(projectId);
+export function createSlideDuplicator(projectId: string) {
+  const duplicateSlide = duplicateSlideMutation(projectId);
   return (id: string) => {
     duplicateSlide.mutate(id);
   };
 }
 
 /** User action: commit a new slide order, with optional UI rollback for optimistic rails. */
-export function useReorderSlides(projectId: string) {
-  const reorderSlides = useReorderSlidesMutation(projectId);
+export function createSlideReorderer(projectId: string) {
+  const reorderSlides = reorderSlidesMutation(projectId);
   return (slideIds: string[], opts?: { onError?: () => void }) => {
     reorderSlides.mutate(slideIds, {
       onError: opts?.onError,
@@ -99,9 +99,9 @@ export function useReorderSlides(projectId: string) {
 }
 
 /** User action: create or dissolve slide stacks. */
-export function useStackSlides(projectId: string) {
-  const stackMutation = useStackSlidesMutation(projectId);
-  const unstackMutation = useUnstackSlidesMutation(projectId);
+export function createSlideStackActions(projectId: string) {
+  const stackMutation = stackSlidesMutation(projectId);
+  const unstackMutation = unstackSlidesMutation(projectId);
 
   function stackSlides(sourceIds: string[], targetId: string, opts?: { onSuccess?: () => void }) {
     stackMutation.mutate(

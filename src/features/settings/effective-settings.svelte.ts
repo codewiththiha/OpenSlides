@@ -1,7 +1,7 @@
 import { ui } from "$lib/stores/ui-state.svelte";
 import type { Project, Slide } from "$lib/types";
 
-export function useEffectiveSettings(
+export function createEffectiveSettings(
   project: () => Project,
   slide?: () => Slide | undefined,
 ) {

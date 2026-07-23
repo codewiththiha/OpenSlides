@@ -7,7 +7,7 @@ interface Args {
   lineHeight: () => number;
 }
 
-export function useFindReplace(args: Args) {
+export function createFindReplace(args: Args) {
   let open = $state(false);
   let searchTerm = $state("");
   let replaceTerm = $state("");
@@ -133,4 +133,4 @@ export function useFindReplace(args: Args) {
   };
 }
 
-export type FindReplaceApi = ReturnType<typeof useFindReplace>;
+export type FindReplaceApi = ReturnType<typeof createFindReplace>;

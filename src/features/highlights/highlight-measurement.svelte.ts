@@ -15,7 +15,7 @@ interface UseHighlightMeasurementArgs {
   theme: () => string;
 }
 
-export function useHighlightMeasurement(args: UseHighlightMeasurementArgs) {
+export function createHighlightMeasurement(args: UseHighlightMeasurementArgs) {
   let measurement = $state<HighlightMeasurement | null>(null);
 
   // Optimized measure: container ResizeObserver + codeRoot MutationObserver (no textContent read)

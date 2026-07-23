@@ -1,7 +1,7 @@
 <script lang="ts">
   import { ChevronDown, ChevronUp, Search, X } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
-  import type { FindReplaceApi } from "@/hooks/useFindReplace.svelte";
+  import type { FindReplaceApi } from "@/features/editor/find-replace.svelte";
 
   let { fr, onClose }: { fr: FindReplaceApi; onClose: () => void } = $props();
 

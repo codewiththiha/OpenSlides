@@ -1,10 +1,10 @@
 /**
- * usePresentFullscreen — encapsulates fullscreen enter/exit + OS sync.
+ * createPresentFullscreen — encapsulates fullscreen enter/exit + OS sync.
  */
 import { ui, setIsAutoPlaying, setIsPresenting } from "$lib/stores/ui-state.svelte";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-export function usePresentFullscreen() {
+export function createPresentFullscreen() {
   async function exitPresent() {
     setIsPresenting(false);
     setIsAutoPlaying(false);

@@ -4,7 +4,7 @@
    *
    * React notes preserved:
    * - NSSpellServer timeout: aggressive spellcheck/autocorrect disabling
-   * - The textarea is uncontrolled (useCodeEditorCaret syncs value/caret).
+   * - The textarea is uncontrolled (createCaretSync syncs value/caret).
    * - Debounced save: 500ms timer in this component (replaces use-debounce),
    *   flushed on slide switch / unmount / explicit navigation so the final
    *   edit is never discarded by a disposed timer.
@@ -25,19 +25,19 @@
   import { untrack } from "svelte";
   import { localCode, setLocalCode } from "$lib/stores/slide-code.svelte";
   import { setCaretPosition } from "$lib/stores/caret-positions";
-  import { useUpdateSettings, useUpdateSlideCode } from "$lib/queries";
+  import { updateProjectSettingsMutation, updateSlideCodeMutation } from "$lib/queries";
   import { record as recordEditorHistory, type Snapshot } from "$lib/lib/editor-history";
   import { markSavePending, clearPendingSave } from "$lib/lib/code-save";
   import HighlightContextMenu from "@/features/highlights/HighlightContextMenu.svelte";
-  import { useShikiWorker } from "@/hooks/useShikiWorker";
-  import { useEditorHistory } from "@/hooks/useEditorHistory.svelte";
-  import { useHighlightCrud } from "@/hooks/useHighlightCrud.svelte";
-  import { useCurrentSlide } from "@/hooks/useCurrentSlide.svelte";
+  import { editorShikiHtml } from "$lib/shiki/shiki-display.svelte";
+  import { createEditorHistory } from "@/features/editor/editor-history.svelte";
+  import { createHighlightCrud } from "@/features/highlights/highlight-crud.svelte";
+  import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
   import FindReplaceBar from "@/features/editor/FindReplaceBar.svelte";
-  import { useFindReplace } from "@/hooks/useFindReplace.svelte";
-  import { useCodeEditorCaret } from "@/hooks/editor/useCodeEditorCaret.svelte";
-  import { useCodeEditorScrollSync } from "@/hooks/editor/useCodeEditorScrollSync";
-  import { useCodeEditorTabKey } from "@/hooks/editor/useCodeEditorTabKey";
+  import { createFindReplace } from "@/features/editor/find-replace.svelte";
+  import { createCaretSync } from "@/features/editor/caret.svelte";
+  import { createScrollSync } from "@/features/editor/scroll-sync";
+  import { createTabKeyHandler } from "@/features/editor/tab-key";
   import CodeEditorHeader from "@/features/editor/CodeEditorHeader.svelte";
   import CodeEditorBody from "@/features/editor/CodeEditorBody.svelte";
   import CodeEditorFooter from "@/features/editor/CodeEditorFooter.svelte";
@@ -54,7 +54,7 @@
     onCollapse?: () => void;
   } = $props();
 
-  const currentSlide = useCurrentSlide(() => project);
+  const currentSlide = createCurrentSlide(() => project);
   const slide = $derived(currentSlide.activeSlide);
   const currentIndex = $derived(currentSlide.activeIndex);
   const slideId = $derived(slide?.id);
@@ -68,7 +68,7 @@
   const editorSnapshot = { current: { code: "", caretStart: 0, caretEnd: 0 } as Snapshot };
 
   // ── Uncontrolled textarea, by design ─────────────
-  const saveCaret = useCodeEditorCaret({
+  const saveCaret = createCaretSync({
     textarea: () => textareaEl,
     slideId: () => slideId,
     slide: () => slide,
@@ -76,11 +76,11 @@
   });
 
   let highlightMode = $state(false);
-  const codeMutation = useUpdateSlideCode();
+  const codeMutation = updateSlideCodeMutation();
   // Stable per mount (the editor is rebuilt on project switch) — untrack()
   // marks the one-time id capture as deliberate.
   const projectId = untrack(() => project.id);
-  const projectSettingsMutation = useUpdateSettings(projectId);
+  const projectSettingsMutation = updateProjectSettingsMutation(projectId);
   const language = $derived(resolveProjectLanguage(project));
   const theme = $derived(project.theme);
 
@@ -94,7 +94,7 @@
     Array.from({ length: lineCount }, (_, i) => i + 1).join("\n"),
   );
 
-  const shiki = useShikiWorker(() => ({
+  const shiki = editorShikiHtml(() => ({
     code,
     language,
     theme,
@@ -167,7 +167,7 @@
 
   const handleChange = applyCode;
 
-  const findReplace = useFindReplace({
+  const findReplace = createFindReplace({
     code: () => code,
     textarea: () => textareaEl,
     applyCode,
@@ -188,14 +188,14 @@
     return () => window.removeEventListener("openslides:find-in-code", openCodeFind);
   });
 
-  const { applyHistorySnapshot } = useEditorHistory({
+  const { applyHistorySnapshot } = createEditorHistory({
     slideId: () => slideId,
     textarea: () => textareaEl,
     handleChange,
     saveCaret,
   });
 
-  const handleTabKey = useCodeEditorTabKey({ slideId: () => slideId, handleChange });
+  const handleTabKey = createTabKeyHandler({ slideId: () => slideId, handleChange });
 
   function handleKeyDown(e: KeyboardEvent & { currentTarget: HTMLTextAreaElement }) {
     const isMod = e.metaKey || e.ctrlKey;
@@ -237,7 +237,7 @@
   }
 
   const currentHighlights = $derived(slide?.highlights ?? []);
-  const crud = useHighlightCrud({
+  const crud = createHighlightCrud({
     projectId,
     slideId: () => slideId,
     highlights: () => currentHighlights,
@@ -247,7 +247,7 @@
     saveCaret,
   });
 
-  const syncScroll = useCodeEditorScrollSync({
+  const syncScroll = createScrollSync({
     textarea: () => textareaEl,
     pre: () => preEl,
     gutter: () => gutterEl,

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { setPreviewHighlightSetting } from "$lib/stores/ui-state.svelte";
-  import { previewHighlightSettings } from "@/hooks/usePreviewSettings";
+  import { previewHighlightSettings } from "@/features/settings/preview-settings";
   import SliderField from "$lib/ui/SliderField.svelte";
   import ToggleField from "$lib/ui/ToggleField.svelte";
   import type { Highlight } from "$lib/types";

@@ -34,15 +34,15 @@
   import { SvelteSet } from "svelte/reactivity";
   import { resolveProjectLanguage, type Project, type Slide } from "$lib/types";
   import { pointerInsertIndex, shadowInsertAt } from "$lib/lib/stack-targeting";
-  import { useSlideStripSearch } from "@/hooks/useSlideStripSearch.svelte";
-  import { useInlineRename } from "@/hooks/useInlineRename.svelte";
-  import { useAddSlide } from "@/hooks/useAddSlide.svelte";
+  import { createSlideStripSearch } from "@/features/slides/slide-search.svelte";
+  import { createRenameState } from "$lib/lib/rename-state.svelte";
+  import { createAddSlide } from "@/features/slides/add-slide.svelte";
   import {
-    useDeleteSlideWithUndo,
-    useDuplicateSlide,
-    useReorderSlides,
-    useStackSlides,
-  } from "@/hooks/useSlideActions.svelte";
+    createSlideDeleter,
+    createSlideDuplicator,
+    createSlideReorderer,
+    createSlideStackActions,
+  } from "@/features/slides/slide-actions.svelte";
   import SlideCard, { ITEM_HEIGHT, ITEM_WIDTH } from "@/features/slides/SlideCard.svelte";
   import SlideSearchDialog, { type SearchScope } from "@/features/slides/SlideSearchDialog.svelte";
   import SlideContextMenu from "@/features/slides/SlideContextMenu.svelte";
@@ -56,8 +56,8 @@
     setIsBottomPanelCollapsed,
   } from "$lib/stores/ui-state.svelte";
   import { chunkConsecutive } from "$lib/lib/grouping";
-  import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks.svelte";
-  import { useUpdateSlideSettings } from "$lib/queries";
+  import { autoDissolveStacks } from "$lib/lib/stacking.svelte";
+  import { updateSlideSettingsMutation } from "$lib/queries";
   import { isTypingTarget } from "$lib/lib/keyboard";
   import { cn } from "$lib/lib/utils";
 
@@ -97,15 +97,15 @@
   // untrack() marks the one-time id capture shared by the hooks below.
   const projectId = untrack(() => project.id);
 
-  const addSlideHook = useAddSlide(projectId, () => project);
-  const duplicateSlide = useDuplicateSlide(projectId);
-  const reorderSlides = useReorderSlides(projectId);
-  const { stackSlides, unstackSlides } = useStackSlides(projectId);
-  const updateSettings = useUpdateSlideSettings(projectId);
+  const addSlideHook = createAddSlide(projectId, () => project);
+  const duplicateSlide = createSlideDuplicator(projectId);
+  const reorderSlides = createSlideReorderer(projectId);
+  const { stackSlides, unstackSlides } = createSlideStackActions(projectId);
+  const updateSettings = updateSlideSettingsMutation(projectId);
   const theme = $derived(project.theme);
   const language = $derived(resolveProjectLanguage(project));
 
-  useAutoDissolveStacks(
+  autoDissolveStacks(
     () => project.slides,
     (s) => s.sectionId,
     (s) => s.id,
@@ -151,7 +151,7 @@
     });
   });
 
-  const search = useSlideStripSearch({
+  const search = createSlideStripSearch({
     projectId,
     ordered: () => ordered,
   });
@@ -181,7 +181,7 @@
     return () => window.removeEventListener("openslides:open-search", openSearch);
   });
 
-  const rename = useInlineRename(async (id: string, name: string) => {
+  const rename = createRenameState(async (id: string, name: string) => {
     const finalName = name || "Untitled slide";
     await new Promise<void>((resolve) => {
       updateSettings.mutate(
@@ -197,7 +197,7 @@
     });
   });
 
-  const deleter = useDeleteSlideWithUndo(projectId, {
+  const deleter = createSlideDeleter(projectId, {
     ordered: () => ordered,
     renamingId: () => rename.renamingId,
     pendingFocusId,

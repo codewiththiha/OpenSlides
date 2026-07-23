@@ -83,7 +83,7 @@ export interface ShikiDisplayHtmlArgs {
   policy?: Partial<ShikiDisplayPolicy>;
 }
 
-export function useShikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
+export function shikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
   const resolvedPolicy = $derived(
     resolvePolicy(args().policyName ?? "editor", args().policy),
   );
@@ -223,7 +223,7 @@ export interface ShikiHighlighterDisplayArgs {
   >;
 }
 
-export function useShikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
+export function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
   const resolvedPolicy = $derived(
     resolvePolicy(args().policyName ?? "magicMove", args().policy),
   );
@@ -320,4 +320,27 @@ export function useShikiHighlighterDisplay(args: () => ShikiHighlighterDisplayAr
       return shouldUseFallback;
     },
   };
+}
+
+/**
+ * Shared Shiki worker display state for the editor HTML overlay —
+ * high priority, short debounce, editor retention policy.
+ */
+export function editorShikiHtml(
+  args: () => Pick<ShikiDisplayHtmlArgs, "code" | "language" | "theme" | "resetKey">,
+) {
+  return shikiDisplayHtml(() => ({
+    ...args(),
+    debounceMs: 80,
+    priority: "high",
+    policyName: "editor",
+  }));
+}
+
+/** MagicMove/highlighter display state with the `magicMove` retention policy. */
+export function magicMoveShikiDisplay(args: () => { theme: string; language: string }) {
+  return shikiHighlighterDisplay(() => ({
+    ...args(),
+    policyName: "magicMove",
+  }));
 }

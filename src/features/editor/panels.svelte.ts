@@ -1,5 +1,5 @@
 /**
- * useCollapsiblePanel — shared expand/collapse choreography for the
+ * createCollapsiblePanel — shared expand/collapse choreography for the
  * paneforge rails (code panel + slides strip).
  *
  * Handles the four things every collapsible panel needs, identically:
@@ -33,7 +33,7 @@ interface UseCollapsiblePanelArgs {
   collapseThreshold: number;
 }
 
-export function useCollapsiblePanel({
+export function createCollapsiblePanel({
   panel,
   isCollapsed,
   setCollapsed,

@@ -1,6 +1,6 @@
 import { nextStarterSlideAction } from "$lib/constants";
 import { setCurrentSlideId } from "$lib/stores/ui-state.svelte";
-import { useCreateSlide, useUpdateSlideSettings } from "$lib/queries";
+import { createSlideMutation, updateSlideSettingsMutation } from "$lib/queries";
 import type { Project } from "$lib/types";
 
 /**
@@ -10,9 +10,9 @@ import type { Project } from "$lib/types";
  * active-slide selection here so every entry point (slide rail, native menu,
  * command palette, etc.) behaves identically.
  */
-export function useAddSlide(projectId: string, project: () => Project | undefined) {
-  const createSlide = useCreateSlide(projectId);
-  const updateSettings = useUpdateSlideSettings(projectId);
+export function createAddSlide(projectId: string, project: () => Project | undefined) {
+  const createSlide = createSlideMutation(projectId);
+  const updateSettings = updateSlideSettingsMutation(projectId);
   let inFlight = $state(false);
 
   async function addSlide() {

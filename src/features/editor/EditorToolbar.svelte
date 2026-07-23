@@ -29,7 +29,7 @@
     setIsSettingsOpen,
     setIsCommandOpen,
   } from "$lib/stores/ui-state.svelte";
-  import { useExportProject, useUpdateSlideSettings } from "$lib/queries";
+  import { exportProjectMutation, updateSlideSettingsMutation } from "$lib/queries";
   import { modKeyLabel } from "$lib/lib/platform";
   import { cn, formatDurationShort } from "$lib/lib/utils";
   import { slideDisplayName } from "$lib/types";
@@ -47,10 +47,10 @@
     onPresent: () => void;
   } = $props();
 
-  const exportMutation = useExportProject();
+  const exportMutation = exportProjectMutation();
   // Stable per mount (rendered only after the project loads, under the
   // project-keyed EditorInner) — untrack() marks the capture as deliberate.
-  const updateSlideSettings = useUpdateSlideSettings(untrack(() => project.id));
+  const updateSlideSettings = updateSlideSettingsMutation(untrack(() => project.id));
 
   let editingSlideName = $state(false);
   let slideNameDraft = $state("");

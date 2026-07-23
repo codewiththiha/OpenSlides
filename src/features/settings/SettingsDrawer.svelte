@@ -10,7 +10,7 @@
   import { X } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
   import { type Project, type ThemeName } from "$lib/types";
-  import { useUpdateSettings, useUpdateTheme } from "$lib/queries";
+  import { updateProjectSettingsMutation, updateProjectThemeMutation } from "$lib/queries";
   import {
     ui,
     setEditorShowLineNumbers,
@@ -18,7 +18,7 @@
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
   } from "$lib/stores/ui-state.svelte";
-  import { previewProjectSettings } from "@/hooks/usePreviewSettings";
+  import { previewProjectSettings } from "@/features/settings/preview-settings";
   import { cn } from "$lib/lib/utils";
   import { showUndoToast } from "$lib/lib/settings-undo";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
@@ -42,8 +42,8 @@
   // The drawer is mounted under the project-keyed EditorInner, so project.id
   // is stable for this mount — untrack() marks the one-time capture.
   const projectId = untrack(() => project.id);
-  const updateSettings = useUpdateSettings(projectId);
-  const updateTheme = useUpdateTheme(projectId);
+  const updateSettings = updateProjectSettingsMutation(projectId);
+  const updateTheme = updateProjectThemeMutation(projectId);
 
   const previewProject = $derived(previewProjectSettings());
 

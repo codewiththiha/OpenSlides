@@ -1,7 +1,7 @@
 import { api } from "$lib/lib/tauri-api";
 import type { Slide } from "$lib/types";
 
-export function useSlideStripSearch(args: {
+export function createSlideStripSearch(args: {
   projectId: string;
   ordered: () => Slide[];
 }) {

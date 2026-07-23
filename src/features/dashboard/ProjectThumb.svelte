@@ -1,6 +1,6 @@
 <script lang="ts">
   import { FileCode } from "@lucide/svelte";
-  import { useSlideThumbnail } from "@/hooks/useSlideThumbnail.svelte";
+  import { createSlideThumbnail } from "@/features/slides/slide-thumbnail.svelte";
   import { type ProjectSummary } from "$lib/types";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
   import { cn } from "$lib/lib/utils";
@@ -17,7 +17,7 @@
     fontSize?: number;
   } = $props();
 
-  const thumb = useSlideThumbnail(() => ({
+  const thumb = createSlideThumbnail(() => ({
     slideId: project.firstSlideId || project.id,
     code: project.firstSlideCode,
     theme: project.theme,

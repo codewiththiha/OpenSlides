@@ -1,10 +1,10 @@
 import { ui } from "$lib/stores/ui-state.svelte";
-import { slideMaps } from "./useSlideMaps";
+import { slideMaps } from "$lib/lib/slides";
 import type { Project, Slide } from "$lib/types";
 
 const EMPTY_SLIDES: Slide[] = [];
 
-export function useCurrentSlide(project: () => Project | undefined) {
+export function createCurrentSlide(project: () => Project | undefined) {
   const slides = $derived(project()?.slides ?? EMPTY_SLIDES);
   const maps = $derived(slideMaps(slides));
   const activeSlide = $derived(
