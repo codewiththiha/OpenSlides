@@ -9,6 +9,7 @@
   import Button from "$lib/ui/Button.svelte";
   import Kbd from "$lib/ui/Kbd.svelte";
   import Overlay, { Z_INDEX } from "$lib/ui/Overlay.svelte";
+  import { focusTrap } from "$lib/actions/focus-trap";
 
   const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[] }[] = [
     {
@@ -79,7 +80,13 @@
     closeOnEsc
     class="w-full max-w-lg"
   >
-    <div class="overflow-hidden rounded-xl border bg-card shadow-2xl" role="dialog" aria-labelledby="shortcuts-title">
+    <div
+      use:focusTrap
+      class="overflow-hidden rounded-xl border bg-card shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shortcuts-title"
+    >
       <div class="flex items-center justify-between border-b px-4 py-3">
         <h2 id="shortcuts-title" class="text-sm font-semibold">
           Keyboard shortcuts

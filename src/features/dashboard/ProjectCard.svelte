@@ -44,10 +44,23 @@
 </script>
 
 <Card
-  class="group relative cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+  class="group relative cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   style="height: {PROJECT_CARD_HEIGHT}px"
+  role="button"
+  tabindex={0}
+  aria-label={project.name}
   onclick={() => {
     if (!isRenaming) onOpen(project.id);
+  }}
+  onkeydown={(e) => {
+    if (isRenaming) return;
+    // Inner controls (rename input, hover buttons) handle their own keys;
+    // only activate when the card itself is focused.
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onOpen(project.id);
+    }
   }}
 >
   <ProjectThumb

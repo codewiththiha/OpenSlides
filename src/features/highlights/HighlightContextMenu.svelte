@@ -34,6 +34,8 @@
     use:clickOutside={{ onOutside: onClose, delayMs: 50 }}
     use:escapeKey={{ onEscape: onClose, delayMs: 50 }}
     class="fixed min-w-[180px] rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
+    role="menu"
+    aria-label="Highlight actions"
     style="left: {position.x}px; top: {position.y}px; z-index: {Z_INDEX.contextMenu};"
     transition:pop={{}}
   >

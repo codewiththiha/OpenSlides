@@ -4,6 +4,7 @@
   import { Command } from "bits-ui";
   import type { Snippet } from "svelte";
   import Overlay, { Z_INDEX } from "./Overlay.svelte";
+  import { focusTrap } from "$lib/actions/focus-trap";
 
   let {
     open,
@@ -32,11 +33,19 @@
 
 {#if open}
   <Overlay onClose={onClose} z={Z_INDEX.command} placement="top" closeOnEsc class={className}>
-    <Command.Root {label} class="w-full overflow-hidden rounded-xl border bg-card shadow-2xl">
+    <!-- Actions attach only to elements, so the trap wraps the cmdk root. -->
+    <div use:focusTrap>
+      <Command.Root
+        {label}
+        class="w-full overflow-hidden rounded-xl border bg-card shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+      >
       <Command.Input
         autofocus
         bind:value={search}
         {placeholder}
+        aria-label={placeholder || label}
         class="w-full border-b bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground"
       />
       <Command.List class={listClassName}>
@@ -46,6 +55,7 @@
         {@render children?.()}
       </Command.List>
       {@render footer?.()}
-    </Command.Root>
+      </Command.Root>
+    </div>
   </Overlay>
 {/if}

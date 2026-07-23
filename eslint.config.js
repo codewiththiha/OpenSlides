@@ -51,6 +51,27 @@ export default tseslint.config(
       "svelte/no-unused-svelte-ignore": "warn",
     },
   },
+  // §7.2 ui mutation discipline: components mutate `ui` only through the
+  // setters exported by the store — never with direct ui.x = assignments.
+  {
+    files: ["src/**/*.{ts,svelte}"],
+    ignores: ["src/shared/stores/ui-state.svelte.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "AssignmentExpression > MemberExpression[object.name='ui']",
+          message:
+            "Mutate ui only through the setter functions exported from ui-state.svelte.ts (§7.2).",
+        },
+        {
+          selector: "UpdateExpression > MemberExpression[object.name='ui']",
+          message:
+            "Mutate ui only through the setter functions exported from ui-state.svelte.ts (§7.2).",
+        },
+      ],
+    },
+  },
   // Dependency boundaries: shared/ is the bottom layer.
   {
     files: ["src/shared/**/*.{ts,svelte}"],
