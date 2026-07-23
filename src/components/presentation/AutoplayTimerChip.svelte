@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Timer } from "lucide-svelte";
+  import { Timer } from "@lucide/svelte";
   import { formatClockSeconds } from "@/lib/utils";
   import Chip from "../ui/Chip.svelte";
 

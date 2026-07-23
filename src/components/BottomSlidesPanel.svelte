@@ -23,7 +23,7 @@
     type DndEvent,
   } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
-  import { Plus } from "lucide-svelte";
+  import { Plus } from "@lucide/svelte";
   import { SvelteSet } from "svelte/reactivity";
   import { resolveProjectLanguage, type Project, type Slide } from "@/types";
   import { useSlideStripSearch } from "@/hooks/useSlideStripSearch.svelte";

@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Compact editor slide stepper. Navigation side effects stay in CodeEditor. */
-  import { ChevronLeft, ChevronRight } from "lucide-svelte";
+  import { ChevronLeft, ChevronRight } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
 
   let {

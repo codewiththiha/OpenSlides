@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, Copy, Download, Pencil, Trash2 } from "lucide-svelte";
+  import { ArrowRight, Copy, Download, Pencil, Trash2 } from "@lucide/svelte";
   import Card from "../ui/Card.svelte";
   import { formatRelative } from "@/lib/utils";
   import { themeBackground, type ProjectSummary } from "@/types";

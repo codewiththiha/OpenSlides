@@ -2,7 +2,7 @@
   /**
    * Cmd/Ctrl+K command palette for quick actions.
    */
-  import { Command } from "cmdk-sv";
+  import { Command } from "bits-ui";
   import type { Snippet } from "svelte";
   import {
     Home,
@@ -14,7 +14,7 @@
     Sun,
     Plus,
     Keyboard,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
   import { push } from "svelte-spa-router";
   import {
     ui,
@@ -69,12 +69,15 @@
 
   const itemClass = cn(
     "flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground",
-    "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground",
+    // bits-ui marks selection with a presence-only data-selected attribute
+    "data-[selected]:bg-accent data-[selected]:text-accent-foreground",
   );
 </script>
 
 {#snippet item(icon: Snippet, label: string, onSelect: () => void)}
-  <Command.Item {onSelect} class={itemClass}>
+  <!-- bits-ui needs an explicit value for filtering (cmdk derived it from
+       the text content); match cmdk's lowercase normalization. -->
+  <Command.Item value={label.toLowerCase()} {onSelect} class={itemClass}>
     {@render icon()}
     <span>{label}</span>
   </Command.Item>
@@ -88,7 +91,8 @@
   bind:search={search}
   class="w-full max-w-lg"
 >
-  <Command.Group heading="Navigation" class="text-xs text-muted-foreground">
+  <Command.Group value="navigation" class="text-xs text-muted-foreground">
+    <Command.GroupHeading>Navigation</Command.GroupHeading>
     {@render item(homeIcon, "Go to Dashboard", () => run(() => void push("/")))}
     {#if projectId}
       {@render item(presentIcon, "Start Presentation", () => run(() => setIsPresenting(true)))}
@@ -104,7 +108,8 @@
   </Command.Group>
 
   {#if projectId && onTheme}
-    <Command.Group heading="Themes" class="mt-2 text-xs text-muted-foreground">
+    <Command.Group value="themes" class="mt-2 text-xs text-muted-foreground">
+      <Command.GroupHeading>Themes</Command.GroupHeading>
       {#each THEME_OPTIONS as t (t.value)}
         {@render item(themeDot, t.label, () => run(() => onTheme(t.value)))}
       {/each}

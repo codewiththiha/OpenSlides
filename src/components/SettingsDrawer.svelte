@@ -6,7 +6,7 @@
    * preview instantly via previewProject overrides (Zustand → runes), while
    * DB save happens only on commit.
    */
-  import { X } from "lucide-svelte";
+  import { X } from "@lucide/svelte";
   import Button from "./ui/Button.svelte";
   import { type Project, type ThemeName } from "@/types";
   import { useUpdateSettings, useUpdateTheme } from "@/queries";

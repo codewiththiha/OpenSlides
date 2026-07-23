@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { RotateCcw } from "lucide-svelte";
+  import { RotateCcw } from "@lucide/svelte";
   import Button from "./ui/Button.svelte";
 
   /** Keeps a renderer failure local to the preview/editor pane. */

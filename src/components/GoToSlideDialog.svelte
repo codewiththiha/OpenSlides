@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Cmd/Ctrl+G quick jump to a slide by number or name. */
-  import { Command } from "cmdk-sv";
-  import { Highlighter as HighlighterIcon } from "lucide-svelte";
+  import { Command } from "bits-ui";
+  import { Highlighter as HighlighterIcon } from "@lucide/svelte";
   import { ui, setIsGoToSlideOpen, setCurrentSlideId } from "@/store/ui-state.svelte";
   import { slideDisplayName, type Project } from "@/types";
   import { cn } from "@/lib/utils";
@@ -32,7 +32,7 @@
   emptyText="No matching slide."
   class="w-full max-w-md"
 >
-  <Command.Group class="text-xs text-muted-foreground">
+  <Command.Group value="slides" class="text-xs text-muted-foreground">
     {#each project.slides as slide, index (slide.id)}
       {@const isCurrent = slide.id === ui.currentSlideId}
       <Command.Item
@@ -40,7 +40,8 @@
         onSelect={() => go(slide.id)}
         class={cn(
           "flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm text-foreground",
-          "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground",
+          // bits-ui marks selection with a presence-only data-selected attribute
+          "data-[selected]:bg-accent data-[selected]:text-accent-foreground",
           isCurrent && "bg-primary/5",
         )}
       >

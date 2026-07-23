@@ -5,7 +5,7 @@
    * HighlightStepIndicator is clickable via onSelectHighlight.
    */
   import { Pane, PaneGroup, PaneResizer } from "paneforge";
-  import { Code2 } from "lucide-svelte";
+  import { Code2 } from "@lucide/svelte";
   import CodeEditor from "../CodeEditor.svelte";
   import BottomSlidesPanel from "../BottomSlidesPanel.svelte";
   import RenderBoundary from "../RenderBoundary.svelte";

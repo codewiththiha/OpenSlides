@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import type { IconComponent } from "@/lib/icon-types";
+  import type { Component, Snippet } from "svelte";
   import { cn } from "@/lib/utils";
 
   let {
@@ -11,7 +10,7 @@
     class: className,
     children,
   }: {
-    icon: IconComponent;
+    icon: Component<{ class?: string }>;
     title: string;
     description?: string;
     children?: Snippet;

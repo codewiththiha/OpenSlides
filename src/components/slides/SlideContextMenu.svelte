@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Right-click menu for entering a slide-selection workflow. */
-  import type { IconComponent } from "@/lib/icon-types";
-  import { CheckSquare, Pencil, SquareDashedMousePointer } from "lucide-svelte";
+  import type { Component } from "svelte";
+  import { CheckSquare, Pencil, SquareDashedMousePointer } from "@lucide/svelte";
   import { Z_INDEX } from "../ui/Overlay.svelte";
   import { EASE_DIM } from "../highlights/easings";
 
@@ -77,7 +77,7 @@
   });
 </script>
 
-{#snippet menuItem(Icon: IconComponent, label: string, shortcut: string | undefined, onclick: () => void)}
+{#snippet menuItem(Icon: Component<{ class?: string }>, label: string, shortcut: string | undefined, onclick: () => void)}
   <button
     type="button"
     class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-muted/70"

@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Project dashboard orchestrator. */
   import { push } from "svelte-spa-router";
-  import { Command as CommandIcon, Plus, Upload } from "lucide-svelte";
+  import { Command as CommandIcon, Plus, Upload } from "@lucide/svelte";
   import Button from "./ui/Button.svelte";
   import TitleBar from "./TitleBar.svelte";
   import CommandPalette from "./CommandPalette.svelte";

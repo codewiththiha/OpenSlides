@@ -7,7 +7,7 @@
     ChevronUp,
     Eye,
     Trash2,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
   import { cn } from "@/lib/utils";
   import HighlightSettingsForm from "./HighlightSettingsForm.svelte";

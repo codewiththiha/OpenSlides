@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check, X } from "lucide-svelte";
+  import { Check, X } from "@lucide/svelte";
   import { cn } from "@/lib/utils";
   import Button from "./Button.svelte";
 

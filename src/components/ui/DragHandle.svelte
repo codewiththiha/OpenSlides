@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GripVertical } from "lucide-svelte";
+  import { GripVertical } from "@lucide/svelte";
   import type { HTMLButtonAttributes } from "svelte/elements";
   import { cn } from "@/lib/utils";
 

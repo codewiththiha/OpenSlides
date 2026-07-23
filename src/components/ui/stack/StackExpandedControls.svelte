@@ -3,7 +3,7 @@
    * StackExpandedControls — shared expanded controls for fanned stacks
    * (`Ungroup (n)` + close `X` buttons).
    */
-  import { Ungroup, X } from "lucide-svelte";
+  import { Ungroup, X } from "@lucide/svelte";
   import Button from "../Button.svelte";
   import { cn } from "@/lib/utils";
 

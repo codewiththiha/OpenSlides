@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronUp, Search, X } from "lucide-svelte";
+  import { ChevronDown, ChevronUp, Search, X } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
   import type { FindReplaceApi } from "@/hooks/useFindReplace.svelte";
 

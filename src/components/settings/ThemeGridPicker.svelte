@@ -1,6 +1,6 @@
 <script lang="ts">
   /** A compact theme control that opens the visual Shiki theme gallery on demand. */
-  import { ChevronDown, Palette } from "lucide-svelte";
+  import { ChevronDown, Palette } from "@lucide/svelte";
   import ThemeTile from "./ThemeTile.svelte";
   import { THEMES } from "@/lib/themes";
   import type { ThemeName } from "@/types";

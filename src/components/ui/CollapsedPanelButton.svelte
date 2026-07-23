@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { IconComponent } from "@/lib/icon-types";
+  import type { Component } from "svelte";
   import { cn } from "@/lib/utils";
 
   let {
@@ -12,7 +12,7 @@
   }: {
     /** vertical = side rail (Code), horizontal = bottom bar (Slides) */
     orientation: "vertical" | "horizontal";
-    icon: IconComponent;
+    icon: Component<{ class?: string }>;
     label: string;
     onClick: () => void;
     title?: string;

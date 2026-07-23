@@ -5,7 +5,7 @@
     PanelRightClose,
     Highlighter as HighlighterIcon,
     Search,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
   import SelectField from "../ui/SelectField.svelte";
   import EditorSlideNav from "./EditorSlideNav.svelte";

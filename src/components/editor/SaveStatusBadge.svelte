@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Loader2, Check, AlertCircle } from "lucide-svelte";
+  import { Loader2, Check, AlertCircle } from "@lucide/svelte";
   import type { SaveStatus } from "@/store/types";
 
   let { status }: { status: SaveStatus } = $props();

@@ -6,7 +6,7 @@
    * are preserved via svelte/motion + the shared pointer-drag manager.
    */
   import { Spring, Tween } from "svelte/motion";
-  import { Ungroup, X } from "lucide-svelte";
+  import { Ungroup, X } from "@lucide/svelte";
   import { type ProjectSummary } from "@/types";
   import { type GroupChunk } from "@/lib/grouping";
   import StackSpreadItem from "./StackSpreadItem.svelte";
