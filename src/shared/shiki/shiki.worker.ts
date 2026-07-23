@@ -1,4 +1,5 @@
 /** Shiki Web Worker — one prioritized tokenization pipeline. */
+import type { BundledLanguage, BundledTheme } from "shiki";
 import { createShikiLoader } from "$lib/shiki/shiki-loader";
 import { extractShikiCodeHtml } from "./extract-html";
 
@@ -25,6 +26,15 @@ export interface WorkerResponse {
   html?: string;
   error?: string;
   aborted?: boolean;
+}
+
+const workerScope = self as unknown as {
+  postMessage: (message: WorkerResponse) => void;
+  onmessage: ((event: MessageEvent<WorkerIncoming>) => void) | null;
+};
+
+function post(message: WorkerResponse): void {
+  workerScope.postMessage(message);
 }
 
 const abortedIds = new Set<number>();
@@ -66,11 +76,11 @@ function enqueue(request: QueuedRequest) {
   }
 }
 
-self.onmessage = (event: MessageEvent<WorkerIncoming>) => {
-  const data = event.data as any;
+workerScope.onmessage = (event: MessageEvent<WorkerIncoming>) => {
+  const data = event.data;
 
   // Abort messages bypass the queue and are handled immediately.
-  if (data?.type === "abort" && typeof data.id === "number") {
+  if ("type" in data && data.type === "abort") {
     addAborted(data.id);
     return;
   }
@@ -79,7 +89,7 @@ self.onmessage = (event: MessageEvent<WorkerIncoming>) => {
   if (typeof request.id !== "number") return;
   if (isAborted(request.id)) {
     abortedIds.delete(request.id);
-    (self as any).postMessage({ id: request.id, aborted: true } as WorkerResponse);
+    post({ id: request.id, aborted: true });
     return;
   }
 
@@ -101,7 +111,7 @@ async function pump() {
       const request = queue.shift()!;
       if (isAborted(request.id)) {
         abortedIds.delete(request.id);
-        (self as any).postMessage({ id: request.id, aborted: true } as WorkerResponse);
+        post({ id: request.id, aborted: true });
         continue;
       }
       try {
@@ -119,41 +129,44 @@ async function processRequest(request: QueuedRequest): Promise<void> {
   const { id, code, lang, theme } = request;
   if (code.length > 20_000) {
     console.warn(`[Shiki Worker] code too large (${code.length} chars) — using plain fallback`);
-    (self as any).postMessage({ id, error: "code_too_large" } as WorkerResponse);
+    post({ id, error: "code_too_large" });
     return;
   }
 
   try {
     if (isAborted(id)) {
       abortedIds.delete(id);
-      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      post({ id, aborted: true });
       return;
     }
 
     const highlighter = await loader.getHighlighter(theme, lang);
     if (isAborted(id)) {
       abortedIds.delete(id);
-      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      post({ id, aborted: true });
       return;
     }
 
-    const html = highlighter.codeToHtml(code, { lang: lang as any, theme: theme as any });
+    const html = highlighter.codeToHtml(code, {
+      lang: lang as BundledLanguage,
+      theme: theme as BundledTheme,
+    });
     if (isAborted(id)) {
       abortedIds.delete(id);
-      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      post({ id, aborted: true });
       return;
     }
 
-    (self as any).postMessage({ id, html: extractShikiCodeHtml(html) } as WorkerResponse);
+    post({ id, html: extractShikiCodeHtml(html) });
   } catch (error) {
     if (isAborted(id)) {
       abortedIds.delete(id);
-      (self as any).postMessage({ id, aborted: true } as WorkerResponse);
+      post({ id, aborted: true });
       return;
     }
-    (self as any).postMessage({
+    post({
       id,
       error: error instanceof Error ? error.message : String(error),
-    } as WorkerResponse);
+    });
   }
 }

@@ -6,6 +6,7 @@ const IS_DEV = typeof import.meta !== "undefined" && Boolean(import.meta.env?.DE
 
 export const logger = {
   debug: (...args: unknown[]) => {
+    // eslint-disable-next-line no-console -- logger is the sanctioned wrapper
     if (IS_DEV) console.debug(...args);
   },
   warn: (...args: unknown[]) => {
