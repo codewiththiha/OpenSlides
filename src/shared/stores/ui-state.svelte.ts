@@ -12,6 +12,12 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { Highlight } from "$lib/types";
 import { applyUiTheme } from "./theme";
+import {
+  loadPersistedUiState,
+  savePersistedUiState,
+  DEFAULT_CODE_SIZE,
+  DEFAULT_SLIDES_SIZE,
+} from "./ui-persistence";
 import { clearAllLocalCode } from "./slide-code.svelte";
 import { clearCaretPositions } from "./caret-positions";
 import type {
@@ -27,43 +33,7 @@ export type {
 } from "./types";
 export { applyUiTheme } from "./theme";
 
-const STORAGE_KEY = "openslides-ui";
-const STORAGE_VERSION = 2;
-const DEFAULT_CODE_SIZE = 42;
-const DEFAULT_SLIDES_SIZE = 14;
-
-interface PersistedState {
-  isBottomPanelCollapsed: boolean;
-  isCodePanelCollapsed: boolean;
-  codePanelSize: number;
-  slidesPanelSize: number;
-  isDarkUi: boolean;
-  editorShowLineNumbers: boolean;
-  showSlideHoverPreview: boolean;
-}
-
-/** Synchronous hydration — persisted state must exist before first render. */
-function loadPersisted(): Partial<PersistedState> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as {
-      state?: Partial<PersistedState>;
-      version?: number;
-    };
-    const state = { ...(parsed.state ?? {}) };
-    // Keep the compact slides rail as the baseline regardless of an older
-    // saved layout (migrate any persisted version below STORAGE_VERSION).
-    if ((parsed.version ?? 0) < STORAGE_VERSION) {
-      state.slidesPanelSize = DEFAULT_SLIDES_SIZE;
-    }
-    return state;
-  } catch {
-    return {};
-  }
-}
-
-const persisted = loadPersisted();
+const persisted = loadPersistedUiState();
 
 export const ui = $state({
   currentSlideId: null as string | null,
@@ -94,7 +64,7 @@ applyUiTheme(ui.isDarkUi);
 /** Persisted slice — written on every change (partialize-equivalent). */
 $effect.root(() => {
   $effect(() => {
-    const snapshot: PersistedState = {
+    savePersistedUiState({
       isBottomPanelCollapsed: ui.isBottomPanelCollapsed,
       isCodePanelCollapsed: ui.isCodePanelCollapsed,
       codePanelSize: ui.codePanelSize,
@@ -102,15 +72,7 @@ $effect.root(() => {
       isDarkUi: ui.isDarkUi,
       editorShowLineNumbers: ui.editorShowLineNumbers,
       showSlideHoverPreview: ui.showSlideHoverPreview,
-    };
-    try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ state: snapshot, version: STORAGE_VERSION }),
-      );
-    } catch {
-      /* storage full / unavailable — session-only prefs */
-    }
+    });
   });
 });
 

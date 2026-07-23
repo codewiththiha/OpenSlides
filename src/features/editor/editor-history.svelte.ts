@@ -3,6 +3,7 @@ import {
   undo as undoEditorHistory,
   withoutRecording,
 } from "$lib/lib/editor-history";
+import { onUndoRedo } from "$lib/lib/app-events";
 
 export function createEditorHistory(args: {
   slideId: () => string | undefined;
@@ -39,14 +40,10 @@ export function createEditorHistory(args: {
         document.execCommand(direction);
       }
     };
-    const onUndo = () => exec("undo");
-    const onRedo = () => exec("redo");
-    window.addEventListener("openslides:undo", onUndo);
-    window.addEventListener("openslides:redo", onRedo);
-    return () => {
-      window.removeEventListener("openslides:undo", onUndo);
-      window.removeEventListener("openslides:redo", onRedo);
-    };
+    return onUndoRedo(
+      () => exec("undo"),
+      () => exec("redo"),
+    );
   });
 
   return { applyHistorySnapshot };

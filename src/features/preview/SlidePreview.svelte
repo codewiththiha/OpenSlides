@@ -16,7 +16,7 @@
     previewMergedHighlights,
     previewProjectSetting,
   } from "@/features/settings/preview-settings";
-  import { localCode } from "$lib/stores/slide-code.svelte";
+  import { effectiveSlideCode } from "$lib/stores/slide-code.svelte";
   import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
   import HighlightLayer from "@/features/highlights/HighlightLayer.svelte";
   import MagicMoveBlock from "./MagicMoveBlock.svelte";
@@ -37,7 +37,7 @@
 
   const currentSlide = createCurrentSlide(() => project);
   const slide = $derived(currentSlide.activeSlide);
-  const code = $derived(slide ? (localCode[slide.id] ?? slide.code) : "");
+  const code = $derived(effectiveSlideCode(slide));
 
   let containerEl = $state<HTMLDivElement | null>(null);
   let codeContainerEl = $state<HTMLDivElement | null>(null);

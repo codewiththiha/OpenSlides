@@ -62,6 +62,20 @@ function hitChunk(x: number, y: number): string | null {
 
 const ACTIVE_CLASS = "project-dnd-active";
 
+/* Hit-testing queries the DOM, so it runs at most once per frame. */
+let hitRaf = 0;
+
+function scheduleHitTest() {
+  if (hitRaf) return;
+  hitRaf = requestAnimationFrame(() => {
+    hitRaf = 0;
+    const s = projectDnd.session;
+    if (s?.active) {
+      s.hoverChunkId = hitChunk(s.x, s.y);
+    }
+  });
+}
+
 function onMove(e: PointerEvent) {
   const s = projectDnd.session;
   if (!s) return;
@@ -72,7 +86,7 @@ function onMove(e: PointerEvent) {
   }
   if (s.active) {
     document.documentElement.classList.add(ACTIVE_CLASS);
-    s.hoverChunkId = hitChunk(s.x, s.y);
+    scheduleHitTest();
   }
 }
 
@@ -80,13 +94,21 @@ function onUp() {
   const s = projectDnd.session;
   cleanup();
   projectDnd.session = null;
-  if (s?.active) dropHandler?.(s);
+  if (s?.active) {
+    // Finalize synchronously: one last hit test at the release point.
+    s.hoverChunkId = hitChunk(s.x, s.y);
+    dropHandler?.(s);
+  }
 }
 
 function cleanup() {
   window.removeEventListener("pointermove", onMove);
   window.removeEventListener("pointerup", onUp);
   window.removeEventListener("pointercancel", onUp);
+  if (hitRaf) {
+    cancelAnimationFrame(hitRaf);
+    hitRaf = 0;
+  }
   document.documentElement.classList.remove(ACTIVE_CLASS);
 }
 

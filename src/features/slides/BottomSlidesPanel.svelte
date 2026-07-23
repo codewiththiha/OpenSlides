@@ -53,6 +53,7 @@
   import { updateSlideSettingsMutation } from "$lib/queries";
   import { isTypingTarget } from "$lib/lib/keyboard";
   import { cn } from "$lib/lib/utils";
+  import { onOpenSearch, emitFindInCode } from "$lib/lib/app-events";
 
   let {
     project,
@@ -129,8 +130,7 @@
       searchDialogQuery = search.rawSearchQuery;
       isSearchDialogOpen = true;
     };
-    window.addEventListener("openslides:open-search", openSearch);
-    return () => window.removeEventListener("openslides:open-search", openSearch);
+    return onOpenSearch(openSearch);
   });
 
   const rename = createRenameState(async (id: string, name: string) => {
@@ -227,9 +227,7 @@
   }
 
   function submitCodeSearch() {
-    window.dispatchEvent(
-      new CustomEvent("openslides:find-in-code", { detail: { query: searchDialogQuery } }),
-    );
+    emitFindInCode(searchDialogQuery);
     isSearchDialogOpen = false;
   }
 

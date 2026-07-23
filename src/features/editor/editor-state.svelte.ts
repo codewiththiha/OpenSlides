@@ -12,7 +12,8 @@ import {
 } from "$lib/stores/ui-state.svelte";
 import { projectQuery } from "$lib/queries";
 import { api } from "$lib/lib/tauri-api";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { setWindowTitle } from "$lib/lib/window-title";
+import { logger } from "$lib/lib/logger";
 import { dismissAllUndoToasts } from "$lib/lib/settings-undo";
 
 export function createEditorState(args: {
@@ -32,8 +33,7 @@ export function createEditorState(args: {
 
   // Native + document window title follows the open project's name.
   $effect(() => {
-    document.title = title;
-    getCurrentWindow().setTitle(title).catch(() => undefined);
+    setWindowTitle(title);
   });
 
   // Select the persisted (or first) slide whenever the project arrives and
@@ -54,7 +54,9 @@ export function createEditorState(args: {
     const cid = ui.currentSlideId;
     if (!projectPid || !cid) return;
     const t = window.setTimeout(() => {
-      api.setCurrentSlide(projectPid, cid).catch(() => undefined);
+      api
+        .setCurrentSlide(projectPid, cid)
+        .catch((error) => logger.debug("Failed to persist current slide", error));
     }, 300);
     return () => window.clearTimeout(t);
   });

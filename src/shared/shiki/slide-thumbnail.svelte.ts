@@ -1,6 +1,7 @@
 import { shikiDisplayHtml } from "$lib/shiki/shiki-display.svelte";
 import { api } from "$lib/lib/tauri-api";
 import { LruMap } from "$lib/lib/lru-map";
+import { logger } from "$lib/lib/logger";
 
 const MAX_CACHE_ENTRIES = 120;
 const MAX_LINES = 6;
@@ -105,7 +106,9 @@ export function createSlideThumbnail(args: () => SlideThumbnailArgs) {
     cache.set(k, next);
     entryKey = k;
     entry = next;
-    void api.cacheThumbnail(args().slideId, args().code, freshHtml).catch(() => undefined);
+    void api
+      .cacheThumbnail(args().slideId, args().code, freshHtml)
+      .catch((error) => logger.debug("Failed to persist thumbnail cache", error));
   });
 
   return {

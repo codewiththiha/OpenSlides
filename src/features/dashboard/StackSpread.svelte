@@ -14,6 +14,7 @@
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { portal } from "$lib/actions/portal";
   import { EASE_DIM } from "$lib/lib/easings";
+  import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
   let {
     chunk,
@@ -106,10 +107,10 @@
     ),
   );
 
-  const cardWidth = 220;
-  const cardHeight = 180;
-  const spreadWidth = $derived(cardWidth + (total - 1) * 85 + 80);
-  const spreadHeight = $derived(cardHeight + Math.abs((total - 1) / 2) * 12 + 80);
+  const spreadWidth = $derived(PROJECT_CARD_WIDTH + (total - 1) * 85 + 80);
+  const spreadHeight = $derived(
+    PROJECT_CARD_HEIGHT + Math.abs((total - 1) / 2) * 12 + 80,
+  );
 
   /* Motion values */
   const backdrop = new Tween(0, { duration: 240, easing: EASE_DIM });
