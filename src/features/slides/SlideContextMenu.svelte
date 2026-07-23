@@ -5,7 +5,7 @@
   import type { Component } from "svelte";
   import { CheckSquare, Pencil, SquareDashedMousePointer } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
-  import { EASE_DIM } from "$lib/lib/easings";
+  import { pop } from "$lib/ui/transitions/pop";
   import { clampMenuPosition } from "$lib/lib/menu-position";
 
   let {
@@ -27,18 +27,6 @@
   let menuEl = $state<HTMLDivElement | null>(null);
   let resolved = $state({ x: -9999, y: -9999 });
   let positioned = $state(false);
-
-  function pop(
-    _node: Element,
-    { duration = 140, easing = EASE_DIM }: { duration?: number; easing?: (t: number) => number } = {},
-  ) {
-    return {
-      duration,
-      easing,
-      css: (t: number) =>
-        `opacity: ${t}; transform: scale(${0.96 + 0.04 * t}) translateY(${-4 * (1 - t)}px);`,
-    };
-  }
 
   // Measure-then-show before paint: keeps the menu inside the viewport
   // without a flash at the raw click point.
@@ -80,7 +68,7 @@
     style="left: {resolved.x}px; top: {resolved.y}px; visibility: {positioned
       ? 'visible'
       : 'hidden'}; z-index: {Z_INDEX.contextMenu};"
-    transition:pop={{}}
+    transition:pop={{ duration: 140, from: 0.96 }}
     role="menu"
     aria-label="Slide actions"
   >

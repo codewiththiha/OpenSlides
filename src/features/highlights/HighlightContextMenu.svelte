@@ -7,7 +7,7 @@
   import { escapeKey } from "$lib/actions/escape-key";
   import { Highlighter as HighlightIcon, X } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
-  import { EASE_DIM } from "$lib/lib/easings";
+  import { pop } from "$lib/ui/transitions/pop";
 
   let {
     visible,
@@ -26,17 +26,6 @@
   } = $props();
 
 
-  function pop(
-    _node: Element,
-    { duration = 150, easing = EASE_DIM }: { duration?: number; easing?: (t: number) => number } = {},
-  ) {
-    return {
-      duration,
-      easing,
-      css: (t: number) =>
-        `opacity: ${t}; transform: scale(${0.95 + 0.05 * t}) translateY(${-4 * (1 - t)}px);`,
-    };
-  }
 
 </script>
 

@@ -8,6 +8,7 @@
   import { fade } from "svelte/transition";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { modKeyLabel } from "$lib/lib/platform";
+  import { rise } from "$lib/ui/transitions/rise";
   import { EASE_DIM } from "$lib/lib/easings";
 
   let {
@@ -30,17 +31,6 @@
 
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  function rise(
-    _node: Element,
-    { duration = 150, easing = EASE_DIM }: { duration?: number; easing?: (t: number) => number } = {},
-  ) {
-    return {
-      duration,
-      easing,
-      css: (t: number) =>
-        `opacity: ${t}; transform: translateY(${8 * (1 - t)}px) scale(${0.98 + 0.02 * t});`,
-    };
-  }
 
   $effect(() => {
     if (!open) return;
@@ -66,7 +56,7 @@
     <button type="button" class="absolute inset-0 cursor-default" aria-label="Close search" onclick={onClose}></button>
     <div
       class="relative w-full max-w-lg overflow-hidden rounded-xl border bg-card shadow-2xl"
-      transition:rise={{}}
+      transition:rise={{ duration: 150, dy: 8, from: 0.98 }}
     >
       <div class="flex items-center gap-2 border-b px-4 py-3">
         <Search class="h-4 w-4 text-muted-foreground" />

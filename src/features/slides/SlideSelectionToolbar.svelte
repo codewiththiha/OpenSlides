@@ -3,7 +3,7 @@
   import type { Component } from "svelte";
   import { ArrowLeftToLine, ArrowRightToLine, Layers3, Trash2, X } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
-  import { EASE_DIM } from "$lib/lib/easings";
+  import { rise } from "$lib/ui/transitions/rise";
   import { cn } from "$lib/lib/utils";
 
   let {
@@ -26,17 +26,6 @@
     onCancel: () => void;
   } = $props();
 
-  function rise(
-    _node: Element,
-    { duration = 160, easing = EASE_DIM }: { duration?: number; easing?: (t: number) => number } = {},
-  ) {
-    return {
-      duration,
-      easing,
-      css: (t: number) =>
-        `opacity: ${t}; transform: translateY(${12 * (1 - t)}px) scale(${0.96 + 0.04 * t});`,
-    };
-  }
 </script>
 
 {#snippet bubbleButton(
