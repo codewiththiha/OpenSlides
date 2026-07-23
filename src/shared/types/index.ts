@@ -48,8 +48,6 @@ export {
   THEMES,
   THEME_OPTIONS,
   themeBackground,
-  LIGHT_THEMES,
-  isLightTheme,
   isDarkTheme,
   fallbackForeground,
 } from "$lib/lib/themes";

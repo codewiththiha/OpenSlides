@@ -8,7 +8,7 @@
   import { SHORTCUTS } from "$lib/lib/shortcuts";
   import Button from "$lib/ui/Button.svelte";
   import Kbd from "$lib/ui/Kbd.svelte";
-  import Overlay, { OVERLAY_Z } from "$lib/ui/Overlay.svelte";
+  import Overlay, { Z_INDEX } from "$lib/ui/Overlay.svelte";
 
   const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[] }[] = [
     {
@@ -75,7 +75,7 @@
 {#if ui.isShortcutsOpen}
   <Overlay
     onClose={() => setIsShortcutsOpen(false)}
-    z={OVERLAY_Z.shortcuts}
+    z={Z_INDEX.shortcuts}
     closeOnEsc
     class="w-full max-w-lg"
   >

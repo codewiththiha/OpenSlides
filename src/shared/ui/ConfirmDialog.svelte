@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Overlay, { OVERLAY_Z } from "./Overlay.svelte";
+  import Overlay, { Z_INDEX } from "./Overlay.svelte";
   import Button from "./Button.svelte";
 
   let {
@@ -35,7 +35,7 @@
 </script>
 
 {#if open}
-  <Overlay onClose={onCancel} z={OVERLAY_Z.command} placement="center" closeOnEsc>
+  <Overlay onClose={onCancel} z={Z_INDEX.command} placement="center" closeOnEsc>
     <div class="w-full max-w-sm rounded-xl border bg-card p-5 shadow-2xl">
       <h3 class="text-sm font-semibold">{title}</h3>
       {#if description}
