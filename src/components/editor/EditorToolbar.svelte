@@ -2,6 +2,7 @@
   /**
    * EditorToolbar — top TitleBar bar.
    */
+  import { untrack } from "svelte";
   import { push } from "svelte-spa-router";
   import {
     Home,
@@ -47,7 +48,9 @@
   } = $props();
 
   const exportMutation = useExportProject();
-  const updateSlideSettings = useUpdateSlideSettings(project.id);
+  // Stable per mount (rendered only after the project loads, under the
+  // project-keyed EditorInner) — untrack() marks the capture as deliberate.
+  const updateSlideSettings = useUpdateSlideSettings(untrack(() => project.id));
 
   let editingSlideName = $state(false);
   let slideNameDraft = $state("");

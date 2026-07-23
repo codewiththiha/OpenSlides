@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import Slider from "./Slider.svelte";
 
   /**
@@ -37,7 +38,9 @@
     class?: string;
   } = $props();
 
-  let local = $state<number[]>(value);
+  // Initial value only — the effect above re-syncs `local` with every
+  // external value change. untrack() marks the capture as deliberate.
+  let local = $state<number[]>(untrack(() => value));
 
   // Sync from parent when the external value changes (project switch, DB update)
   $effect(() => {

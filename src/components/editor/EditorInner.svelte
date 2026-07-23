@@ -18,6 +18,7 @@
    * switch. Harmless — the initial-slide effect immediately re-selects
    * `settings.currentSlideId ?? slides[0]`, matching the React end state.
    */
+  import { untrack } from "svelte";
   import { push } from "svelte-spa-router";
   import {
     ui,
@@ -60,15 +61,20 @@
 
   let { projectId }: { projectId?: string } = $props();
 
+  // `projectId` is a fixed prop (the route wrapper keys this component on
+  // it), so project-scoped mutation hooks capture the right id for life.
+  // untrack() marks that one-time capture as deliberate.
+  const pid = untrack(() => projectId ?? "");
+
   // Project data (TanStack) — owns slides / theme / settings
-  const projectQuery = useProject(projectId);
+  const projectQuery = useProject(pid);
   const project = $derived(projectQuery.data);
 
   const exportMutation = useExportProject();
-  const duplicateSlide = useDuplicateSlide(projectId ?? "");
-  const updateTheme = useUpdateTheme(projectId ?? "");
+  const duplicateSlide = useDuplicateSlide(pid);
+  const updateTheme = useUpdateTheme(pid);
   const createProject = useCreateProject();
-  const { addSlide } = useAddSlide(projectId ?? "", () => project);
+  const { addSlide } = useAddSlide(pid, () => project);
 
   let editorExpanded = $state(false);
 

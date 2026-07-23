@@ -1,11 +1,14 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Timer } from "@lucide/svelte";
   import { formatClockSeconds } from "@/lib/utils";
   import Chip from "../ui/Chip.svelte";
 
   let { duration, resetKey }: { duration: number; resetKey: string } = $props();
 
-  let remaining = $state(Math.ceil(duration / 1000));
+  // Initial value only — the effect resets `remaining` whenever
+  // duration/resetKey change. untrack() marks the capture as deliberate.
+  let remaining = $state(untrack(() => Math.ceil(duration / 1000)));
 
   $effect(() => {
     duration;

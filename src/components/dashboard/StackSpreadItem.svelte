@@ -7,6 +7,7 @@
    * Svelte's Spring has unit mass, so k/d are divided by 0.8 (325/25) —
    * the normalized ODE is identical, so the arc of the fan matches.
    */
+  import { untrack } from "svelte";
   import { Spring } from "svelte/motion";
   import { type ProjectSummary } from "@/types";
   import { computeFanLayout } from "@/lib/stacking";
@@ -94,8 +95,17 @@
     rotate: 0,
   });
 
+  // The spring only STARTS at the origin rect — the effect below drives it
+  // to its fan target (and back on close) via pos.set(). untrack() marks
+  // the initial read of the deriveds as deliberate.
   const pos = new Spring(
-    { left: originLeft, top: originTop, scale: 0.5, opacity: 0, rotate: 0 },
+    untrack(() => ({
+      left: originLeft,
+      top: originTop,
+      scale: 0.5,
+      opacity: 0,
+      rotate: 0,
+    })),
     SPRING_OPTS,
   );
 
@@ -132,6 +142,7 @@
 <div
   bind:this={itemEl}
   onpointerdown={onPointerDown}
+  role="presentation"
   class="absolute touch-none"
   style="width: {CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
     ? 60

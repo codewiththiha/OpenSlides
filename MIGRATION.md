@@ -93,9 +93,12 @@ advance → exit. It caught a genuine post-migration freeze:
 
 ## Verification
 
-- `npx svelte-check --tsconfig ./tsconfig.json` → 0 errors
-  (32 warnings: a11y notices carried over from the React markup, and
-  intentional initial-value captures for project-scoped hooks).
+- `npx svelte-check --tsconfig ./tsconfig.json` → **0 errors, 0 warnings**.
+  The deliberate initial-value captures (project-scoped hook factories,
+  `$state`/Spring/Tween initializers that re-sync via effects) are marked
+  with `untrack(() => …)`; interactive elements carry proper roles/keys
+  (`StackDeck` keeps its conditional button semantics behind one scoped
+  `svelte-ignore` for the conditional `tabindex`).
 - `npm run build` → clean.
 - `npm run test:highlight` → 13/13; `npm run test:save-race` → 14/14;
   `npm run test:app-flow` → 4/4.
