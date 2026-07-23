@@ -59,7 +59,12 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
   function onMouseUp(e: MouseEvent) {
     args.saveCaret();
     const el = args.textarea();
-    if (e.button === 0 && args.highlightMode() && el && el.selectionStart !== el.selectionEnd) {
+    if (
+      e.button === 0 &&
+      args.highlightMode() &&
+      el &&
+      el.selectionStart !== el.selectionEnd
+    ) {
       showAt(e.clientX, e.clientY);
     }
   }
@@ -89,7 +94,10 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
       pending.endLine,
       pending.endChar,
     );
-    mutation.mutate({ slideId, payload: { highlights: [...args.highlights(), hl] } });
+    mutation.mutate({
+      slideId,
+      payload: { highlights: [...args.highlights(), hl] },
+    });
     pending = null;
     expandedId = hl.id;
   }
@@ -100,7 +108,9 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     mutation.mutate({
       slideId,
       payload: {
-        highlights: args.highlights().map((h) => (h.id === id ? { ...h, ...patch } : h)),
+        highlights: args
+          .highlights()
+          .map((h) => (h.id === id ? { ...h, ...patch } : h)),
       },
     });
   }
@@ -117,7 +127,8 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     if (expandedId === id) expandedId = null;
     if (index >= 0) {
       if (ui.previewHighlightIndex === index) setPreviewHighlightIndex(-1);
-      else if (ui.previewHighlightIndex > index) setPreviewHighlightIndex(ui.previewHighlightIndex - 1);
+      else if (ui.previewHighlightIndex > index)
+        setPreviewHighlightIndex(ui.previewHighlightIndex - 1);
     }
   }
 
@@ -143,12 +154,19 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     if (!slideId) return;
     const highlights = args.highlights();
     const previewIndex = ui.previewHighlightIndex;
-    const previewId = previewIndex >= 0 ? highlights[previewIndex]?.id : undefined;
+    const previewId =
+      previewIndex >= 0 ? highlights[previewIndex]?.id : undefined;
     const byId = new Map(highlights.map((h) => [h.id, h]));
-    const next = ids.map((id) => byId.get(id)).filter((h): h is Highlight => !!h);
+    const next = ids
+      .map((id) => byId.get(id))
+      .filter((h): h is Highlight => !!h);
     if (next.length !== highlights.length) return rollback();
-    mutation.mutate({ slideId, payload: { highlights: next } }, { onError: rollback });
-    if (previewId) setPreviewHighlightIndex(next.findIndex((h) => h.id === previewId));
+    mutation.mutate(
+      { slideId, payload: { highlights: next } },
+      { onError: rollback },
+    );
+    if (previewId)
+      setPreviewHighlightIndex(next.findIndex((h) => h.id === previewId));
   }
 
   function previewHighlight(index: number) {

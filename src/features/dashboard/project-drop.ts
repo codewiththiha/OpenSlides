@@ -56,7 +56,10 @@ export function decideProjectDrop(
 
   // Fan item dragged far away from any cell → unstack it.
   if (payload.kind === "fan-item") {
-    const dist = Math.hypot(session.x - session.startX, session.y - session.startY);
+    const dist = Math.hypot(
+      session.x - session.startX,
+      session.y - session.startY,
+    );
     if (dist > UNSTACK_DISTANCE) {
       return { kind: "unstack", projectId: payload.project.id };
     }

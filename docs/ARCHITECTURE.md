@@ -27,15 +27,15 @@ import from `app/` (`no-restricted-imports` in `eslint.config.js`).
 
 ## Feature map
 
-| Feature          | Contents |
-| ---------------- | ----------------------------------------------- |
-| `dashboard`      | Project grid, stack fan (StackSpread), drag-to-stack (`project-dnd`), card actions context |
-| `editor`         | Editor shell, CodeMirror wrapper `CodeEditor.svelte` + `code-editor/` controllers (apply/find/keyboard/highlighting/slide-nav), PreviewPane |
-| `preview`        | `SlidePreview` + MagicMove renderer (`magicMoveShikiDisplay`) |
-| `slides`         | Slide strip (`strip/`), card + actions context, current-slide, slide DnD (`dnd/`) |
-| `highlights`     | Highlight CRUD (`highlight-crud`), token pipeline, measurement/plan/nav, context menu |
-| `presentation`   | Fullscreen overlay, autoplay, controls |
-| `settings`       | Settings drawer, effective/preview settings, theme pickers |
+| Feature        | Contents                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dashboard`    | Project grid, stack fan (StackSpread), drag-to-stack (`project-dnd`), card actions context                                                  |
+| `editor`       | Editor shell, CodeMirror wrapper `CodeEditor.svelte` + `code-editor/` controllers (apply/find/keyboard/highlighting/slide-nav), PreviewPane |
+| `preview`      | `SlidePreview` + MagicMove renderer (`magicMoveShikiDisplay`)                                                                               |
+| `slides`       | Slide strip (`strip/`), card + actions context, current-slide, slide DnD (`dnd/`)                                                           |
+| `highlights`   | Highlight CRUD (`highlight-crud`), token pipeline, measurement/plan/nav, context menu                                                       |
+| `presentation` | Fullscreen overlay, autoplay, controls                                                                                                      |
+| `settings`     | Settings drawer, effective/preview settings, theme pickers                                                                                  |
 
 ## Shared map
 

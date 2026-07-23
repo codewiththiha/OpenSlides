@@ -19,6 +19,7 @@ export function grow(
   return {
     duration,
     easing,
-    css: (t: number) => `transform: translateZ(0) scale(${from + (to - from) * t})`,
+    css: (t: number) =>
+      `transform: translateZ(0) scale(${from + (to - from) * t})`,
   };
 }

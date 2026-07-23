@@ -4,6 +4,9 @@ import { createShikiLoader } from "./shiki-loader";
 
 const loader = createShikiLoader();
 
-export function getHighlighter(theme: string, language: string): Promise<Highlighter> {
+export function getHighlighter(
+  theme: string,
+  language: string,
+): Promise<Highlighter> {
   return loader.getHighlighter(theme, language);
 }

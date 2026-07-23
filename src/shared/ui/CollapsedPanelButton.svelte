@@ -41,10 +41,10 @@
   tabindex="0"
   onkeydown={onKeyDown}
 >
-  <Icon class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+  <Icon class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
   <span
     class={cn(
-      "select-none text-muted-foreground",
+      "text-muted-foreground select-none",
       orientation === "vertical" && "text-[11px] tracking-wide",
       orientation === "horizontal" && "text-xs",
     )}

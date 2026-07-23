@@ -10,7 +10,10 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pointerInsertIndex, shadowInsertAt } from "../src/shared/lib/stack-targeting";
+import {
+  pointerInsertIndex,
+  shadowInsertAt,
+} from "../src/shared/lib/stack-targeting";
 
 // Zone with three 152px children at an 8px gap (pitch 160): centers 76/236/396.
 const CENTERS = [76, 236, 396];

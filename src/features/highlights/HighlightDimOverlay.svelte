@@ -26,7 +26,10 @@
 
   // Constructor default duration only; every set() passes the live dimMs
   // again. untrack() marks the capture as deliberate.
-  const opacity = new Tween(0, { duration: untrack(() => dimMs), easing: EASE_DIM });
+  const opacity = new Tween(0, {
+    duration: untrack(() => dimMs),
+    easing: EASE_DIM,
+  });
 
   $effect(() => {
     void opacity.set(dimAmount, {

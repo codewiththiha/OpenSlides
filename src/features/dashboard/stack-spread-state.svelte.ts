@@ -18,11 +18,13 @@ export function createStackSpreadState(args: {
   const currentExpandedChunk = $derived.by(() => {
     const info = expandedChunkInfo;
     if (!info) return null;
-    const latest = args.chunks().find(
-      (c) =>
-        (c.groupId && c.groupId === info.chunk.groupId) ||
-        (!c.groupId && c.items[0]?.id === info.chunk.items[0]?.id),
-    );
+    const latest = args
+      .chunks()
+      .find(
+        (c) =>
+          (c.groupId && c.groupId === info.chunk.groupId) ||
+          (!c.groupId && c.items[0]?.id === info.chunk.items[0]?.id),
+      );
     if (!latest || latest.items.length <= 1) return null;
     return latest;
   });
@@ -37,7 +39,12 @@ export function createStackSpreadState(args: {
     get expandedChunkInfo() {
       return expandedChunkInfo;
     },
-    set expandedChunkInfo(next: { chunk: GroupChunk<ProjectSummary>; el: HTMLElement | null } | null) {
+    set expandedChunkInfo(
+      next: {
+        chunk: GroupChunk<ProjectSummary>;
+        el: HTMLElement | null;
+      } | null,
+    ) {
       expandedChunkInfo = next;
     },
     get currentExpandedChunk() {

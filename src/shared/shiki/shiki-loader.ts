@@ -41,9 +41,10 @@ export function createShikiLoader() {
     if (h.getLoadedLanguages().includes(language)) return Promise.resolve();
     let load = langLoads.get(language);
     if (!load) {
-      load = (language === "merustmar"
-        ? h.loadLanguage(merustmarLanguage)
-        : h.loadLanguage(language as BundledLanguage)
+      load = (
+        language === "merustmar"
+          ? h.loadLanguage(merustmarLanguage)
+          : h.loadLanguage(language as BundledLanguage)
       )
         .then(() => undefined)
         .finally(() => langLoads.delete(language));
@@ -52,7 +53,10 @@ export function createShikiLoader() {
     return load;
   }
 
-  async function getHighlighter(theme: string, language: string): Promise<Highlighter> {
+  async function getHighlighter(
+    theme: string,
+    language: string,
+  ): Promise<Highlighter> {
     const h = await getBase();
     await Promise.all([ensureTheme(h, theme), ensureLanguage(h, language)]);
     return h;

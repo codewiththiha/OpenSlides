@@ -153,10 +153,6 @@ export function slideDisplayName(slide: Slide, index: number): string {
  */
 export function resolveProjectLanguage(project: Project): string {
   return (
-    project.settings.language ||
-    project.slides[0]?.language ||
-    "typescript"
+    project.settings.language || project.slides[0]?.language || "typescript"
   );
 }
-
-

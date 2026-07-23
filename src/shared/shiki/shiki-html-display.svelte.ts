@@ -83,7 +83,12 @@ export function shikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
     const timer = window.setTimeout(() => {
       requestHtml(code, a.language, a.theme, controller.signal, priority)
         .then((response) => {
-          if (controller.signal.aborted || !response.html || lastActiveKey !== key) return;
+          if (
+            controller.signal.aborted ||
+            !response.html ||
+            lastActiveKey !== key
+          )
+            return;
           lastHtml = response.html;
           htmlForKey = key;
           html = response.html;
@@ -92,10 +97,15 @@ export function shikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
         .catch((caught) => {
           if ((caught as DOMException)?.name === "AbortError") return;
           if (lastActiveKey !== key) return;
-          const nextError = caught instanceof Error ? caught : new Error(String(caught));
+          const nextError =
+            caught instanceof Error ? caught : new Error(String(caught));
           error = nextError;
-          status = nextError.message === "code_too_large" ? "too-large" : "error";
-          if (policy.errorPolicy === "clear" || nextError.message === "code_too_large") {
+          status =
+            nextError.message === "code_too_large" ? "too-large" : "error";
+          if (
+            policy.errorPolicy === "clear" ||
+            nextError.message === "code_too_large"
+          ) {
             clearCurrent(key);
           }
         });
@@ -150,7 +160,10 @@ export function shikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
  * high priority, short debounce, editor retention policy.
  */
 export function editorShikiHtml(
-  args: () => Pick<ShikiDisplayHtmlArgs, "code" | "language" | "theme" | "resetKey">,
+  args: () => Pick<
+    ShikiDisplayHtmlArgs,
+    "code" | "language" | "theme" | "resetKey"
+  >,
 ) {
   return shikiDisplayHtml(() => ({
     ...args(),

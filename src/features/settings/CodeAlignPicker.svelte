@@ -27,7 +27,9 @@
     >
       <div class="font-medium capitalize">{align}</div>
       <div class="mt-0.5 text-[10px] text-muted-foreground">
-        {align === "left" ? "Block starts at the left edge" : "Centered on the slide"}
+        {align === "left"
+          ? "Block starts at the left edge"
+          : "Centered on the slide"}
       </div>
     </button>
   {/each}

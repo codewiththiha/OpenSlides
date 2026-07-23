@@ -32,7 +32,13 @@
 </script>
 
 {#if open}
-  <Overlay onClose={onClose} z={Z_INDEX.command} placement="top" closeOnEsc class={className}>
+  <Overlay
+    {onClose}
+    z={Z_INDEX.command}
+    placement="top"
+    closeOnEsc
+    class={className}
+  >
     <!-- Actions attach only to elements, so the trap wraps the cmdk root. -->
     <div use:focusTrap>
       <Command.Root
@@ -41,20 +47,22 @@
         role="dialog"
         aria-modal="true"
       >
-      <Command.Input
-        autofocus
-        bind:value={search}
-        {placeholder}
-        aria-label={placeholder || label}
-        class="w-full border-b bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground"
-      />
-      <Command.List class={listClassName}>
-        <Command.Empty class="px-3 py-6 text-center text-sm text-muted-foreground">
-          {emptyText}
-        </Command.Empty>
-        {@render children?.()}
-      </Command.List>
-      {@render footer?.()}
+        <Command.Input
+          autofocus
+          bind:value={search}
+          {placeholder}
+          aria-label={placeholder || label}
+          class="w-full border-b bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground"
+        />
+        <Command.List class={listClassName}>
+          <Command.Empty
+            class="px-3 py-6 text-center text-sm text-muted-foreground"
+          >
+            {emptyText}
+          </Command.Empty>
+          {@render children?.()}
+        </Command.List>
+        {@render footer?.()}
       </Command.Root>
     </div>
   </Overlay>

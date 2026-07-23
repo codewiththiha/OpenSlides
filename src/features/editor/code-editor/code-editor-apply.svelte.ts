@@ -2,7 +2,10 @@
  * Code-editor apply path: every edit (typing, replace-all, undo, tab edits)
  * flows through here — history record, local code shadow, save scheduling.
  */
-import { record as recordEditorHistory, type Snapshot } from "$lib/lib/editor-history";
+import {
+  record as recordEditorHistory,
+  type Snapshot,
+} from "$lib/lib/editor-history";
 import { markSavePending } from "$lib/lib/code-save";
 import { setLocalCode } from "$lib/stores/slide-code.svelte";
 import type { createCodeEditorState } from "../code-editor-state.svelte";

@@ -168,7 +168,7 @@
       <button
         type="button"
         onclick={() => toggleZenMode()}
-        class="absolute right-3 top-3 z-30 rounded-md bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow backdrop-blur hover:text-foreground"
+        class="absolute top-3 right-3 z-30 rounded-md bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow backdrop-blur hover:text-foreground"
       >
         Exit Focus (Esc)
       </button>

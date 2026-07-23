@@ -1,5 +1,8 @@
 import { getLocalCode } from "$lib/stores/slide-code.svelte";
-import { getCaretPosition, setCaretPosition } from "$lib/stores/caret-positions";
+import {
+  getCaretPosition,
+  setCaretPosition,
+} from "$lib/stores/caret-positions";
 import { type Snapshot } from "$lib/lib/editor-history";
 import type { Slide } from "$lib/types";
 

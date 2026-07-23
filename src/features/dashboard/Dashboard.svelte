@@ -92,7 +92,11 @@
   <TitleBar>
     {#snippet leading()}
       <div class="flex items-center gap-2">
-        <img src="/openslides-logo.svg" alt="OpenSlides" class="h-8 w-8 rounded-lg object-cover" />
+        <img
+          src="/openslides-logo.svg"
+          alt="OpenSlides"
+          class="h-8 w-8 rounded-lg object-cover"
+        />
         <span class="text-sm font-semibold">OpenSlides</span>
       </div>
     {/snippet}

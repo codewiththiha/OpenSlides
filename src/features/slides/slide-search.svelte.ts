@@ -18,7 +18,9 @@ export function createSlideStripSearch(args: {
     return () => window.clearTimeout(t);
   });
 
-  const searchQuery = $derived(rawSearchQuery.trim() ? debouncedSearchQuery : "");
+  const searchQuery = $derived(
+    rawSearchQuery.trim() ? debouncedSearchQuery : "",
+  );
 
   $effect(() => {
     const q = searchQuery;

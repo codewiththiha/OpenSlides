@@ -28,7 +28,12 @@
 </script>
 
 {#if isLoading || isError}
-  <AsyncState {isLoading} {isError} {error} loadingLabel="Loading presentations…" />
+  <AsyncState
+    {isLoading}
+    {isError}
+    {error}
+    loadingLabel="Loading presentations…"
+  />
 {:else if projectCount === 0 && showEmptyState}
   <EmptyState
     icon={FolderOpen}

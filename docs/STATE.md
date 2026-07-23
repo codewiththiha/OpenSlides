@@ -33,7 +33,7 @@ See `SAVE_PIPELINE.md` for how this flushes.
 ## Instant preview overrides
 
 `ui.previewProject` / `ui.previewSlides` / `ui.previewHighlights` let the
-settings UI preview changes *before* committing them (dragging a font-size
+settings UI preview changes _before_ committing them (dragging a font-size
 slider updates the preview live). Helpers live in
 `features/settings/preview-settings.ts` (`previewProjectSetting`,
 `previewHighlightSettings`, `previewMergedHighlights`) and
@@ -59,8 +59,8 @@ Two action channels replace long prop chains (guide §2.1):
   consume rename/remove/duplicate/multi-select/context-menu.
 
 Both are getter-backed (`readonly` fields read live state) and provided
-exactly once with `untrack` + late-binding closures. Per-card *data*
-(slide, selection flags, tab stop) stays in props; only stable *actions*
+exactly once with `untrack` + late-binding closures. Per-card _data_
+(slide, selection flags, tab stop) stays in props; only stable _actions_
 travel by context.
 
 ## App events (`shared/lib/app-events.ts`)

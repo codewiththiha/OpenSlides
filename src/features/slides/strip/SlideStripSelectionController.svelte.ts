@@ -7,11 +7,17 @@ import { SvelteSet } from "svelte/reactivity";
 import type { Slide } from "$lib/types";
 
 interface DeleterLike {
-  deleteSlides(ids: string[]): Promise<{ ok: boolean; deletedIds: Set<string> }>;
+  deleteSlides(
+    ids: string[],
+  ): Promise<{ ok: boolean; deletedIds: Set<string> }>;
 }
 
 interface MenuLike {
-  menu: { slide: Slide; title: string; position: { x: number; y: number } } | null;
+  menu: {
+    slide: Slide;
+    title: string;
+    position: { x: number; y: number };
+  } | null;
   close: () => void;
   updatePosition: (position: { x: number; y: number }) => void;
 }
@@ -45,7 +51,10 @@ export function createSlideStripSelection(args: {
       .filter((slide) => selectedSlideIds.has(slide.id))
       .map((slide) => slide.id);
 
-  function toggleSlideSelection(id: string, position?: { x: number; y: number }) {
+  function toggleSlideSelection(
+    id: string,
+    position?: { x: number; y: number },
+  ) {
     if (selectedSlideIds.has(id)) selectedSlideIds.delete(id);
     else selectedSlideIds.add(id);
     if (position && args.menuCtl().menu) {
@@ -84,7 +93,9 @@ export function createSlideStripSelection(args: {
       .filter((slide) => !selectedSet.has(slide.id))
       .map((slide) => slide.id);
     args.reorderSlides(
-      destination === "start" ? [...selected, ...remaining] : [...remaining, ...selected],
+      destination === "start"
+        ? [...selected, ...remaining]
+        : [...remaining, ...selected],
     );
     args.menuCtl().close();
   }

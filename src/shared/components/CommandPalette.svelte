@@ -88,23 +88,35 @@
   onClose={() => setIsCommandOpen(false)}
   label="Command Menu"
   placeholder="Type a command or search…"
-  bind:search={search}
+  bind:search
   class="w-full max-w-lg"
 >
   <Command.Group value="navigation" class="text-xs text-muted-foreground">
     <Command.GroupHeading>Navigation</Command.GroupHeading>
     {@render item(homeIcon, "Go to Dashboard", () => run(() => void push("/")))}
     {#if projectId}
-      {@render item(presentIcon, "Start Presentation", () => run(() => setIsPresenting(true)))}
-      {@render item(settingsIcon, "Open Settings", () => run(() => setIsSettingsOpen(true)))}
-      {@render item(focusIcon, "Toggle focus mode", () => run(() => toggleZenMode()))}
+      {@render item(presentIcon, "Start Presentation", () =>
+        run(() => setIsPresenting(true)),
+      )}
+      {@render item(settingsIcon, "Open Settings", () =>
+        run(() => setIsSettingsOpen(true)),
+      )}
+      {@render item(focusIcon, "Toggle focus mode", () =>
+        run(() => toggleZenMode()),
+      )}
       {@render item(plusIcon, "Add Slide", () => run(() => onAddSlide?.()))}
-      {@render item(downloadIcon, "Export presentation", () => run(() => onExport?.()))}
+      {@render item(downloadIcon, "Export presentation", () =>
+        run(() => onExport?.()),
+      )}
     {/if}
-    {@render item(themeIcon, ui.isDarkUi ? "Switch to light mode" : "Switch to dark mode", () =>
-      run(() => toggleTheme()),
+    {@render item(
+      themeIcon,
+      ui.isDarkUi ? "Switch to light mode" : "Switch to dark mode",
+      () => run(() => toggleTheme()),
     )}
-    {@render item(keyboardIcon, "Keyboard shortcuts", () => run(() => setIsShortcutsOpen(true)))}
+    {@render item(keyboardIcon, "Keyboard shortcuts", () =>
+      run(() => setIsShortcutsOpen(true)),
+    )}
   </Command.Group>
 
   {#if projectId && onTheme}
@@ -133,4 +145,5 @@
 {#snippet themeIcon()}
   {#if ui.isDarkUi}<Sun class="h-4 w-4" />{:else}<Moon class="h-4 w-4" />{/if}
 {/snippet}
-{#snippet themeDot()}<span class="h-2 w-2 rounded-full bg-primary"></span>{/snippet}
+{#snippet themeDot()}<span class="h-2 w-2 rounded-full bg-primary"
+  ></span>{/snippet}

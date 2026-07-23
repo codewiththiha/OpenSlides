@@ -128,7 +128,9 @@ async function pump() {
 async function processRequest(request: QueuedRequest): Promise<void> {
   const { id, code, lang, theme } = request;
   if (code.length > 20_000) {
-    console.warn(`[Shiki Worker] code too large (${code.length} chars) — using plain fallback`);
+    console.warn(
+      `[Shiki Worker] code too large (${code.length} chars) — using plain fallback`,
+    );
     post({ id, error: "code_too_large" });
     return;
   }

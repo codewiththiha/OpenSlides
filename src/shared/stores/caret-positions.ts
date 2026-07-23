@@ -13,7 +13,11 @@ export function getCaretPosition(slideId: string): CaretPosition | undefined {
   return positions.get(slideId);
 }
 
-export function setCaretPosition(slideId: string, start: number, end: number): void {
+export function setCaretPosition(
+  slideId: string,
+  start: number,
+  end: number,
+): void {
   positions.set(slideId, { start, end });
 }
 

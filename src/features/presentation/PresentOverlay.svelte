@@ -9,7 +9,11 @@
   import ProgressBar from "$lib/ui/ProgressBar.svelte";
   import AutoplayTimerChip from "@/features/presentation/AutoplayTimerChip.svelte";
   import PresentControls from "@/features/presentation/PresentControls.svelte";
-  import { ui, toggleAutoPlaying, setIsAutoPlaying } from "$lib/stores/ui-state.svelte";
+  import {
+    ui,
+    toggleAutoPlaying,
+    setIsAutoPlaying,
+  } from "$lib/stores/ui-state.svelte";
   import type { Project, Slide } from "$lib/types";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
 
@@ -50,12 +54,15 @@
     <ProgressBar
       {duration}
       {resetKey}
-      class="absolute left-0 top-0 h-1 w-full bg-white/10"
+      class="absolute top-0 left-0 h-1 w-full bg-white/10"
       style="z-index: {Z_INDEX.presentationProgress}"
     />
   {/if}
 
-  <div class="absolute right-4 top-4 flex items-center gap-2" style="z-index: {Z_INDEX.presentationControls}">
+  <div
+    class="absolute top-4 right-4 flex items-center gap-2"
+    style="z-index: {Z_INDEX.presentationControls}"
+  >
     {#if isAutoPlaying}
       <AutoplayTimerChip {duration} {resetKey} />
     {/if}
@@ -89,7 +96,9 @@
         {onHighlightExitComplete}
       />
       {#if project.settings.showHighlightStepIndicator !== false}
-        <div class="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4">
+        <div
+          class="absolute inset-x-0 bottom-4 z-40 flex items-center justify-between px-4"
+        >
           <div class="flex-1"></div>
           <div class="pointer-events-none flex justify-center">
             <div

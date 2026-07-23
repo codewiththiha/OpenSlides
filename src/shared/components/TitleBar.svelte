@@ -32,7 +32,9 @@
   <div class="flex min-w-0 items-center gap-2">
     {@render leading?.()}
     {#if title}
-      <span class="truncate text-sm font-medium text-foreground/90">{title}</span>
+      <span class="truncate text-sm font-medium text-foreground/90"
+        >{title}</span
+      >
     {/if}
   </div>
   <div class="flex shrink-0 items-center gap-1">{@render trailing?.()}</div>

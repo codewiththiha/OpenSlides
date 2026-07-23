@@ -38,17 +38,22 @@
       class={cn(
         "relative z-10 flex h-full w-full",
         stagePad,
-        centerBlock ? "items-center justify-center" : "items-center justify-start",
+        centerBlock
+          ? "items-center justify-center"
+          : "items-center justify-start",
       )}
     >
       <pre
-        class="font-mono font-medium tracking-wide text-left"
-        style="font-size: {fontSize}px; line-height: {lineHeight}; color: {fallbackForeground(theme)}; white-space: pre;"
-      >{code}</pre>
+        class="text-left font-mono font-medium tracking-wide"
+        style="font-size: {fontSize}px; line-height: {lineHeight}; color: {fallbackForeground(
+          theme,
+        )}; white-space: pre;">{code}</pre>
     </div>
   </div>
 {:else}
-  <div class="flex h-full w-full items-center justify-center text-muted-foreground">
+  <div
+    class="flex h-full w-full items-center justify-center text-muted-foreground"
+  >
     Loading preview…
   </div>
 {/if}

@@ -12,7 +12,10 @@
   import { type ProjectSummary } from "$lib/types";
   import { computeFanLayout } from "$lib/lib/stacking";
   import ProjectCard from "./ProjectCard.svelte";
-  import { beginProjectDrag, projectDnd } from "@/features/dashboard/project-dnd.svelte";
+  import {
+    beginProjectDrag,
+    projectDnd,
+  } from "@/features/dashboard/project-dnd.svelte";
   import { riseFade } from "$lib/ui/transitions/rise-fade";
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
@@ -122,8 +125,9 @@
   class="absolute touch-none"
   style="width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
     ? 60
-    : 30 + index}; left: {pos.current.left}px; top: {pos.current.top}px; transform: scale({pos
-    .current.scale}) rotate({pos.current.rotate}deg); opacity: {pos.current.opacity};"
+    : 30 + index}; left: {pos.current.left}px; top: {pos.current
+    .top}px; transform: scale({pos.current.scale}) rotate({pos.current
+    .rotate}deg); opacity: {pos.current.opacity};"
 >
   <div in:riseFade={{ duration: 300, delay: delayMs, y: 18 }}>
     <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">

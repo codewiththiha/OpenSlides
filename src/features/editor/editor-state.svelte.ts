@@ -56,7 +56,9 @@ export function createEditorState(args: {
     const t = window.setTimeout(() => {
       api
         .setCurrentSlide(projectPid, cid)
-        .catch((error) => logger.debug("Failed to persist current slide", error));
+        .catch((error) =>
+          logger.debug("Failed to persist current slide", error),
+        );
     }, 300);
     return () => window.clearTimeout(t);
   });

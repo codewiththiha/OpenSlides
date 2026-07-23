@@ -22,8 +22,14 @@ export function createEditorMenuHandlers(args: {
   addSlide: () => Promise<unknown> | void;
   duplicateSlide: (id: string) => void;
 }): AppMenuHandlers {
-  const { projectId, createProject, exportProject, enterPresent, addSlide, duplicateSlide } =
-    args;
+  const {
+    projectId,
+    createProject,
+    exportProject,
+    enterPresent,
+    addSlide,
+    duplicateSlide,
+  } = args;
   return {
     "menu://new-project": () => {
       void createProject("Untitled Presentation").then((p) => {

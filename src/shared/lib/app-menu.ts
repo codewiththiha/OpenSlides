@@ -2,7 +2,12 @@
  * Native application menu (macOS menu bar / Windows window menu).
  * Emits window events so app code stays loosely coupled.
  */
-import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/menu";
+import {
+  Menu,
+  MenuItem,
+  PredefinedMenuItem,
+  Submenu,
+} from "@tauri-apps/api/menu";
 import { emit } from "@tauri-apps/api/event";
 import { isMacOS } from "./platform";
 import { SHORTCUTS, shortcutAccelerator } from "./shortcuts";
@@ -41,10 +46,22 @@ async function item(
 export async function installAppMenu(): Promise<void> {
   try {
     const fileItems = [
-      await item("menu://new-project", "New Presentation", shortcutAccelerator(SHORTCUTS.newProject)),
-      await item("menu://open-dashboard", "Go to Dashboard", shortcutAccelerator(SHORTCUTS.openDashboard)),
+      await item(
+        "menu://new-project",
+        "New Presentation",
+        shortcutAccelerator(SHORTCUTS.newProject),
+      ),
+      await item(
+        "menu://open-dashboard",
+        "Go to Dashboard",
+        shortcutAccelerator(SHORTCUTS.openDashboard),
+      ),
       await PredefinedMenuItem.new({ item: "Separator" }),
-      await item("menu://export", "Export…", shortcutAccelerator(SHORTCUTS.export)),
+      await item(
+        "menu://export",
+        "Export…",
+        shortcutAccelerator(SHORTCUTS.export),
+      ),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await PredefinedMenuItem.new({ item: "CloseWindow", text: "Close" }),
     ];
@@ -69,9 +86,21 @@ export async function installAppMenu(): Promise<void> {
     ];
 
     const viewItems = [
-      await item("menu://present", "Start Presentation", shortcutAccelerator(SHORTCUTS.present)),
-      await item("menu://zen", "Toggle Focus Mode", shortcutAccelerator(SHORTCUTS.zen)),
-      await item("menu://command-palette", "Command Palette", shortcutAccelerator(SHORTCUTS.commandPalette)),
+      await item(
+        "menu://present",
+        "Start Presentation",
+        shortcutAccelerator(SHORTCUTS.present),
+      ),
+      await item(
+        "menu://zen",
+        "Toggle Focus Mode",
+        shortcutAccelerator(SHORTCUTS.zen),
+      ),
+      await item(
+        "menu://command-palette",
+        "Command Palette",
+        shortcutAccelerator(SHORTCUTS.commandPalette),
+      ),
       await PredefinedMenuItem.new({ item: "Separator" }),
       await item("menu://toggle-theme", "Toggle Light/Dark Mode"),
       await PredefinedMenuItem.new({ item: "Separator" }),
@@ -79,9 +108,21 @@ export async function installAppMenu(): Promise<void> {
     ];
 
     const slideItems = [
-      await item("menu://add-slide", "Add Slide", shortcutAccelerator(SHORTCUTS.addSlide)),
-      await item("menu://duplicate-slide", "Duplicate Slide", shortcutAccelerator(SHORTCUTS.duplicateSlide)),
-      await item("menu://settings", "Presentation Settings…", shortcutAccelerator(SHORTCUTS.settings)),
+      await item(
+        "menu://add-slide",
+        "Add Slide",
+        shortcutAccelerator(SHORTCUTS.addSlide),
+      ),
+      await item(
+        "menu://duplicate-slide",
+        "Duplicate Slide",
+        shortcutAccelerator(SHORTCUTS.duplicateSlide),
+      ),
+      await item(
+        "menu://settings",
+        "Presentation Settings…",
+        shortcutAccelerator(SHORTCUTS.settings),
+      ),
     ];
 
     // Help: only Keyboard Shortcuts (no About — same modal was confusing)
@@ -105,11 +146,17 @@ export async function installAppMenu(): Promise<void> {
           await PredefinedMenuItem.new({ item: "Separator" }),
           await PredefinedMenuItem.new({ item: "Services" }),
           await PredefinedMenuItem.new({ item: "Separator" }),
-          await PredefinedMenuItem.new({ item: "Hide", text: "Hide OpenSlides" }),
+          await PredefinedMenuItem.new({
+            item: "Hide",
+            text: "Hide OpenSlides",
+          }),
           await PredefinedMenuItem.new({ item: "HideOthers" }),
           await PredefinedMenuItem.new({ item: "ShowAll" }),
           await PredefinedMenuItem.new({ item: "Separator" }),
-          await PredefinedMenuItem.new({ item: "Quit", text: "Quit OpenSlides" }),
+          await PredefinedMenuItem.new({
+            item: "Quit",
+            text: "Quit OpenSlides",
+          }),
         ],
       });
       submenus.unshift(appMenu);

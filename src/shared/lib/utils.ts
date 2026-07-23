@@ -11,7 +11,8 @@ export function formatDurationShort(ms: number): string {
   if (totalSec < 60) return `${totalSec}s`;
   const minutes = Math.floor(totalSec / 60);
   const seconds = totalSec % 60;
-  if (minutes < 60) return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  if (minutes < 60)
+    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
   const hours = Math.floor(minutes / 60);
   return `${hours}h ${minutes % 60}m`;
 }

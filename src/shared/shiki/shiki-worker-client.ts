@@ -52,7 +52,8 @@ function getWorker(): Worker {
     }
   };
   createdWorker.onerror = (event) => {
-    const error = event.error ?? new Error(event.message || "Shiki worker failed");
+    const error =
+      event.error ?? new Error(event.message || "Shiki worker failed");
     // A fatal worker error leaves this instance unusable. Drop and terminate it
     // so the next request can create a clean worker rather than reusing a dead one.
     if (worker === createdWorker) {

@@ -13,7 +13,10 @@
     settings: ProjectSettings;
     effTransition: number;
     effStagger: number;
-    onPreview: (key: "globalTransitionDuration" | "globalStagger", value: number) => void;
+    onPreview: (
+      key: "globalTransitionDuration" | "globalStagger",
+      value: number,
+    ) => void;
     onCommit: (partial: Record<string, unknown>) => void;
   } = $props();
 </script>

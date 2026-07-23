@@ -69,11 +69,15 @@
     )}
     aria-label="Create new presentation"
   >
-    <div class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-110">
+    <div
+      class="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-110"
+    >
       <Plus class="h-5 w-5" />
     </div>
     <h3 class="text-sm font-semibold text-foreground">New Presentation</h3>
-    <p class="mt-1 text-xs text-muted-foreground">Click or press Enter to start</p>
+    <p class="mt-1 text-xs text-muted-foreground">
+      Click or press Enter to start
+    </p>
   </div>
 {:else}
   <div
@@ -83,9 +87,13 @@
       className,
     )}
   >
-    <div class="mb-4 flex items-center justify-between border-b border-border/40 pb-3">
+    <div
+      class="mb-4 flex items-center justify-between border-b border-border/40 pb-3"
+    >
       <div>
-        <h3 class="text-base font-semibold text-foreground">Create New Presentation</h3>
+        <h3 class="text-base font-semibold text-foreground">
+          Create New Presentation
+        </h3>
         <p class="text-xs text-muted-foreground">
           Configure your deck theme and starting slide preview
         </p>
@@ -108,7 +116,10 @@
       <div class="flex flex-col justify-between gap-5 lg:col-span-5">
         <div class="space-y-4">
           <div>
-            <label for="create-deck-name" class="mb-1.5 block text-xs font-medium text-foreground">
+            <label
+              for="create-deck-name"
+              class="mb-1.5 block text-xs font-medium text-foreground"
+            >
               Presentation Name
             </label>
             <Input
@@ -127,8 +138,9 @@
 
           <div>
             <span class="mb-1.5 block text-xs font-medium text-foreground">
-              Theme Color Palette ({THEMES.find((t) => t.value === (selectedTheme || "dark-plus"))
-                ?.label || "Dark+"})
+              Theme Color Palette ({THEMES.find(
+                (t) => t.value === (selectedTheme || "dark-plus"),
+              )?.label || "Dark+"})
             </span>
             <div class="flex flex-wrap gap-2 pt-1">
               {#each THEMES as t (t.value)}
@@ -159,7 +171,9 @@
             Create Presentation
           </Button>
           {#if !isStandalone}
-            <Button variant="ghost" onclick={() => onToggleExpand(false)}>Cancel</Button>
+            <Button variant="ghost" onclick={() => onToggleExpand(false)}
+              >Cancel</Button
+            >
           {/if}
         </div>
       </div>
@@ -169,7 +183,9 @@
         <span class="mb-1.5 block text-xs font-medium text-foreground">
           Live Starting Slide Preview
         </span>
-        <div class="relative flex-1 rounded-lg border border-border/60 bg-background/50 p-1">
+        <div
+          class="relative flex-1 rounded-lg border border-border/60 bg-background/50 p-1"
+        >
           <CodeThumbnail
             html={preview.html}
             theme={selectedTheme || "dark-plus"}

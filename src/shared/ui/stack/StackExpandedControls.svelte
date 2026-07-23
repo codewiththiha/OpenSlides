@@ -23,7 +23,9 @@
 </script>
 
 {#if variant === "slide-strip"}
-  <div class={cn("flex flex-col gap-1 border-r border-border/60 pr-2", className)}>
+  <div
+    class={cn("flex flex-col gap-1 border-r border-border/60 pr-2", className)}
+  >
     <Button
       variant="ghost"
       size="sm"

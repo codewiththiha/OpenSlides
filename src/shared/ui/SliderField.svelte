@@ -33,7 +33,13 @@
 </script>
 
 <div class={cn("min-w-0 space-y-1", disabled && "opacity-45", className)}>
-  <Label class={cn("block truncate text-[10px] text-muted-foreground", labelClassName)} title={text}>
+  <Label
+    class={cn(
+      "block truncate text-[10px] text-muted-foreground",
+      labelClassName,
+    )}
+    title={text}
+  >
     {text}
   </Label>
   <DebouncedSlider

@@ -97,14 +97,16 @@
     save,
   });
 
-  const { findReplace, isFindOpen, closeFind, openFind } = createCodeEditorFind({
-    code: () => code,
-    textareaEl: () => st.textareaEl,
-    applyCode: handleChange,
-    saveCaret,
-    editorFontSize: () => editorFontSize,
-    lineHeight: () => lineHeight,
-  });
+  const { findReplace, isFindOpen, closeFind, openFind } = createCodeEditorFind(
+    {
+      code: () => code,
+      textareaEl: () => st.textareaEl,
+      applyCode: handleChange,
+      saveCaret,
+      editorFontSize: () => editorFontSize,
+      lineHeight: () => lineHeight,
+    },
+  );
 
   const { handleKeyDown } = createCodeEditorKeyboard({
     slideId: () => slideId,
@@ -141,7 +143,9 @@
     crud,
   });
 
-  const gutterWidth = $derived(Math.max(2, String(lineCount).length) * 0.65 + 1.25);
+  const gutterWidth = $derived(
+    Math.max(2, String(lineCount).length) * 0.65 + 1.25,
+  );
   const defaultFg = $derived(fallbackForeground(theme));
 </script>
 
@@ -159,7 +163,8 @@
       highlightCount={currentHighlights.length}
       {expanded}
       onNavigate={goSlide}
-      onLanguageChange={(value) => projectSettingsMutation.mutate({ language: value })}
+      onLanguageChange={(value) =>
+        projectSettingsMutation.mutate({ language: value })}
       onToggleHighlightMode={() => (st.highlightMode = !st.highlightMode)}
       {onToggleExpand}
       {onCollapse}

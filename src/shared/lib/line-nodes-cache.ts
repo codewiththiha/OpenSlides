@@ -71,7 +71,11 @@ export function getLineTextNodes(root: HTMLElement): Text[][] {
   if (cached && !cached.dirty) return cached.nodes;
 
   const lineSpans = Array.from(root.querySelectorAll("span.line"));
-  if (lineSpans.length > 0 && cached && cached.lineSpans.length === lineSpans.length) {
+  if (
+    lineSpans.length > 0 &&
+    cached &&
+    cached.lineSpans.length === lineSpans.length
+  ) {
     const nodes = lineSpans.map((span, index) =>
       span === cached.lineSpans[index]
         ? (cached.nodes[index] ?? collectLineSpanTextNodes(span))
@@ -90,4 +94,3 @@ export function clearLineNodesCache(root: HTMLElement) {
   const cached = nodesCache.get(root);
   if (cached) cached.dirty = true;
 }
-

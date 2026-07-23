@@ -35,28 +35,48 @@ function getHistory(slideId: string): History {
 
 function isSingleCharacterEdit(before: string, after: string): boolean {
   let prefix = 0;
-  while (prefix < before.length && prefix < after.length && before[prefix] === after[prefix]) prefix++;
+  while (
+    prefix < before.length &&
+    prefix < after.length &&
+    before[prefix] === after[prefix]
+  )
+    prefix++;
   let beforeEnd = before.length;
   let afterEnd = after.length;
-  while (beforeEnd > prefix && afterEnd > prefix && before[beforeEnd - 1] === after[afterEnd - 1]) {
+  while (
+    beforeEnd > prefix &&
+    afterEnd > prefix &&
+    before[beforeEnd - 1] === after[afterEnd - 1]
+  ) {
     beforeEnd--;
     afterEnd--;
   }
   const removed = before.slice(prefix, beforeEnd);
   const inserted = after.slice(prefix, afterEnd);
   if (/[\n\t]/.test(removed) || /[\n\t]/.test(inserted)) return false;
-  return (removed.length === 0 && inserted.length === 1) ||
-    (removed.length === 1 && inserted.length === 0);
+  return (
+    (removed.length === 0 && inserted.length === 1) ||
+    (removed.length === 1 && inserted.length === 0)
+  );
 }
 
-export function record(slideId: string, before: Snapshot, after: Snapshot): void {
+export function record(
+  slideId: string,
+  before: Snapshot,
+  after: Snapshot,
+): void {
   if (applyingHistory || before.code === after.code) return;
   const history = getHistory(slideId);
   const now = Date.now();
   const coalescible = isSingleCharacterEdit(before.code, after.code);
   const last = history.undo[history.undo.length - 1];
 
-  if (last && coalescible && last.coalescible && now - last.timestamp < COALESCE_MS) {
+  if (
+    last &&
+    coalescible &&
+    last.coalescible &&
+    now - last.timestamp < COALESCE_MS
+  ) {
     last.after = after;
     last.timestamp = now;
     history.redo.length = 0;

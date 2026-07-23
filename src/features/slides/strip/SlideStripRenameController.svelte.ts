@@ -25,7 +25,9 @@ export function createSlideStripRename(args: {
         {
           onSuccess: () => {
             args.setOrdered(
-              args.ordered().map((s) => (s.id === id ? { ...s, name: finalName } : s)),
+              args
+                .ordered()
+                .map((s) => (s.id === id ? { ...s, name: finalName } : s)),
             );
             resolve();
           },

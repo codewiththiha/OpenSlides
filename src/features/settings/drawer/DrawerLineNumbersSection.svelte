@@ -29,8 +29,12 @@
   const previewProject = $derived(previewProjectSettings());
 
   const effFontSize = $derived(previewProject.fontSize ?? settings.fontSize);
-  const effLineHeight = $derived(previewProject.lineHeight ?? settings.lineHeight);
-  const effEditorFontSize = $derived(previewProject.editorFontSize ?? settings.editorFontSize);
+  const effLineHeight = $derived(
+    previewProject.lineHeight ?? settings.lineHeight,
+  );
+  const effEditorFontSize = $derived(
+    previewProject.editorFontSize ?? settings.editorFontSize,
+  );
 </script>
 
 <SettingsSection title="Line numbers">

@@ -26,7 +26,9 @@ export function emitFindInCode(query: string): void {
   );
 }
 
-export function onFindInCode(handler: (query: string | undefined) => void): () => void {
+export function onFindInCode(
+  handler: (query: string | undefined) => void,
+): () => void {
   const listener = (event: Event) => {
     const detail = (event as CustomEvent<{ query?: string }>).detail;
     handler(detail?.query);

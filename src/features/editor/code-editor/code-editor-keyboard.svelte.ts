@@ -29,12 +29,15 @@ export function createCodeEditorKeyboard(args: {
     handleChange: args.handleChange,
   });
 
-  function handleKeyDown(e: KeyboardEvent & { currentTarget: HTMLTextAreaElement }) {
+  function handleKeyDown(
+    e: KeyboardEvent & { currentTarget: HTMLTextAreaElement },
+  ) {
     const isMod = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
     if (isMod && (key === "z" || key === "y")) {
       e.preventDefault();
-      const direction = key === "y" || (key === "z" && e.shiftKey) ? "redo" : "undo";
+      const direction =
+        key === "y" || (key === "z" && e.shiftKey) ? "redo" : "undo";
       if (!applyHistorySnapshot(direction)) {
         document.execCommand(direction);
       }

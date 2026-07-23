@@ -125,7 +125,12 @@ function cancelProjectDrag() {
 export function beginProjectDrag(
   payload: ProjectDragPayload,
   e: PointerEvent | MouseEvent,
-  opts: { width?: number | null; threshold?: number; originLeft?: number; originTop?: number } = {},
+  opts: {
+    width?: number | null;
+    threshold?: number;
+    originLeft?: number;
+    originTop?: number;
+  } = {},
 ) {
   if ("button" in e && e.button !== 0) return;
   cancelProjectDrag();

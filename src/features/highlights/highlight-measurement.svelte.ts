@@ -86,7 +86,13 @@ export function createHighlightMeasurement(args: UseHighlightMeasurementArgs) {
       // cannot produce a usable result.
       let m = measureHighlight(container, codeRoot, plan, fontSize, lineHeight);
       if (!m) {
-        m = measureHighlightPureMath(container, codeRoot, plan, fontSize, lineHeight);
+        m = measureHighlightPureMath(
+          container,
+          codeRoot,
+          plan,
+          fontSize,
+          lineHeight,
+        );
       }
       if (!disposed && m) measurement = m;
     };

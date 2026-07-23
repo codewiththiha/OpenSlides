@@ -1,5 +1,7 @@
 /** Inline rename state machine (slide names, project names). */
-export function createRenameState(onCommit: (id: string, name: string) => void | Promise<void>) {
+export function createRenameState(
+  onCommit: (id: string, name: string) => void | Promise<void>,
+) {
   let renamingId = $state<string | null>(null);
   let value = $state("");
 

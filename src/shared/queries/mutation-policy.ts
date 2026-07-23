@@ -5,14 +5,23 @@ import {
 import { queryClient } from "./query-client";
 import { projectKeys } from "./keys";
 
-interface ProjectListInvalidatingMutationOptions<TData, TVariables, TContext>
-  extends Omit<CreateMutationOptions<TData, Error, TVariables, TContext>, "mutationFn"> {
+interface ProjectListInvalidatingMutationOptions<
+  TData,
+  TVariables,
+  TContext,
+> extends Omit<
+  CreateMutationOptions<TData, Error, TVariables, TContext>,
+  "mutationFn"
+> {
   /** Set false only for mutations that cannot affect dashboard summaries. */
   invalidateProjectList?: boolean;
 }
 
-interface SlideMutationOptions<TData, TVariables, TContext>
-  extends ProjectListInvalidatingMutationOptions<TData, TVariables, TContext> {
+interface SlideMutationOptions<
+  TData,
+  TVariables,
+  TContext,
+> extends ProjectListInvalidatingMutationOptions<TData, TVariables, TContext> {
   /** Refetch the active project detail after local cache updates/onSuccess run. */
   invalidateProjectDetail?: boolean;
 }
@@ -26,7 +35,11 @@ interface SlideMutationOptions<TData, TVariables, TContext>
  */
 export function projectListMutation<TData, TVariables, TContext = unknown>(
   mutationFn: (variables: TVariables) => Promise<TData>,
-  options: ProjectListInvalidatingMutationOptions<TData, TVariables, TContext> = {},
+  options: ProjectListInvalidatingMutationOptions<
+    TData,
+    TVariables,
+    TContext
+  > = {},
 ) {
   const { invalidateProjectList = true, meta, ...mutationOptions } = options;
 
@@ -66,7 +79,9 @@ export function slideMutation<TData, TVariables, TContext = unknown>(
     onSuccess: async (data, variables, onMutateResult, context) => {
       await onSuccess?.(data, variables, onMutateResult, context);
       if (invalidateProjectDetail) {
-        await queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+        await queryClient.invalidateQueries({
+          queryKey: projectKeys.detail(projectId),
+        });
       }
     },
   });

@@ -6,23 +6,23 @@ native menu protocol are identical.
 
 ## Library mapping
 
-| React (before)                        | Svelte 5 (after)                                   |
-| ------------------------------------- | -------------------------------------------------- |
-| react, react-dom                      | svelte                                             |
-| zustand (+ persist, slices, selectors)| `$state` runes (`src/store/ui-state.svelte.ts`)    |
-| @tanstack/react-query                 | @tanstack/svelte-query (singleton client, explicit)|
-| react-router-dom (HashRouter)         | svelte-spa-router (hash-based, same URLs)          |
-| @dnd-kit/*                            | svelte-dnd-action + custom pointer DnD (dashboard) |
-| framer-motion                         | svelte/transition + svelte/motion (Spring/Tween)   |
-| @radix-ui/*                           | bits-ui                                            |
-| cmdk                                  | bits-ui Command (cmdk-sv's official successor)     |
-| sonner                                | svelte-sonner                                      |
-| lucide-react                          | @lucide/svelte                                     |
-| react-resizable-panels                | paneforge                                          |
-| @tanstack/react-virtual               | @tanstack/svelte-virtual (Readable store)          |
-| use-debounce                          | `$effect` + `setTimeout` (editor saves, search)    |
-| clsx + tailwind-merge, CVA, shiki,    | unchanged                                          |
-| workers, Tailwind v4                  |                                                    |
+| React (before)                         | Svelte 5 (after)                                    |
+| -------------------------------------- | --------------------------------------------------- |
+| react, react-dom                       | svelte                                              |
+| zustand (+ persist, slices, selectors) | `$state` runes (`src/store/ui-state.svelte.ts`)     |
+| @tanstack/react-query                  | @tanstack/svelte-query (singleton client, explicit) |
+| react-router-dom (HashRouter)          | svelte-spa-router (hash-based, same URLs)           |
+| @dnd-kit/*                             | svelte-dnd-action + custom pointer DnD (dashboard)  |
+| framer-motion                          | svelte/transition + svelte/motion (Spring/Tween)    |
+| @radix-ui/*                            | bits-ui                                             |
+| cmdk                                   | bits-ui Command (cmdk-sv's official successor)      |
+| sonner                                 | svelte-sonner                                       |
+| lucide-react                           | @lucide/svelte                                      |
+| react-resizable-panels                 | paneforge                                           |
+| @tanstack/react-virtual                | @tanstack/svelte-virtual (Readable store)           |
+| use-debounce                           | `$effect` + `setTimeout` (editor saves, search)     |
+| clsx + tailwind-merge, CVA, shiki,     | unchanged                                           |
+| workers, Tailwind v4                   |                                                     |
 
 ## Structure
 

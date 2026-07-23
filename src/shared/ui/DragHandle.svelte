@@ -8,7 +8,10 @@
     iconClassName,
     children: _children,
     ...props
-  }: HTMLButtonAttributes & { class?: string; iconClassName?: string } = $props();
+  }: HTMLButtonAttributes & {
+    class?: string;
+    iconClassName?: string;
+  } = $props();
 </script>
 
 <button

@@ -76,7 +76,8 @@
         max={2000}
         step={50}
         format={(v) => `${v}ms`}
-        onPreview={(v) => setPreviewHighlightSetting(id, { sizeUpTransition: v })}
+        onPreview={(v) =>
+          setPreviewHighlightSetting(id, { sizeUpTransition: v })}
         onCommit={(v) => onUpdate(id, { sizeUpTransition: v })}
       />
     {/if}

@@ -256,7 +256,9 @@ export function buildPlan(
   return {
     lines,
     eraserColor: mixTowardBlack(themeBg, dimPercent),
-    selectedText: spans.map(s => codeLines[s.lineIndex]!.slice(s.start, s.end)).join("\n"),
+    selectedText: spans
+      .map((s) => codeLines[s.lineIndex]!.slice(s.start, s.end))
+      .join("\n"),
   };
 }
 

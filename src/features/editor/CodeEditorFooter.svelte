@@ -41,8 +41,8 @@
   <div class="shrink-0 border-t border-border/50 bg-muted/20 px-3 py-2">
     <p class="text-[10px] leading-relaxed text-muted-foreground">
       Highlight mode is on. Select code, then choose{" "}
-      <span class="font-medium text-foreground/80">Add Highlight</span>. During the
-      presentation, highlights play in order with{" "}
+      <span class="font-medium text-foreground/80">Add Highlight</span>. During
+      the presentation, highlights play in order with{" "}
       <Kbd class="bg-background px-1 text-[9px]">→</Kbd> or a click.
     </p>
   </div>

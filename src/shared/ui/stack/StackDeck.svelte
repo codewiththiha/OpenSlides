@@ -46,9 +46,9 @@
     if (!target || !(target instanceof HTMLElement)) return false;
     return Boolean(
       target.closest("button") ||
-        target.closest("input") ||
-        target.closest("a") ||
-        target.closest(".hover-actions"),
+      target.closest("input") ||
+      target.closest("a") ||
+      target.closest(".hover-actions"),
     );
   }
 

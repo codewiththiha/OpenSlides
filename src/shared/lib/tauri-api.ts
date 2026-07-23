@@ -61,7 +61,10 @@ export function isCancelledError(err: unknown): boolean {
   );
 }
 
-async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+async function call<T>(
+  cmd: string,
+  args?: Record<string, unknown>,
+): Promise<T> {
   try {
     return await invoke<T>(cmd, args);
   } catch (err) {
@@ -72,7 +75,8 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 export const api = {
   getProjects: () => call<ProjectSummary[]>("get_projects"),
 
-  getProject: (projectId: string) => call<Project>("get_project", { projectId }),
+  getProject: (projectId: string) =>
+    call<Project>("get_project", { projectId }),
 
   createProject: (name: string) => call<Project>("create_project", { name }),
 
@@ -82,7 +86,8 @@ export const api = {
   duplicateProject: (projectId: string) =>
     call<Project>("duplicate_project", { projectId }),
 
-  deleteProject: (projectId: string) => call<void>("delete_project", { projectId }),
+  deleteProject: (projectId: string) =>
+    call<void>("delete_project", { projectId }),
 
   updateProjectSettings: (projectId: string, settings: SettingsPatch) =>
     call<Project>("update_project_settings", { projectId, settings }),

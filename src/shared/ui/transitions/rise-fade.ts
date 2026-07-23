@@ -22,6 +22,7 @@ export function riseFade(
     duration,
     delay,
     easing,
-    css: (t: number) => `opacity: ${t}; transform: translateY(${(1 - t) * y}px);`,
+    css: (t: number) =>
+      `opacity: ${t}; transform: translateY(${(1 - t) * y}px);`,
   };
 }

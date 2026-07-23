@@ -58,7 +58,9 @@
   // when ITS slide id / localCode key flips, not on every keystroke.
   const isSelected = $derived(ui.currentSlideId === slide.id);
   const thumbnailCode = $derived(effectiveSlideCode(slide));
-  const preview = $derived(thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty");
+  const preview = $derived(
+    thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty",
+  );
 
   let cardRootEl = $state<HTMLDivElement | null>(null);
 
@@ -101,7 +103,9 @@
     };
   }
 
-  const onCardKeyDown = (e: KeyboardEvent & { currentTarget: HTMLDivElement }) =>
+  const onCardKeyDown = (
+    e: KeyboardEvent & { currentTarget: HTMLDivElement },
+  ) =>
     handleSlideCardKeyDown(e, {
       slideId: slide.id,
       title,
@@ -122,7 +126,7 @@
   tabindex={isTabStop ? 0 : -1}
   onkeydown={onCardKeyDown}
   class={cn(
-    "group relative flex h-[118px] min-w-0 shrink-0 cursor-pointer select-none flex-col gap-1 self-center overflow-hidden rounded-md border p-2 will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+    "group relative flex h-[118px] min-w-0 shrink-0 cursor-pointer flex-col gap-1 self-center overflow-hidden rounded-md border p-2 will-change-transform select-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none",
     isSelected
       ? "border-primary/50 bg-muted ring-1 ring-primary/20"
       : "bg-background/60 hover:border-primary/30 hover:bg-muted/40",
@@ -134,7 +138,10 @@
   onclick={(event) => {
     if (isRenaming) return;
     if (isMultiSelectMode) {
-      cardActions.toggleMultiSelect(slide.id, { x: event.clientX, y: event.clientY });
+      cardActions.toggleMultiSelect(slide.id, {
+        x: event.clientX,
+        y: event.clientY,
+      });
       return;
     }
     setCurrentSlideId(slide.id);
@@ -150,11 +157,16 @@
     html={thumbnail.html}
     {theme}
     fontSize={5.5}
-    class={cn("absolute inset-0 h-full w-full rounded-none border-0", isSelected && "ring-1 ring-primary/30")}
+    class={cn(
+      "absolute inset-0 h-full w-full rounded-none border-0",
+      isSelected && "ring-1 ring-primary/30",
+    )}
     codeClassName="p-2 pt-9"
   >
     {#snippet fallback()}
-      <span class="block truncate p-2 pt-9 font-mono text-[10px] leading-tight text-muted-foreground/80">
+      <span
+        class="block truncate p-2 pt-9 font-mono text-[10px] leading-tight text-muted-foreground/80"
+      >
         {preview}
       </span>
     {/snippet}
@@ -171,7 +183,7 @@
 
   <!-- The title sits over the code with a soft fade rather than taking layout space. -->
   <div
-    class="pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pb-8 pt-2"
+    class="pointer-events-none absolute inset-x-0 top-0 z-10 px-2 pt-2 pb-8"
     style="background: {cardTheme.topGradient};"
   >
     <div class="pointer-events-auto pr-14 text-white mix-blend-difference">
@@ -179,7 +191,7 @@
     </div>
   </div>
 
-  <div class="absolute right-2 top-1.5 z-20">
+  <div class="absolute top-1.5 right-2 z-20">
     <SlideCardActions {isRenaming} {title} slideId={slide.id} />
   </div>
 
@@ -190,7 +202,7 @@
   {/if}
 
   <div
-    class="absolute inset-x-0 bottom-0 z-10 px-2 pb-1.5 pt-7"
+    class="absolute inset-x-0 bottom-0 z-10 px-2 pt-7 pb-1.5"
     style="background: {cardTheme.bottomGradient};"
   >
     <div class="text-white mix-blend-difference">

@@ -22,9 +22,11 @@
   class={cn(
     size === "sm" && "rounded p-0.5 text-muted-foreground",
     size === "md" &&
-      "inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground",
+      "inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground",
     size === "sm" && !destructive && "hover:bg-muted",
-    size === "md" && !destructive && "hover:bg-accent hover:text-accent-foreground",
+    size === "md" &&
+      !destructive &&
+      "hover:bg-accent hover:text-accent-foreground",
     destructive && "hover:bg-destructive/10 hover:text-destructive",
     className,
   )}

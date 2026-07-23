@@ -9,7 +9,7 @@
 export function findSingleMemberGroups<T>(
   items: T[],
   getGroupId: (i: T) => string | null | undefined,
-  getId: (i: T) => string
+  getId: (i: T) => string,
 ): string[][] {
   if (!items || !Array.isArray(items) || items.length === 0) {
     return [];
@@ -40,7 +40,7 @@ export function findSingleMemberGroups<T>(
  */
 export function computeFanLayout(
   total: number,
-  index: number
+  index: number,
 ): { rotate: number; x: number; y: number } {
   if (total <= 0) {
     return { rotate: 0, x: 0, y: 0 };

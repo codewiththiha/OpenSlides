@@ -6,7 +6,10 @@
  * @example
  *   <div use:escapeKey={onClose}>...</div>
  */
-export function escapeKey(_node: HTMLElement, options: (() => void) | { onEscape: () => void; delayMs?: number }) {
+export function escapeKey(
+  _node: HTMLElement,
+  options: (() => void) | { onEscape: () => void; delayMs?: number },
+) {
   let onEscape = typeof options === "function" ? options : options.onEscape;
   let delayMs = typeof options === "function" ? 0 : (options.delayMs ?? 0);
 

@@ -42,8 +42,14 @@
   } = $props();
 </script>
 
-<div class="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-2">
-  <EditorSlideNav index={currentIndex} total={project.slides.length} {onNavigate} />
+<div
+  class="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-2"
+>
+  <EditorSlideNav
+    index={currentIndex}
+    total={project.slides.length}
+    {onNavigate}
+  />
 
   <div class="flex min-w-0 items-center gap-1">
     <SelectField
@@ -57,7 +63,10 @@
     <Button
       variant="ghost"
       size="icon"
-      class={cn("relative h-7 w-7 shrink-0", highlightMode && "bg-primary/15 text-primary")}
+      class={cn(
+        "relative h-7 w-7 shrink-0",
+        highlightMode && "bg-primary/15 text-primary",
+      )}
       onclick={onToggleHighlightMode}
       title={highlightMode
         ? "Highlight mode is on — select code and right-click to add a highlight"
@@ -66,7 +75,7 @@
       <HighlighterIcon class="h-3.5 w-3.5" />
       {#if highlightCount > 0}
         <span
-          class="absolute -right-0.5 -top-0.5 flex h-3 min-w-3 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] font-semibold leading-none text-primary-foreground"
+          class="absolute -top-0.5 -right-0.5 flex h-3 min-w-3 items-center justify-center rounded-full bg-primary px-0.5 text-[8px] leading-none font-semibold text-primary-foreground"
         >
           {highlightCount}
         </span>

@@ -18,7 +18,8 @@
     classes: {
       title: "text-[13px] font-medium leading-snug text-foreground",
       description: "text-xs leading-snug text-muted-foreground toast-desc-slot",
-      content: "toast-content flex min-w-0 flex-1 flex-col justify-center gap-0.5",
+      content:
+        "toast-content flex min-w-0 flex-1 flex-col justify-center gap-0.5",
       actionButton:
         "toast-action ml-auto shrink-0 rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90",
       cancelButton:

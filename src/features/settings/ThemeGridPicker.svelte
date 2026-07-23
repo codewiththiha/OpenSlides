@@ -23,7 +23,9 @@
   } = $props();
 
   let isOpen = $state(false);
-  const selected = $derived(THEMES.find((theme) => theme.value === value) ?? THEMES[0]);
+  const selected = $derived(
+    THEMES.find((theme) => theme.value === value) ?? THEMES[0],
+  );
 </script>
 
 <div class="space-y-3">
@@ -46,7 +48,9 @@
     <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
       <Palette class="h-3.5 w-3.5" />
       Browse themes
-      <ChevronDown class={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")} />
+      <ChevronDown
+        class={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")}
+      />
     </span>
   </button>
 

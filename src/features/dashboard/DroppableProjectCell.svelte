@@ -9,7 +9,10 @@
   import { type GroupChunk } from "$lib/lib/grouping";
   import StackDeck from "$lib/ui/stack/StackDeck.svelte";
   import ProjectCard from "./ProjectCard.svelte";
-  import { beginProjectDrag, projectDnd } from "@/features/dashboard/project-dnd.svelte";
+  import {
+    beginProjectDrag,
+    projectDnd,
+  } from "@/features/dashboard/project-dnd.svelte";
   import { consumeProjectCardActions } from "./project-card-actions.svelte";
 
   let {
@@ -17,7 +20,10 @@
     onOpenSpread,
   }: {
     chunk: GroupChunk<ProjectSummary>;
-    onOpenSpread: (chunk: GroupChunk<ProjectSummary>, el: HTMLElement | null) => void;
+    onOpenSpread: (
+      chunk: GroupChunk<ProjectSummary>,
+      el: HTMLElement | null,
+    ) => void;
   } = $props();
 
   const cardActions = consumeProjectCardActions();
@@ -32,12 +38,13 @@
   const isSelfDragging = $derived(
     Boolean(
       session?.active &&
-        session.payload.kind === "project-cell" &&
-        String(
-          session.payload.chunk.kind === "stack" && session.payload.chunk.items.length > 1
-            ? session.payload.chunk.groupId
-            : session.payload.chunk.items[0]?.id,
-        ) === id,
+      session.payload.kind === "project-cell" &&
+      String(
+        session.payload.chunk.kind === "stack" &&
+          session.payload.chunk.items.length > 1
+          ? session.payload.chunk.groupId
+          : session.payload.chunk.items[0]?.id,
+      ) === id,
     ),
   );
   const isHovered = $derived(
@@ -60,7 +67,7 @@
   onpointerdown={onPointerDown}
   role="presentation"
   class={cn(
-    "relative touch-pan-y select-none rounded-xl transition-all duration-200",
+    "relative touch-pan-y rounded-xl transition-all duration-200 select-none",
     isSelfDragging && "pointer-events-none scale-95 opacity-40",
     isHovered &&
       "z-20 scale-[1.02] bg-primary/10 shadow-xl ring-2 ring-primary ring-offset-2 ring-offset-background",
@@ -71,7 +78,8 @@
       count={chunk.items.length}
       onExpand={() => onOpenSpread(chunk, cellEl)}
       onOpenTop={() => cardActions.open(topProject.id)}
-      ariaLabel="Stack of {chunk.items.length} presentations, press Enter to expand"
+      ariaLabel="Stack of {chunk.items
+        .length} presentations, press Enter to expand"
     >
       <ProjectCard project={topProject} />
     </StackDeck>

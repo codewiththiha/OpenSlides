@@ -20,7 +20,9 @@
 </script>
 
 {#if isLoading}
-  <div class="flex flex-1 items-center justify-center gap-2 text-muted-foreground">
+  <div
+    class="flex flex-1 items-center justify-center gap-2 text-muted-foreground"
+  >
     <Loader2 class="h-5 w-5 animate-spin" />
     {loadingLabel}
   </div>

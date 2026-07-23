@@ -17,7 +17,10 @@
   } = $props();
 </script>
 
-<SettingsSection title="Theme" description="Choose a syntax theme from its live code preview.">
+<SettingsSection
+  title="Theme"
+  description="Choose a syntax theme from its live code preview."
+>
   <ThemeGridPicker
     value={currentTheme}
     onPreviewTheme={(theme) => setPreviewProjectSetting("theme", theme)}

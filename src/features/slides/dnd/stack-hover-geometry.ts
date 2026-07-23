@@ -20,7 +20,8 @@ export function findStackHoverId(opts: {
   currentHoverId: string | null;
   elements: StackHoverElement[];
 }): string | null {
-  const { pointer, draggingIds, draggedSection, currentHoverId, elements } = opts;
+  const { pointer, draggingIds, draggedSection, currentHoverId, elements } =
+    opts;
   for (const el of elements) {
     if (draggingIds.has(el.id)) continue;
     if (draggedSection && el.section && el.section === draggedSection) continue;

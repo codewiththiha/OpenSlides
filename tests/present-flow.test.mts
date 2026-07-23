@@ -19,7 +19,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { flushSync, mount, unmount } from "svelte";
 import EditorInner from "../src/features/editor/EditorInner.svelte";
-import { ui, setIsPresenting, setCurrentSlideId } from "../src/shared/stores/ui-state.svelte";
+import {
+  ui,
+  setIsPresenting,
+  setCurrentSlideId,
+} from "../src/shared/stores/ui-state.svelte";
 import { clearAllLocalCode } from "../src/shared/stores/slide-code.svelte";
 import { queryClient } from "../src/shared/queries/query-client";
 import type { Highlight, Project } from "../src/shared/types";
@@ -130,7 +134,9 @@ async function waitFor(
 function assertNoAppErrors(context: string): void {
   if (errors.length > 0) {
     const detail = errors
-      .map((e) => (e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e)))
+      .map((e) =>
+        e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e),
+      )
       .join("\n---\n");
     errors.length = 0;
     assert.fail(`app errors during ${context}:\n${detail}`);

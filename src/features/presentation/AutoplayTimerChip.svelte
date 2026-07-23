@@ -16,7 +16,10 @@
     const start = performance.now();
     remaining = Math.ceil(duration / 1000);
     const id = window.setInterval(() => {
-      const next = Math.max(0, Math.ceil((duration - (performance.now() - start)) / 1000));
+      const next = Math.max(
+        0,
+        Math.ceil((duration - (performance.now() - start)) / 1000),
+      );
       if (next !== remaining) remaining = next;
     }, 100);
     return () => window.clearInterval(id);

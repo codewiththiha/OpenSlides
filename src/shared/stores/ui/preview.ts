@@ -5,19 +5,15 @@
 import { SvelteMap } from "svelte/reactivity";
 import type { Highlight } from "$lib/types";
 import { ui } from "./ui-object.svelte";
-import type {
-  PreviewProjectSettings,
-  PreviewSlideSettings,
-} from "../types";
+import type { PreviewProjectSettings, PreviewSlideSettings } from "../types";
 
 export function setPreviewHighlightIndex(v: number) {
   ui.previewHighlightIndex = v;
 }
 
-export function setPreviewProjectSetting<K extends keyof PreviewProjectSettings>(
-  key: K,
-  value: PreviewProjectSettings[K] | null,
-) {
+export function setPreviewProjectSetting<
+  K extends keyof PreviewProjectSettings,
+>(key: K, value: PreviewProjectSettings[K] | null) {
   if (value === null || value === undefined) {
     delete ui.previewProject[key];
   } else {
@@ -50,7 +46,8 @@ export function setPreviewHighlightSetting(
       (current as Record<string, unknown>)[key] = value;
     }
   }
-  if (Object.keys(current).length === 0) ui.previewHighlights.delete(highlightId);
+  if (Object.keys(current).length === 0)
+    ui.previewHighlights.delete(highlightId);
   else ui.previewHighlights.set(highlightId, current);
 }
 
@@ -82,7 +79,8 @@ export function clearPreviewHighlightSetting(
   }
   const current = { ...(ui.previewHighlights.get(highlightId) ?? {}) };
   delete current[key as keyof typeof current];
-  if (Object.keys(current).length === 0) ui.previewHighlights.delete(highlightId);
+  if (Object.keys(current).length === 0)
+    ui.previewHighlights.delete(highlightId);
   else ui.previewHighlights.set(highlightId, current);
 }
 

@@ -8,7 +8,10 @@
   import { X } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
   import { type Project, type ThemeName } from "$lib/types";
-  import { updateProjectSettingsMutation, updateProjectThemeMutation } from "$lib/queries";
+  import {
+    updateProjectSettingsMutation,
+    updateProjectThemeMutation,
+  } from "$lib/queries";
   import {
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
@@ -51,7 +54,9 @@
   const effGlobalTransition = $derived(
     previewProject.globalTransitionDuration ?? s.globalTransitionDuration,
   );
-  const effGlobalStagger = $derived(previewProject.globalStagger ?? s.globalStagger);
+  const effGlobalStagger = $derived(
+    previewProject.globalStagger ?? s.globalStagger,
+  );
 
   function patch(partial: Parameters<typeof updateSettings.mutate>[0]) {
     updateSettings.mutate(partial);
@@ -69,7 +74,7 @@
 ></div>
 <aside
   class={cn(
-    "fixed right-0 top-0 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
+    "fixed top-0 right-0 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
     open ? "translate-x-0" : "translate-x-full",
   )}
   style="z-index: {Z_INDEX.drawer};"

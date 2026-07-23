@@ -22,7 +22,10 @@
  * shadow placeholder): the first child whose center lies strictly right of
  * the pointer, i.e. "insert before that child".
  */
-export function pointerInsertIndex(pointerX: number, childCenters: number[]): number {
+export function pointerInsertIndex(
+  pointerX: number,
+  childCenters: number[],
+): number {
   for (let i = 0; i < childCenters.length; i++) {
     if (childCenters[i]! > pointerX) return i;
   }

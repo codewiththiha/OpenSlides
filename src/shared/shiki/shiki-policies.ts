@@ -5,12 +5,7 @@
 
 type RetentionPolicy = "clear" | "keep-last";
 export type ShikiDisplayStatus =
-  | "disabled"
-  | "empty"
-  | "too-large"
-  | "loading"
-  | "ready"
-  | "error";
+  "disabled" | "empty" | "too-large" | "loading" | "ready" | "error";
 
 export interface ShikiDisplayPolicy {
   loadingPolicy: RetentionPolicy;

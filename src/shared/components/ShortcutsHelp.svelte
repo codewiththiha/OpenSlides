@@ -11,13 +11,25 @@
   import Overlay, { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { focusTrap } from "$lib/actions/focus-trap";
 
-  const GROUPS: { title: string; items: { keys: readonly string[]; desc: string }[] }[] = [
+  const GROUPS: {
+    title: string;
+    items: { keys: readonly string[]; desc: string }[];
+  }[] = [
     {
       title: "General",
       items: [
-        { keys: [...SHORTCUTS.commandPalette.keys], desc: SHORTCUTS.commandPalette.description },
-        { keys: [...SHORTCUTS.shortcutsHelp.keys], desc: SHORTCUTS.shortcutsHelp.description },
-        { keys: ["Esc"], desc: "Close dialogs / exit presentation or focus mode" },
+        {
+          keys: [...SHORTCUTS.commandPalette.keys],
+          desc: SHORTCUTS.commandPalette.description,
+        },
+        {
+          keys: [...SHORTCUTS.shortcutsHelp.keys],
+          desc: SHORTCUTS.shortcutsHelp.description,
+        },
+        {
+          keys: ["Esc"],
+          desc: "Close dialogs / exit presentation or focus mode",
+        },
       ],
     },
     {
@@ -27,12 +39,21 @@
         { keys: [...SHORTCUTS.redo.keys], desc: SHORTCUTS.redo.description },
         { keys: ["mod", "Y"], desc: "Redo (Windows)" },
         { keys: [...SHORTCUTS.zen.keys], desc: SHORTCUTS.zen.description },
-        { keys: [...SHORTCUTS.goToSlide.keys], desc: SHORTCUTS.goToSlide.description },
-        { keys: [...SHORTCUTS.focusSlideSearch.keys], desc: SHORTCUTS.focusSlideSearch.description },
+        {
+          keys: [...SHORTCUTS.goToSlide.keys],
+          desc: SHORTCUTS.goToSlide.description,
+        },
+        {
+          keys: [...SHORTCUTS.focusSlideSearch.keys],
+          desc: SHORTCUTS.focusSlideSearch.description,
+        },
         { keys: ["←", "→"], desc: "Step through highlights, then slides" },
         { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
         { keys: ["0"], desc: "Back to the full slide (no highlight)" },
-        { keys: ["Click a dot"], desc: "Jump to a highlight by clicking its dot" },
+        {
+          keys: ["Click a dot"],
+          desc: "Jump to a highlight by clicking its dot",
+        },
         { keys: ["Tab"], desc: "Indent (insert 2 spaces)" },
         { keys: ["Shift", "Tab"], desc: "Unindent" },
       ],
@@ -47,12 +68,21 @@
     {
       title: "Presentation",
       items: [
-        { keys: [...SHORTCUTS.present.keys], desc: SHORTCUTS.present.description },
-        { keys: ["←", "→", "Space"], desc: "Step through highlights, then slides" },
+        {
+          keys: [...SHORTCUTS.present.keys],
+          desc: SHORTCUTS.present.description,
+        },
+        {
+          keys: ["←", "→", "Space"],
+          desc: "Step through highlights, then slides",
+        },
         { keys: ["1", "…", "9"], desc: "Jump directly to highlight step 1-9" },
         { keys: ["0"], desc: "Back to the full slide (no highlight)" },
         { keys: ["Click"], desc: "Advance one highlight step / slide" },
-        { keys: ["Click a dot"], desc: "Jump to a highlight by clicking its dot" },
+        {
+          keys: ["Click a dot"],
+          desc: "Jump to a highlight by clicking its dot",
+        },
         { keys: ["Right-click"], desc: "Step back" },
         { keys: ["Esc"], desc: "Exit presentation / fullscreen" },
       ],
@@ -60,11 +90,26 @@
     {
       title: "Menu (also in menu bar)",
       items: [
-        { keys: [...SHORTCUTS.newProject.keys], desc: SHORTCUTS.newProject.description },
-        { keys: [...SHORTCUTS.export.keys], desc: SHORTCUTS.export.description },
-        { keys: [...SHORTCUTS.settings.keys], desc: SHORTCUTS.settings.description },
-        { keys: [...SHORTCUTS.addSlide.keys], desc: SHORTCUTS.addSlide.description },
-        { keys: [...SHORTCUTS.duplicateSlide.keys], desc: SHORTCUTS.duplicateSlide.description },
+        {
+          keys: [...SHORTCUTS.newProject.keys],
+          desc: SHORTCUTS.newProject.description,
+        },
+        {
+          keys: [...SHORTCUTS.export.keys],
+          desc: SHORTCUTS.export.description,
+        },
+        {
+          keys: [...SHORTCUTS.settings.keys],
+          desc: SHORTCUTS.settings.description,
+        },
+        {
+          keys: [...SHORTCUTS.addSlide.keys],
+          desc: SHORTCUTS.addSlide.description,
+        },
+        {
+          keys: [...SHORTCUTS.duplicateSlide.keys],
+          desc: SHORTCUTS.duplicateSlide.description,
+        },
       ],
     },
   ];
@@ -104,18 +149,24 @@
       <div class="max-h-[70vh] space-y-5 overflow-y-auto p-4">
         {#each GROUPS as group (group.title)}
           <section>
-            <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <h3
+              class="mb-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+            >
               {group.title}
             </h3>
             <ul class="space-y-2">
               {#each group.items as item (item.desc)}
                 <li class="flex items-center justify-between gap-4 text-sm">
                   <span class="text-foreground/90">{item.desc}</span>
-                  <span class="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                  <span
+                    class="flex shrink-0 flex-wrap items-center justify-end gap-1"
+                  >
                     {#each item.keys as k, i (`${k}-${i}`)}
                       <span class="contents">
                         {#if i > 0}
-                          <span class="text-[10px] text-muted-foreground">+</span>
+                          <span class="text-[10px] text-muted-foreground"
+                            >+</span
+                          >
                         {/if}
                         <Kbd>{label(k)}</Kbd>
                       </span>

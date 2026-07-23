@@ -31,7 +31,9 @@ function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
     theme: string;
     language: string;
   } | null>(null);
-  let status = $state<ShikiDisplayStatus>(args().enabled === false ? "disabled" : "loading");
+  let status = $state<ShikiDisplayStatus>(
+    args().enabled === false ? "disabled" : "loading",
+  );
   let error = $state<Error | null>(null);
 
   $effect(() => {
@@ -62,7 +64,8 @@ function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
       })
       .catch((caught) => {
         if (cancelled) return;
-        const nextError = caught instanceof Error ? caught : new Error(String(caught));
+        const nextError =
+          caught instanceof Error ? caught : new Error(String(caught));
         readyKey = null;
         error = nextError;
         status = "error";
@@ -98,7 +101,9 @@ function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
       return shouldUseFallback ? null : (displayState?.highlighter ?? null);
     },
     get displayTheme() {
-      return shouldUseFallback ? args().theme : (displayState?.theme ?? args().theme);
+      return shouldUseFallback
+        ? args().theme
+        : (displayState?.theme ?? args().theme);
     },
     get displayLanguage() {
       return shouldUseFallback
@@ -118,7 +123,9 @@ function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
 }
 
 /** MagicMove/highlighter display state with the `magicMove` retention policy. */
-export function magicMoveShikiDisplay(args: () => { theme: string; language: string }) {
+export function magicMoveShikiDisplay(
+  args: () => { theme: string; language: string },
+) {
   return shikiHighlighterDisplay(() => ({
     ...args(),
     policyName: "magicMove",
