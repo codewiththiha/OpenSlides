@@ -3,11 +3,17 @@
  *
  * Presentation flow per slide:
  *   1. → reveals highlight #1 (intro: dim + erase + scale-up)
- *   2. → plays #1's outro while #2's intro plays (crossfade), repeat
+ *   2. → plays #1's outro FULLY (dim held) and ONLY THEN #2's intro, repeat
  *   3. → after the LAST highlight, its outro plays fully and ONLY THEN
  *        does the slide advance
  *   4. ← mirrors the steps backward; ← from a clean slide lands clean
  *      on the previous slide
+ *
+ * Step changes are sequential (outro → intro), never crossfaded: goNext/
+ * goPrev park the index at -1 and queue the next step in `pending`; the
+ * layer's exit-complete signal (or the fail-safe timer) reveals it. While
+ * parked, `spotlightActive` keeps the dim overlay mounted so the backdrop
+ * doesn't pulse between steps.
  *
  * Slide changes that follow an outro are driven by the highlight layer's
  * exit-complete signal (via `handleExitComplete`), so the real per-highlight
@@ -24,7 +30,7 @@ const FAILSAFE_BUFFER_MS = 250;
 /** Never block nav input longer than this, whatever the settings say. */
 const FAILSAFE_CAP_MS = 3200;
 
-type PendingNav = { advance: boolean; dir: 1 | -1 };
+type PendingNav = { advance: boolean; dir: 1 | -1; nextStep?: number };
 
 function outroBudget(hl: Highlight | undefined): number {
   if (!hl) return DEFAULT_DIM_MS + FAILSAFE_BUFFER_MS;
@@ -47,7 +53,7 @@ interface UseHighlightNavArgs {
 export function createHighlightNav(args: UseHighlightNavArgs) {
   /** True while an outro is playing and input is temporarily swallowed. */
   let highlightIndex = $state(-1);
-  let pending: PendingNav | null = null;
+  let pending = $state<PendingNav | null>(null);
   let failSafe: number = 0;
 
   function setIdx(v: number | ((prev: number) => number)) {
@@ -55,11 +61,12 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
   }
 
   /**
-   * Consume whatever slide advance was queued once the outro finished.
-   * Called by the layer's `handleExitComplete` AND by a fail-safe timer:
-   * if the preview unmounts mid-outro (e.g. Esc closes present mode), the
-   * exit signal may never arrive — the timer guarantees forward progress
-   * and releases the input lock. Whichever fires first wins.
+   * Consume whatever was queued once the outro finished: either a slide
+   * advance or the next highlight step's reveal. Called by the layer's
+   * `handleExitComplete` AND by a fail-safe timer: if the preview unmounts
+   * mid-outro (e.g. Esc closes present mode), the exit signal may never
+   * arrive — the timer guarantees forward progress and releases the input
+   * lock. Whichever fires first wins.
    */
   function finishPending() {
     window.clearTimeout(failSafe);
@@ -71,6 +78,10 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
       const i = args.currentIndex();
       const target = p.dir === 1 ? list[i + 1] : list[i - 1];
       if (target) args.setCurrentSlideId(target.id);
+    } else if (p?.nextStep !== undefined) {
+      // Reveal the parked step — unless its highlight was deleted mid-outro.
+      const total = args.slides()[args.currentIndex()]?.highlights?.length ?? 0;
+      if (p.nextStep < total) setIdx(p.nextStep);
     }
   }
 
@@ -109,9 +120,17 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
     const total = slide.highlights?.length ?? 0;
     const idx = highlightIndex;
 
-    // More highlights to reveal → intro the next one (layer crossfades).
+    // More highlights to reveal → outro the current step FULLY, then
+    // finishPending intros the next one (sequential, never crossfaded).
+    // idx -1 = clean slide: nothing to outro, reveal instantly.
     if (idx < total - 1) {
-      setIdx(idx + 1);
+      if (idx >= 0) {
+        pending = { advance: false, dir: 1, nextStep: idx + 1 };
+        armFailSafe(slide.highlights[idx]);
+        setIdx(-1);
+      } else {
+        setIdx(idx + 1);
+      }
       return true;
     }
 
@@ -148,7 +167,10 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
     const idx = highlightIndex;
 
     if (idx > 0) {
-      setIdx(idx - 1);
+      // Mirror goNext: outro first, then the previous step's intro.
+      pending = { advance: false, dir: -1, nextStep: idx - 1 };
+      armFailSafe(list[i]?.highlights[idx]);
+      setIdx(-1);
       return true;
     }
     if (idx === 0) {
@@ -204,6 +226,15 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
   return {
     get highlightIndex() {
       return highlightIndex;
+    },
+    /**
+     * True while the spotlight (dim overlay) should stay mounted: a step is
+     * on screen, or a step outro is playing with another step queued behind
+     * it. False during final outros (advance / back-to-clean) so the dim
+     * fades out with the last highlight.
+     */
+    get spotlightActive() {
+      return highlightIndex >= 0 || pending?.nextStep !== undefined;
     },
     goNext,
     goPrev,

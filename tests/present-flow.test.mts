@@ -194,19 +194,30 @@ test("toolbar Present button mounts the presentation overlay and stage clicks st
   ) as HTMLElement;
   assert.ok(stage, "stage click target exists");
 
-  // Click 1/2/3 → reveal highlight 1, reveal highlight 2, outro→advance.
+  // Click 1 → reveal highlight 1 instantly.
   click(stage);
   await settle();
   assert.equal(ui.isPresenting, true, "still presenting after click 1");
   assertNoAppErrors("stage click 1 (reveal highlight 1)");
 
+  // Click 2 → highlight 1 outros FULLY first; only then does highlight 2
+  // reveal (sequential steps — in jsdom the fail-safe drives the reveal).
+  // A click during the outro is swallowed by design, so wait for #2 first.
   click(stage);
   await settle();
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("[role='status']")].some(
+        (el) => el.getAttribute("aria-label") === "Highlight 2 of 2",
+      ),
+    "highlight 2 revealed after highlight 1 outro",
+    4000,
+  );
   assertNoAppErrors("stage click 2 (reveal highlight 2)");
 
   click(stage);
   await settle();
-  // Outro booked; fail-safe (≤750ms here) performs the slide advance.
+  // Outro booked; fail-safe performs the slide advance.
   await waitFor(
     () => ui.currentSlideId === "s2",
     "advance to slide 2 after last highlight outro",

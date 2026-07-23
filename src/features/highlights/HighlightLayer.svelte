@@ -4,10 +4,18 @@
    *
    * The three visual pieces are expressed with {#if}/{#key} blocks and
    * per-element transitions:
-   *  - dim overlay: mounted while a highlight is active (Tween fades
-   *    0 → dimAmount on mount/step change, svelte-fade outro on removal)
-   *  - eraser segments: keyed per (highlightId, line) — crossfade on steps
-   *  - clone layer: {#key highlight.id} — crossfade on steps
+   *  - dim overlay: mounted while a highlight is active OR `spotlightActive`
+   *    holds it across a step gap (Tween fades 0 → dimAmount on mount/step
+   *    change, svelte-fade outro on removal)
+   *  - eraser segments: keyed per (highlightId, line) — fade IN only; on
+   *    removal they vanish instantly, because the clone text's own fade
+   *    carries the outro (a lingering solid panel reads as a black slab
+   *    under the fading text)
+   *  - clone layer: {#key highlight.id} — swap on steps
+   *
+   * Step changes are sequenced by createHighlightNav (outro fully, then
+   * intro): the nav parks the index at -1 with `spotlightActive` still true,
+   * so only the eraser + clone unmount here while the dim stays put.
    *
    * `onExitComplete` mirrors AnimatePresence: a counter is armed by every
    * outrostart and released by its outroend; when it drains to zero the
@@ -32,6 +40,7 @@
     language,
     fontSize,
     lineHeight,
+    spotlightActive = false,
     onExitComplete,
   }: {
     container: () => HTMLElement | null;
@@ -43,6 +52,8 @@
     language: () => string;
     fontSize: () => number;
     lineHeight: () => number;
+    /** Nav holds the dim across a step gap (outro → intro). */
+    spotlightActive?: boolean;
     onExitComplete?: () => void;
   } = $props();
 
@@ -69,13 +80,25 @@
 
   const hl = $derived(highlight());
 
+  /**
+   * Last non-null highlight seen. The nav drops hl to null during a step
+   * gap while the dim stays mounted; deriving the dim's amount/duration
+   * from this cache prevents a visible dip to the defaults mid-gap (and
+   * keeps custom dim durations on the final outro).
+   */
+  let seenHl: Highlight | null = null;
+  $effect(() => {
+    if (hl) seenHl = hl;
+  });
+  const dimSource = $derived(hl ?? seenHl);
+
   const dimMs = $derived(
-    hl?.useCustomTransition ? hl.dimTransition : DEFAULT_DIM_MS,
+    dimSource?.useCustomTransition ? dimSource.dimTransition : DEFAULT_DIM_MS,
   );
   const sizeMs = $derived(
     hl?.useCustomTransition ? hl.sizeUpTransition : DEFAULT_SIZE_MS,
   );
-  const dimAmount = $derived((hl?.dimAmount ?? 75) / 100);
+  const dimAmount = $derived((dimSource?.dimAmount ?? 75) / 100);
   const sizeUpAmount = $derived(hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT);
   const scaleTarget = $derived(
     hl?.sizeUpEnabled && sizeUpAmount > 100
@@ -103,23 +126,18 @@
   }
 </script>
 
-{#if hl}
+{#if hl || spotlightActive}
   <HighlightDimOverlay
     {dimAmount}
     {dimMs}
     onOutroStart={handleOutroStart}
     onOutroEnd={handleOutroEnd}
   />
+{/if}
 
+{#if hl}
   {#if plan && measurement && hasSegments}
-    <HighlightEraserSegments
-      highlightId={hl.id}
-      {measurement}
-      {plan}
-      {dimMs}
-      onOutroStart={handleOutroStart}
-      onOutroEnd={handleOutroEnd}
-    />
+    <HighlightEraserSegments highlightId={hl.id} {measurement} {plan} {dimMs} />
 
     {#if union}
       {#key hl.id}
