@@ -27,32 +27,7 @@
   import { portal } from "$lib/actions/portal";
   import type { ProjectSummary } from "$lib/types";
 
-  let {
-    projects,
-    rename,
-    onOpen,
-    onDuplicate,
-    onExport,
-    onDelete,
-    duplicateBusy,
-    commitBusy,
-  }: {
-    projects: ProjectSummary[];
-    rename: {
-      renamingId: string | null;
-      value: string;
-      setValue: (v: string) => void;
-      commit: () => void;
-      cancel: () => void;
-      start: (id: string, name: string) => void;
-    };
-    onOpen: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onExport: (id: string) => void;
-    onDelete: (id: string, name: string) => void;
-    duplicateBusy: boolean;
-    commitBusy: boolean;
-  } = $props();
+  let { projects }: { projects: ProjectSummary[] } = $props();
 
   const stackMut = stackProjectsMutation();
   const unstackMut = unstackProjectsMutation();
@@ -132,21 +107,8 @@
 </script>
 
 {#snippet overlayCard(project: ProjectSummary)}
-  <ProjectCard
-    {project}
-    isRenaming={false}
-    renameValue=""
-    onRenameValueChange={() => {}}
-    onCommitRename={() => {}}
-    onCancelRename={() => {}}
-    onStartRename={() => {}}
-    onOpen={() => {}}
-    onDuplicate={() => {}}
-    onExport={() => {}}
-    onDelete={() => {}}
-    duplicateBusy={false}
-    commitBusy={false}
-  />
+  <!-- Non-interactive clone: it never shows rename UI or hover actions. -->
+  <ProjectCard {project} static />
 {/snippet}
 
 {#if projects.length === 0}
@@ -174,18 +136,6 @@
               {#each chunks.slice(row.index * columnCount, row.index * columnCount + columnCount) as chunk (chunkId(chunk))}
                 <DroppableProjectCell
                   {chunk}
-                  isRenaming={(pid) => rename.renamingId === pid}
-                  renameValue={rename.value}
-                  onRenameValueChange={rename.setValue}
-                  onCommitRename={rename.commit}
-                  onCancelRename={rename.cancel}
-                  onStartRename={rename.start}
-                  {onOpen}
-                  {onDuplicate}
-                  {onExport}
-                  {onDelete}
-                  {duplicateBusy}
-                  {commitBusy}
                   onOpenSpread={(chunk, el) => spread.open(chunk, el)}
                 />
               {/each}
@@ -201,18 +151,6 @@
       chunk={currentExpandedChunk}
       deckElement={spread.expandedChunkInfo?.el ?? null}
       onClose={() => spread.close()}
-      isRenaming={(pid) => rename.renamingId === pid}
-      renameValue={rename.value}
-      onRenameValueChange={rename.setValue}
-      onCommitRename={rename.commit}
-      onCancelRename={rename.cancel}
-      onStartRename={rename.start}
-      {onOpen}
-      {onDuplicate}
-      {onExport}
-      {onDelete}
-      {duplicateBusy}
-      {commitBusy}
       onUngroup={(ids) => unstackMut.mutate(ids)}
     />
   {/if}

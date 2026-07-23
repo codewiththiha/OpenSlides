@@ -35,6 +35,7 @@
   } from "$lib/stores/ui-state.svelte";
   import { api } from "$lib/lib/tauri-api";
   import { createDashboardState } from "./dashboard-state.svelte";
+  import { provideProjectCardActions } from "./project-card-actions.svelte";
   import { notify } from "$lib/lib/toast";
 
   const st = createDashboardState();
@@ -85,6 +86,31 @@
       projectId: id,
       name: name || "Untitled Presentation",
     });
+  });
+
+  // Card actions live in context so ProjectCard consumers (grid cells, fan
+  // overlay, drag clone) don't thread a dozen callbacks through each level.
+  provideProjectCardActions({
+    get renamingId() {
+      return rename.renamingId;
+    },
+    get renameValue() {
+      return rename.value;
+    },
+    get duplicateBusy() {
+      return duplicateMutation.isPending;
+    },
+    get commitBusy() {
+      return renameMutation.isPending;
+    },
+    setRenameValue: (v: string) => (rename.value = v),
+    commitRename: rename.commit,
+    cancelRename: rename.cancel,
+    startRename: rename.start,
+    open: handleOpen,
+    duplicate: handleDuplicate,
+    exportProject: handleExport,
+    remove: handleDelete,
   });
 
   async function handleCreate() {
@@ -193,23 +219,7 @@
     showEmptyState={!st.creating}
   >
     {#if !listQuery.isLoading && !listQuery.isError && projects.length > 0}
-      <ProjectGrid
-        {projects}
-        rename={{
-          renamingId: rename.renamingId,
-          value: rename.value,
-          setValue: (v) => (rename.value = v),
-          commit: rename.commit,
-          cancel: rename.cancel,
-          start: rename.start,
-        }}
-        onOpen={handleOpen}
-        onDuplicate={handleDuplicate}
-        onExport={handleExport}
-        onDelete={handleDelete}
-        duplicateBusy={duplicateMutation.isPending}
-        commitBusy={renameMutation.isPending}
-      />
+      <ProjectGrid {projects} />
     {/if}
   </DashboardStates>
 

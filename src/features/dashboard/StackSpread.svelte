@@ -15,42 +15,52 @@
   import { portal } from "$lib/actions/portal";
   import { EASE_DIM } from "$lib/lib/easings";
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
+  import {
+    consumeProjectCardActions,
+    provideProjectCardActions,
+  } from "./project-card-actions.svelte";
 
   let {
     chunk,
     deckElement,
     onClose,
-    isRenaming,
-    renameValue,
-    onRenameValueChange,
-    onCommitRename,
-    onCancelRename,
-    onStartRename,
-    onOpen,
-    onDuplicate,
-    onExport,
-    onDelete,
-    duplicateBusy,
-    commitBusy,
     onUngroup,
   }: {
     chunk: GroupChunk<ProjectSummary>;
     deckElement: HTMLElement | null;
     onClose: () => void;
-    isRenaming: (id: string) => boolean;
-    renameValue: string;
-    onRenameValueChange: (value: string) => void;
-    onCommitRename: () => void;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onOpen: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onExport: (id: string) => void;
-    onDelete: (id: string, name: string) => void;
-    duplicateBusy: boolean;
-    commitBusy: boolean;
     onUngroup: (ids: string[]) => void;
   } = $props();
+
+  const baseCardActions = consumeProjectCardActions();
+
+  // Opened from the fan, a project must close the transient overlay first,
+  // so this scope wraps open() while forwarding the rest untouched.
+  provideProjectCardActions({
+    get renamingId() {
+      return baseCardActions.renamingId;
+    },
+    get renameValue() {
+      return baseCardActions.renameValue;
+    },
+    get duplicateBusy() {
+      return baseCardActions.duplicateBusy;
+    },
+    get commitBusy() {
+      return baseCardActions.commitBusy;
+    },
+    setRenameValue: baseCardActions.setRenameValue,
+    commitRename: baseCardActions.commitRename,
+    cancelRename: baseCardActions.cancelRename,
+    startRename: baseCardActions.startRename,
+    open: (id) => {
+      triggerClose();
+      baseCardActions.open(id);
+    },
+    duplicate: baseCardActions.duplicate,
+    exportProject: baseCardActions.exportProject,
+    remove: baseCardActions.remove,
+  });
 
   let isClosing = $state(false);
   // Initial anchor only — re-measured in triggerClose() before every close.
@@ -198,21 +208,6 @@
           deckRect={currentDeckRect}
           {isClosing}
           groupId={chunk.groupId}
-          isRenaming={isRenaming(project.id)}
-          {renameValue}
-          {onRenameValueChange}
-          {onCommitRename}
-          {onCancelRename}
-          {onStartRename}
-          onOpen={(id) => {
-            triggerClose();
-            onOpen(id);
-          }}
-          {onDuplicate}
-          {onExport}
-          {onDelete}
-          {duplicateBusy}
-          {commitBusy}
         />
       {/each}
     </div>
