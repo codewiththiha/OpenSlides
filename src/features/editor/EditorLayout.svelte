@@ -7,7 +7,7 @@
   import { Pane, PaneGroup, PaneResizer } from "paneforge";
   import { Code2 } from "@lucide/svelte";
   import CodeEditor from "@/features/editor/CodeEditor.svelte";
-  import BottomSlidesPanel from "@/features/slides/BottomSlidesPanel.svelte";
+  import BottomSlidesPanel from "@/features/slides/strip/BottomSlidesPanel.svelte";
   import RenderBoundary from "$lib/components/RenderBoundary.svelte";
   import PreviewPane from "./PreviewPane.svelte";
   import CollapsedPanelButton from "$lib/ui/CollapsedPanelButton.svelte";
