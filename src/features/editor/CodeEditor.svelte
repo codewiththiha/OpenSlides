@@ -2,15 +2,12 @@
   /**
    * Syntax-highlighted code editor — single Web Worker Shiki pipeline.
    *
-   * React notes preserved:
-   * - NSSpellServer timeout: aggressive spellcheck/autocorrect disabling
    * - The textarea is uncontrolled (createCaretSync syncs value/caret).
-   * - Debounced save: 500ms timer in this component (replaces use-debounce),
-   *   flushed on slide switch / unmount / explicit navigation so the final
-   *   edit is never discarded by a disposed timer.
-   * - Setter-style Zustand preview overrides gave instant slider feedback;
-   *   here ui.previewProject / previewSlides / previewHighlights (SvelteMap)
-   *   do the same through $derived.
+   * - Save: 500ms debounce in createCodeSave, flushed on slide switch,
+   *   unmount, and explicit navigation so the final edit is never lost.
+   * - Instant slider feedback comes from preview overrides
+   *   (ui.previewProject / previewSlides / previewHighlights) read via
+   *   $derived.
    */
   import {
     resolveProjectLanguage,
@@ -20,14 +17,15 @@
   import {
     ui,
     setCurrentSlideId,
-    setSaveStatus,
   } from "$lib/stores/ui-state.svelte";
   import { untrack } from "svelte";
+  import { createCodeEditorState } from "./code-editor-state.svelte";
+  import { createCodeSave } from "./save.svelte";
   import { localCode, setLocalCode } from "$lib/stores/slide-code.svelte";
   import { setCaretPosition } from "$lib/stores/caret-positions";
-  import { updateProjectSettingsMutation, updateSlideCodeMutation } from "$lib/queries";
+  import { updateProjectSettingsMutation } from "$lib/queries";
   import { record as recordEditorHistory, type Snapshot } from "$lib/lib/editor-history";
-  import { markSavePending, clearPendingSave } from "$lib/lib/code-save";
+  import { markSavePending } from "$lib/lib/code-save";
   import HighlightContextMenu from "@/features/highlights/HighlightContextMenu.svelte";
   import { editorShikiHtml } from "$lib/shiki/shiki-display.svelte";
   import { createEditorHistory } from "@/features/editor/editor-history.svelte";
@@ -61,22 +59,16 @@
 
   const code = $derived(slide ? (localCode[slide.id] ?? slide.code) : "");
 
-  let textareaEl = $state<HTMLTextAreaElement | null>(null);
-  let preEl = $state<HTMLPreElement | null>(null);
-  let gutterEl = $state<HTMLDivElement | null>(null);
-  /** Plain mutable ref-object (React useRef equivalent) — no reactivity needed. */
-  const editorSnapshot = { current: { code: "", caretStart: 0, caretEnd: 0 } as Snapshot };
+  const st = createCodeEditorState();
 
   // ── Uncontrolled textarea, by design ─────────────
   const saveCaret = createCaretSync({
-    textarea: () => textareaEl,
+    textarea: () => st.textareaEl,
     slideId: () => slideId,
     slide: () => slide,
-    editorSnapshot,
+    editorSnapshot: st.editorSnapshot,
   });
 
-  let highlightMode = $state(false);
-  const codeMutation = updateSlideCodeMutation();
   // Stable per mount (the editor is rebuilt on project switch) — untrack()
   // marks the one-time id capture as deliberate.
   const projectId = untrack(() => project.id);
@@ -101,75 +93,27 @@
     resetKey: slideId,
   }));
 
-  // ── 500ms debounced save (was use-debounce) ─────────────
-  const SAVE_DEBOUNCE_MS = 500;
-  let saveTimer: number | undefined;
-  let pendingSave: { id: string; value: string } | null = null;
-
-  function runSave(id: string, value: string) {
-    setSaveStatus("saving");
-    codeMutation.mutate(
-      { slideId: id, code: value },
-      {
-        onSuccess: () => {
-          setSaveStatus("saved");
-          clearPendingSave(id, value);
-        },
-        onError: () => setSaveStatus("error"),
-      },
-    );
-  }
-
-  function debouncedSave(id: string, value: string) {
-    pendingSave = { id, value };
-    window.clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => {
-      const p = pendingSave;
-      pendingSave = null;
-      saveTimer = undefined;
-      if (p) runSave(p.id, p.value);
-    }, SAVE_DEBOUNCE_MS);
-  }
-
-  /** use-debounce's flush(): run the pending edit immediately, if any. */
-  function flushSave() {
-    if (saveTimer !== undefined && pendingSave) {
-      window.clearTimeout(saveTimer);
-      saveTimer = undefined;
-      const { id, value } = pendingSave;
-      pendingSave = null;
-      runSave(id, value);
-    }
-  }
-
-  $effect(() => {
-    // A slide switch or editor unmount must persist the final debounced edit
-    // before disposing its timer. This cleanup runs for both cases.
-    void slideId;
-    return () => {
-      flushSave();
-    };
-  });
+  const save = createCodeSave({ slideId: () => slideId });
 
   function applyCode(value: string, beforeOverride?: Snapshot) {
     if (!slideId) return;
-    const el = textareaEl;
-    const before = beforeOverride ?? editorSnapshot.current;
+    const el = st.textareaEl;
+    const before = beforeOverride ?? st.editorSnapshot.current;
     const caretStart = el?.selectionStart ?? value.length;
     const caretEnd = el?.selectionEnd ?? caretStart;
     const after = { code: value, caretStart, caretEnd };
     recordEditorHistory(slideId, before, after);
-    editorSnapshot.current = after;
+    st.editorSnapshot.current = after;
     setLocalCode(slideId, value);
     markSavePending(slideId, value);
-    debouncedSave(slideId, value);
+    save.schedule(slideId, value);
   }
 
   const handleChange = applyCode;
 
   const findReplace = createFindReplace({
     code: () => code,
-    textarea: () => textareaEl,
+    textarea: () => st.textareaEl,
     applyCode,
     saveCaret,
     editorFontSize: () => editorFontSize,
@@ -190,7 +134,7 @@
 
   const { applyHistorySnapshot } = createEditorHistory({
     slideId: () => slideId,
-    textarea: () => textareaEl,
+    textarea: () => st.textareaEl,
     handleChange,
     saveCaret,
   });
@@ -224,14 +168,14 @@
 
   function goSlide(dir: -1 | 1) {
     try {
-      const el = textareaEl;
+      const el = st.textareaEl;
       if (el && slideId) {
         setCaretPosition(slideId, el.selectionStart, el.selectionEnd);
       }
     } catch {
       /* ignore */
     }
-    flushSave();
+    save.flush();
     const next = project.slides[currentIndex + dir];
     if (next) setCurrentSlideId(next.id);
   }
@@ -242,15 +186,15 @@
     slideId: () => slideId,
     highlights: () => currentHighlights,
     code: () => code,
-    highlightMode: () => highlightMode,
-    textarea: () => textareaEl,
+    highlightMode: () => st.highlightMode,
+    textarea: () => st.textareaEl,
     saveCaret,
   });
 
   const syncScroll = createScrollSync({
-    textarea: () => textareaEl,
-    pre: () => preEl,
-    gutter: () => gutterEl,
+    textarea: () => st.textareaEl,
+    pre: () => st.preEl,
+    gutter: () => st.gutterEl,
     crud,
   });
 
@@ -268,12 +212,12 @@
       {project}
       {currentIndex}
       {language}
-      {highlightMode}
+      highlightMode={st.highlightMode}
       highlightCount={currentHighlights.length}
       {expanded}
       onNavigate={goSlide}
       onLanguageChange={(value) => projectSettingsMutation.mutate({ language: value })}
-      onToggleHighlightMode={() => (highlightMode = !highlightMode)}
+      onToggleHighlightMode={() => (st.highlightMode = !st.highlightMode)}
       {onToggleExpand}
       {onCollapse}
       onToggleFind={() => (isFindOpen ? closeFind() : openFind())}
@@ -300,9 +244,9 @@
       onBlur={saveCaret}
       onScroll={syncScroll}
       onContextMenu={(e) => crud.onContextMenu(e)}
-      bind:gutterEl
-      bind:preEl
-      bind:textareaEl
+      bind:gutterEl={st.gutterEl}
+      bind:preEl={st.preEl}
+      bind:textareaEl={st.textareaEl}
     />
 
     <HighlightContextMenu
@@ -315,7 +259,7 @@
     <CodeEditorFooter
       {project}
       {slide}
-      {highlightMode}
+      highlightMode={st.highlightMode}
       {currentHighlights}
       {code}
       expandedId={crud.expandedHighlightId}
