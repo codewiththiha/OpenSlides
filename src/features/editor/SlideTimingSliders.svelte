@@ -14,15 +14,15 @@
 
   const previewProject = $derived(ui.previewProject);
   const previewSlide = $derived(ui.previewSlides.get(slide.id));
-  const useGlobalTransition = $derived(project.settings.useGlobalTransition);
-  const useGlobalStagger = $derived(project.settings.useGlobalStagger);
+  const globalTransitionEnabled = $derived(project.settings.useGlobalTransition);
+  const globalStaggerEnabled = $derived(project.settings.useGlobalStagger);
   const transition = $derived(
-    useGlobalTransition
+    globalTransitionEnabled
       ? (previewProject.globalTransitionDuration ?? project.settings.globalTransitionDuration)
       : (previewSlide?.transitionDuration ?? slide.transitionDuration),
   );
   const stagger = $derived(
-    useGlobalStagger
+    globalStaggerEnabled
       ? (previewProject.globalStagger ?? project.settings.globalStagger)
       : (previewSlide?.stagger ?? slide.stagger),
   );
@@ -37,14 +37,14 @@
     min={100}
     max={2000}
     step={50}
-    format={(v) => (useGlobalTransition ? `${v}ms · global` : `${v}ms`)}
-    disabled={useGlobalTransition}
+    format={(v) => (globalTransitionEnabled ? `${v}ms · global` : `${v}ms`)}
+    disabled={globalTransitionEnabled}
     onPreview={(v) =>
-      useGlobalTransition
+      globalTransitionEnabled
         ? setPreviewProjectSetting("globalTransitionDuration", v)
         : setPreviewSlideSetting(slide.id, "transitionDuration", v)}
     onCommit={(v) => {
-      if (useGlobalTransition) projectSettingsMutation.mutate({ globalTransitionDuration: v });
+      if (globalTransitionEnabled) projectSettingsMutation.mutate({ globalTransitionDuration: v });
       else settingsMutation.mutate({ slideId: slide.id, payload: { transitionDuration: v } });
     }}
   />
@@ -55,14 +55,14 @@
     min={0}
     max={50}
     step={1}
-    format={(v) => (useGlobalStagger ? `${v} · global` : `${v}`)}
-    disabled={useGlobalStagger}
+    format={(v) => (globalStaggerEnabled ? `${v} · global` : `${v}`)}
+    disabled={globalStaggerEnabled}
     onPreview={(v) =>
-      useGlobalStagger
+      globalStaggerEnabled
         ? setPreviewProjectSetting("globalStagger", v)
         : setPreviewSlideSetting(slide.id, "stagger", v)}
     onCommit={(v) => {
-      if (useGlobalStagger) projectSettingsMutation.mutate({ globalStagger: v });
+      if (globalStaggerEnabled) projectSettingsMutation.mutate({ globalStagger: v });
       else settingsMutation.mutate({ slideId: slide.id, payload: { stagger: v } });
     }}
   />
