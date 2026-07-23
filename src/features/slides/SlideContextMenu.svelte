@@ -1,5 +1,7 @@
 <script lang="ts">
   /** Right-click menu for entering a slide-selection workflow. */
+  import { clickOutside } from "$lib/actions/click-outside";
+  import { escapeKey } from "$lib/actions/escape-key";
   import type { Component } from "svelte";
   import { CheckSquare, Pencil, SquareDashedMousePointer } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
@@ -57,24 +59,6 @@
     positioned = true;
   });
 
-  $effect(() => {
-    if (!open) return;
-    const dismiss = (event: MouseEvent) => {
-      if (menuEl && !menuEl.contains(event.target as Node)) onClose();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    const timer = window.setTimeout(() => {
-      document.addEventListener("mousedown", dismiss);
-      document.addEventListener("keydown", onKeyDown);
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("mousedown", dismiss);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  });
 </script>
 
 {#snippet menuItem(Icon: Component<{ class?: string }>, label: string, shortcut: string | undefined, onclick: () => void)}
@@ -92,6 +76,8 @@
 {#if open}
   <div
     bind:this={menuEl}
+    use:clickOutside={{ onOutside: onClose }}
+    use:escapeKey={onClose}
     class="fixed min-w-[210px] overflow-hidden rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
     style="left: {resolved.x}px; top: {resolved.y}px; visibility: {positioned
       ? 'visible'
