@@ -23,10 +23,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { flushSync, mount, tick, unmount } from "svelte";
 import CodeEditorHost from "./harness/CodeEditorHost.svelte";
-import { queryClient } from "../src/queries/query-client";
-import { setCurrentSlideId } from "../src/store/ui-state.svelte";
-import { clearAllLocalCode } from "../src/store/slide-code.svelte";
-import type { Project, Slide } from "../src/types";
+import { queryClient } from "../src/shared/queries/query-client";
+import { setCurrentSlideId } from "../src/shared/stores/ui-state.svelte";
+import { clearAllLocalCode } from "../src/shared/stores/slide-code.svelte";
+import type { Project, Slide } from "../src/shared/types";
 import { pendingSaves, resolveSaveAt, resetApiMocks } from "./mocks/tauri-api.mock.mts";
 
 function makeLineCode(lines: number): string {

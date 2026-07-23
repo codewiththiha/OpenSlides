@@ -1,6 +1,6 @@
 import { useShikiDisplayHtml } from "./useShikiDisplayState.svelte";
-import { api } from "@/lib/tauri-api";
-import { LruMap } from "@/lib/lru-map";
+import { api } from "$lib/lib/tauri-api";
+import { LruMap } from "$lib/lib/lru-map";
 
 const MAX_CACHE_ENTRIES = 120;
 const MAX_LINES = 6;

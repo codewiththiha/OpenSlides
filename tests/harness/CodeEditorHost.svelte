@@ -6,9 +6,9 @@
    * flow in as fresh slide objects while tests control resolution order.
    */
   import { createQuery } from "@tanstack/svelte-query";
-  import CodeEditor from "../../src/components/CodeEditor.svelte";
-  import { queryClient } from "../../src/queries/query-client";
-  import type { Project } from "../../src/types";
+  import CodeEditor from "../../src/features/editor/CodeEditor.svelte";
+  import { queryClient } from "../../src/shared/queries/query-client";
+  import type { Project } from "../../src/shared/types";
 
   let { project }: { project: Project } = $props();
 

@@ -1,5 +1,5 @@
 import { untrack } from "svelte";
-import { findSingleMemberGroups } from "@/lib/stacking";
+import { findSingleMemberGroups } from "$lib/lib/stacking";
 
 /**
  * Auto-dissolves any stack (group or slide section) that has <= 1 member remaining.

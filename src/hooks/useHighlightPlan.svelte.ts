@@ -3,14 +3,14 @@
  * AbortController cancels stale Shiki work; direct plainTokenLines fallback.
  */
 import type { BundledLanguage, BundledTheme, Highlighter } from "shiki";
-import type { Highlight } from "@/types";
-import { themeBackground } from "@/types";
+import type { Highlight } from "$lib/types";
+import { themeBackground } from "$lib/types";
 import {
   buildPlan,
   plainTokenLines,
   type HighlightPlan,
   type HighlightTokenLine,
-} from "@/lib/highlight-tokens";
+} from "@/features/highlights/highlight-tokens";
 
 interface UseHighlightPlanArgs {
   highlight: () => Highlight | null;

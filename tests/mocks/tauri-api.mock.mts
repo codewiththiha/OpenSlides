@@ -6,7 +6,7 @@
  * under test is implemented.
  */
 
-import { resetCodeSaveQueue } from "../../src/lib/code-save.ts";
+import { resetCodeSaveQueue } from "../../src/shared/lib/code-save.ts";
 
 export interface DeferredSave {
   slideId: string;

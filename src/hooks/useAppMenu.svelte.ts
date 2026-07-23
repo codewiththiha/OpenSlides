@@ -2,7 +2,7 @@
  * Subscribe to native menu events emitted from app-menu.ts.
  */
 import { listen } from "@tauri-apps/api/event";
-import type { AppMenuEvent } from "@/lib/app-menu";
+import type { AppMenuEvent } from "$lib/lib/app-menu";
 
 export type AppMenuHandlers = Partial<Record<AppMenuEvent, () => void>>;
 

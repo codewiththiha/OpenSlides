@@ -3,7 +3,7 @@ import {
   setIsCommandOpen,
   setIsShortcutsOpen,
   toggleTheme,
-} from "@/store/ui-state.svelte";
+} from "$lib/stores/ui-state.svelte";
 import type { AppMenuHandlers } from "./useAppMenu.svelte";
 
 interface Options {

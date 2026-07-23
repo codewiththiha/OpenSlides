@@ -18,11 +18,11 @@ import "./helpers/jsdom-env.mts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { flushSync, mount, unmount } from "svelte";
-import EditorInner from "../src/components/editor/EditorInner.svelte";
-import { ui, setIsPresenting, setCurrentSlideId } from "../src/store/ui-state.svelte";
-import { clearAllLocalCode } from "../src/store/slide-code.svelte";
-import { queryClient } from "../src/queries/query-client";
-import type { Highlight, Project } from "../src/types";
+import EditorInner from "../src/features/editor/EditorInner.svelte";
+import { ui, setIsPresenting, setCurrentSlideId } from "../src/shared/stores/ui-state.svelte";
+import { clearAllLocalCode } from "../src/shared/stores/slide-code.svelte";
+import { queryClient } from "../src/shared/queries/query-client";
+import type { Highlight, Project } from "../src/shared/types";
 import {
   resetFullApiMocks,
   seedProjects,

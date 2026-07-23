@@ -2,9 +2,9 @@ import {
   measureHighlight,
   measureHighlightPureMath,
   type HighlightMeasurement,
-} from "@/lib/highlight-utils";
-import { clearLineNodesCache } from "@/lib/line-nodes-cache";
-import type { HighlightPlan } from "@/lib/highlight-tokens";
+} from "@/features/highlights/highlight-utils";
+import { clearLineNodesCache } from "$lib/lib/line-nodes-cache";
+import type { HighlightPlan } from "@/features/highlights/highlight-tokens";
 
 interface UseHighlightMeasurementArgs {
   container: () => HTMLElement | null;

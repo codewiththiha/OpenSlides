@@ -1,7 +1,7 @@
-import { nextStarterSlideAction } from "@/constants";
-import { setCurrentSlideId } from "@/store/ui-state.svelte";
-import { useCreateSlide, useUpdateSlideSettings } from "@/queries";
-import type { Project } from "@/types";
+import { nextStarterSlideAction } from "$lib/constants";
+import { setCurrentSlideId } from "$lib/stores/ui-state.svelte";
+import { useCreateSlide, useUpdateSlideSettings } from "$lib/queries";
+import type { Project } from "$lib/types";
 
 /**
  * Canonical "Add Slide" use-case.

@@ -4,9 +4,9 @@
  *
  *   const duration = $derived(previewSlideSetting(slide.id, "duration") ?? slide.duration);
  */
-import { ui } from "@/store/ui-state.svelte";
-import type { PreviewProjectSettings, PreviewSlideSettings } from "@/store/types";
-import type { Highlight } from "@/types";
+import { ui } from "$lib/stores/ui-state.svelte";
+import type { PreviewProjectSettings, PreviewSlideSettings } from "$lib/stores/types";
+import type { Highlight } from "$lib/types";
 
 export function previewProjectSettings(): PreviewProjectSettings {
   return ui.previewProject;

@@ -1,6 +1,6 @@
-import { ui } from "@/store/ui-state.svelte";
+import { ui } from "$lib/stores/ui-state.svelte";
 import { slideMaps } from "./useSlideMaps";
-import type { Project, Slide } from "@/types";
+import type { Project, Slide } from "$lib/types";
 
 const EMPTY_SLIDES: Slide[] = [];
 

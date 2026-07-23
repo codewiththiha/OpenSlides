@@ -46,7 +46,10 @@ await build({
   platform: "node",
   external: ["jsdom"],
   loader: { ".mts": "tsx" },
-  alias: { "@": join(repo, "src") },
+  alias: {
+    "@": join(repo, "src"),
+    $lib: join(repo, "src", "shared"),
+  },
   conditions: SVELTE_CONDITIONS,
   plugins: [mockPlugin, sveltePlugin()],
   logLevel: "warning",

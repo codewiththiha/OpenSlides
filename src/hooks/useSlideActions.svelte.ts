@@ -1,6 +1,6 @@
-import { slideDisplayName, type Slide } from "@/types";
-import { notify } from "@/lib/toast";
-import { ui, setCurrentSlideId } from "@/store/ui-state.svelte";
+import { slideDisplayName, type Slide } from "$lib/types";
+import { notify } from "$lib/lib/toast";
+import { ui, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
 import {
   useDeleteSlide as useDeleteSlideMutation,
   useDuplicateSlide as useDuplicateSlideMutation,
@@ -8,7 +8,7 @@ import {
   useRestoreSlide,
   useStackSlides as useStackSlidesMutation,
   useUnstackSlides as useUnstackSlidesMutation,
-} from "@/queries";
+} from "$lib/queries";
 
 interface DeleteSlideArgs {
   ordered: () => Slide[];

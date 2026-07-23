@@ -35,11 +35,11 @@ import {
   enqueueCodeSave,
   pendingSaveChains,
   pendingSaveChainKeys,
-} from "../src/lib/code-save";
-import { mergeSlidePreservingEditorCode } from "../src/queries/slides";
-import { queryClient } from "../src/queries/query-client";
-import { clearAllLocalCode } from "../src/store/slide-code.svelte";
-import type { Project, Slide } from "../src/types";
+} from "../src/shared/lib/code-save";
+import { mergeSlidePreservingEditorCode } from "../src/shared/queries/slides";
+import { queryClient } from "../src/shared/queries/query-client";
+import { clearAllLocalCode } from "../src/shared/stores/slide-code.svelte";
+import type { Project, Slide } from "../src/shared/types";
 import {
   saveCalls,
   pendingSaves,

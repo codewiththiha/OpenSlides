@@ -1,4 +1,4 @@
-import type { Slide } from "@/types";
+import type { Slide } from "$lib/types";
 
 /** Pure helper — consume through `$derived(slideMaps(slides))`. */
 export function slideMaps(slides: Slide[]) {

@@ -23,7 +23,7 @@ import {
   sliceSnippets,
   sliceTokenLine,
   type HighlightTokenLine,
-} from "../src/lib/highlight-tokens.ts";
+} from "../src/features/highlights/highlight-tokens.ts";
 
 const rng = (startLine: number, startChar: number, endLine: number, endChar: number) => ({
   startLine, startChar, endLine, endChar,
