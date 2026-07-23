@@ -1,10 +1,8 @@
 <script lang="ts">
   /**
-   * Right-side settings drawer for global project options.
-   * Preview line numbers (slide view) are separate from editor gutter numbers.
-   * fontSize / lineHeight / editorFontSize / global durations update the
-   * preview instantly via previewProject overrides, while DB save happens
-   * only on commit.
+   * Right-side settings drawer for global project options (§6.9):
+   * a shell owning the mutations; each settings section is a component
+   * under ./drawer/.
    */
   import { untrack } from "svelte";
   import { X } from "@lucide/svelte";
@@ -12,22 +10,18 @@
   import { type Project, type ThemeName } from "$lib/types";
   import { updateProjectSettingsMutation, updateProjectThemeMutation } from "$lib/queries";
   import {
-    ui,
-    setEditorShowLineNumbers,
-    setShowSlideHoverPreview,
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
   } from "$lib/stores/ui-state.svelte";
   import { previewProjectSettings } from "@/features/settings/preview-settings";
   import { cn } from "$lib/lib/utils";
-  import { showUndoToast } from "$lib/lib/settings-undo";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import SettingsSection from "$lib/ui/SettingsSection.svelte";
-  import SliderField from "$lib/ui/SliderField.svelte";
-  import ToggleField from "$lib/ui/ToggleField.svelte";
-  import CodeAlignPicker from "@/features/settings/CodeAlignPicker.svelte";
   import GlobalAnimationSection from "@/features/settings/GlobalAnimationSection.svelte";
-  import ThemeGridPicker from "@/features/settings/ThemeGridPicker.svelte";
+  import DrawerThemeSection from "./drawer/DrawerThemeSection.svelte";
+  import DrawerCodeLayoutSection from "./drawer/DrawerCodeLayoutSection.svelte";
+  import DrawerCodeBackgroundSection from "./drawer/DrawerCodeBackgroundSection.svelte";
+  import DrawerLineNumbersSection from "./drawer/DrawerLineNumbersSection.svelte";
 
   let {
     project,
@@ -54,9 +48,6 @@
   const s = $derived(project.settings);
 
   // effective values (preview wins)
-  const effFontSize = $derived(previewProject.fontSize ?? s.fontSize);
-  const effLineHeight = $derived(previewProject.lineHeight ?? s.lineHeight);
-  const effEditorFontSize = $derived(previewProject.editorFontSize ?? s.editorFontSize);
   const effGlobalTransition = $derived(
     previewProject.globalTransitionDuration ?? s.globalTransitionDuration,
   );
@@ -91,113 +82,22 @@
   </div>
 
   <div class="flex-1 space-y-6 overflow-y-auto p-4">
-    <SettingsSection title="Theme" description="Choose a syntax theme from its live code preview.">
-      <ThemeGridPicker
-        value={project.theme}
-        onPreviewTheme={(theme) => setPreviewProjectSetting("theme", theme)}
-        onClearPreviewTheme={() => clearPreviewProjectSetting("theme")}
-        onChange={(theme) => {
-          clearPreviewProjectSetting("theme");
-          updateTheme.mutate(theme as ThemeName);
-        }}
-      />
-    </SettingsSection>
+    <DrawerThemeSection
+      currentTheme={project.theme}
+      onCommitTheme={(theme: ThemeName) => updateTheme.mutate(theme)}
+    />
 
-    <SettingsSection
-      title="Code layout"
-      description="Where the code block sits on your slides. Applies to all slides."
-    >
-      <CodeAlignPicker value={s.codeAlign ?? "left"} onChange={(align) => patch({ codeAlign: align })} />
-    </SettingsSection>
+    <DrawerCodeLayoutSection
+      value={s.codeAlign ?? "left"}
+      onChange={(align) => patch({ codeAlign: align })}
+    />
 
-    <SettingsSection title="Code background">
-      <ToggleField
-        label="Pure black background"
-        description="Replace the syntax theme background with black for easy video compositing"
-        checked={s.useBlackCodeBackground}
-        onChange={(v) => {
-          setPreviewProjectSetting("useBlackCodeBackground", v);
-          patch({ useBlackCodeBackground: v });
-        }}
-      />
-    </SettingsSection>
+    <DrawerCodeBackgroundSection
+      checked={s.useBlackCodeBackground}
+      onChange={(v) => patch({ useBlackCodeBackground: v })}
+    />
 
-    <SettingsSection title="Line numbers">
-      <ToggleField
-        label="Slide preview"
-        description="Shown during preview / presentation"
-        checked={s.showLineNumbers}
-        onChange={(v) => patch({ showLineNumbers: v })}
-      />
-      <ToggleField
-        label="Highlight step control"
-        description="Show the floating highlight progress control in preview and presentation"
-        checked={s.showHighlightStepIndicator}
-        onChange={(v) => patch({ showHighlightStepIndicator: v })}
-      />
-      <ToggleField
-        label="Code editor"
-        description="Line numbers in the code editor"
-        checked={ui.editorShowLineNumbers}
-        onChange={(next) => {
-          const before = ui.editorShowLineNumbers;
-          setEditorShowLineNumbers(next);
-          showUndoToast(
-            "undo-editor-showLineNumbers",
-            next ? "Editor line numbers on" : "Editor line numbers off",
-            () => setEditorShowLineNumbers(before),
-          );
-        }}
-      />
-      <ToggleField
-        label="Slide hover previews"
-        description="Show a larger preview when you hover over a slide"
-        checked={ui.showSlideHoverPreview}
-        onChange={setShowSlideHoverPreview}
-      />
-
-      <div class="pt-2">
-        <SliderField
-          label="Preview font size"
-          labelClassName="text-xs text-muted-foreground"
-          value={effFontSize}
-          min={12}
-          max={32}
-          step={2}
-          format={(v) => `${v}px`}
-          onPreview={(v) => setPreviewProjectSetting("fontSize", v)}
-          onCommit={(v) => patch({ fontSize: v })}
-        />
-      </div>
-
-      <div>
-        <SliderField
-          label="Line height"
-          labelClassName="text-xs text-muted-foreground"
-          value={effLineHeight}
-          min={1.1}
-          max={2.2}
-          step={0.05}
-          format={(v) => v.toFixed(2)}
-          onPreview={(v) => setPreviewProjectSetting("lineHeight", v)}
-          onCommit={(v) => patch({ lineHeight: v })}
-        />
-      </div>
-
-      <div>
-        <SliderField
-          label="Editor font size"
-          labelClassName="text-xs text-muted-foreground"
-          value={effEditorFontSize}
-          min={11}
-          max={22}
-          step={1}
-          format={(v) => `${v}px`}
-          onPreview={(v) => setPreviewProjectSetting("editorFontSize", v)}
-          onCommit={(v) => patch({ editorFontSize: v })}
-        />
-      </div>
-    </SettingsSection>
+    <DrawerLineNumbersSection settings={s} onPatch={patch} />
 
     <SettingsSection
       title="Global Animations"
