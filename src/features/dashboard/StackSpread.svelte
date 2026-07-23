@@ -95,6 +95,22 @@
     };
   });
 
+  // Viewport size as state (§10.2): fan centering must react to window
+  // resizes while the spread is open — reading window.innerWidth inside a
+  // $derived is not tracked.
+  let viewportW = $state(0);
+  let viewportH = $state(0);
+
+  $effect(() => {
+    const measure = () => {
+      viewportW = window.innerWidth;
+      viewportH = window.innerHeight;
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  });
+
   const projects = $derived(chunk.items);
   const total = $derived(projects.length);
 
@@ -102,8 +118,8 @@
     Math.max(
       240,
       Math.min(
-        window.innerWidth - 240,
-        (currentDeckRect?.left ?? window.innerWidth / 2) + (currentDeckRect?.width ?? 220) / 2,
+        viewportW - 240,
+        (currentDeckRect?.left ?? viewportW / 2) + (currentDeckRect?.width ?? 220) / 2,
       ),
     ),
   );
@@ -111,8 +127,8 @@
     Math.max(
       180,
       Math.min(
-        window.innerHeight - 200,
-        (currentDeckRect?.top ?? window.innerHeight / 2) + (currentDeckRect?.height ?? 150) / 2,
+        viewportH - 200,
+        (currentDeckRect?.top ?? viewportH / 2) + (currentDeckRect?.height ?? 150) / 2,
       ),
     ),
   );
