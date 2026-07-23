@@ -7,10 +7,7 @@
  */
 
 function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 const LOADED = [
@@ -33,11 +30,22 @@ export function getHighlighter(): Promise<{
   codeToTokens: (
     src: string,
     opts: { lang: string; theme: string },
-  ) => { tokens: Array<Array<{ content: string; color: string; offset: number; fontStyle: number }>> };
+  ) => {
+    tokens: Array<
+      Array<{
+        content: string;
+        color: string;
+        offset: number;
+        fontStyle: number;
+      }>
+    >;
+  };
   codeToTokensBase: (
     src: string,
     opts: { lang: string; theme: string },
-  ) => Array<Array<{ content: string; color: string; offset: number; fontStyle: number }>>;
+  ) => Array<
+    Array<{ content: string; color: string; offset: number; fontStyle: number }>
+  >;
 }> {
   const tokensBase = (src: string) => {
     let offset = 0;

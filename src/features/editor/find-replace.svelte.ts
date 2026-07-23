@@ -64,7 +64,9 @@ export function createFindReplace(args: Args) {
     const match = matches[currentMatchIndex];
     if (!match) return;
     const code = args.code();
-    args.applyCode(code.slice(0, match.start) + replaceTerm + code.slice(match.end));
+    args.applyCode(
+      code.slice(0, match.start) + replaceTerm + code.slice(match.end),
+    );
   }
 
   function replaceAll() {

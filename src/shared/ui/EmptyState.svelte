@@ -22,7 +22,9 @@
 <div
   class={cn(
     "flex flex-col items-center justify-center text-center",
-    compact ? "py-10" : "rounded-2xl border-2 border-dashed border-muted bg-muted/20 py-24",
+    compact
+      ? "py-10"
+      : "rounded-2xl border-2 border-dashed border-muted bg-muted/20 py-24",
     className,
   )}
 >
@@ -32,11 +34,20 @@
       compact ? "h-10 w-10" : "h-16 w-16",
     )}
   >
-    <Icon class={cn("text-muted-foreground", compact ? "h-5 w-5" : "h-8 w-8")} />
+    <Icon
+      class={cn("text-muted-foreground", compact ? "h-5 w-5" : "h-8 w-8")}
+    />
   </div>
-  <h2 class={cn("mb-2 font-semibold", compact ? "text-sm" : "text-xl")}>{title}</h2>
+  <h2 class={cn("mb-2 font-semibold", compact ? "text-sm" : "text-xl")}>
+    {title}
+  </h2>
   {#if description}
-    <p class={cn("max-w-sm text-muted-foreground", compact ? "mb-3 text-xs" : "mb-5")}>
+    <p
+      class={cn(
+        "max-w-sm text-muted-foreground",
+        compact ? "mb-3 text-xs" : "mb-5",
+      )}
+    >
       {description}
     </p>
   {/if}

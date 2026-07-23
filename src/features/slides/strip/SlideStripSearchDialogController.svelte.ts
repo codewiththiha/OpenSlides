@@ -12,7 +12,9 @@ interface StripSearchLike {
   clearSearch: () => void;
 }
 
-export function createSlideStripSearchDialog(args: { search: StripSearchLike }) {
+export function createSlideStripSearchDialog(args: {
+  search: StripSearchLike;
+}) {
   let isOpen = $state(false);
   let scope = $state<SearchScope>("slides");
   let query = $state("");

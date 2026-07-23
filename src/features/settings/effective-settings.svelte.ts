@@ -8,12 +8,16 @@ export function createEffectiveSettings(
   const settings = $derived(project().settings);
   const target = $derived(slide?.() ?? project().slides[0]);
   const previewProject = $derived(ui.previewProject);
-  const previewSlide = $derived(target ? ui.previewSlides.get(target.id) : undefined);
+  const previewSlide = $derived(
+    target ? ui.previewSlides.get(target.id) : undefined,
+  );
 
   const result = $derived.by(() => {
     const globalTransitionDuration =
-      previewProject.globalTransitionDuration ?? settings.globalTransitionDuration;
-    const globalStagger = previewProject.globalStagger ?? settings.globalStagger;
+      previewProject.globalTransitionDuration ??
+      settings.globalTransitionDuration;
+    const globalStagger =
+      previewProject.globalStagger ?? settings.globalStagger;
     return {
       fontSize: previewProject.fontSize ?? settings.fontSize,
       lineHeight: previewProject.lineHeight ?? settings.lineHeight,

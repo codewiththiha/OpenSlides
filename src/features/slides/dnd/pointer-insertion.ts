@@ -26,6 +26,10 @@ export function pointerShadowReorder<T extends StripItemLike>(
   if (unchanged) return null;
   const shadow = items[shadowIdx]!;
   const rest = items.filter((i) => !i.isDndShadowItem);
-  const reordered = [...rest.slice(0, insertAt), shadow, ...rest.slice(insertAt)];
+  const reordered = [
+    ...rest.slice(0, insertAt),
+    shadow,
+    ...rest.slice(insertAt),
+  ];
   return reordered.some((it, i) => it !== items[i]) ? reordered : null;
 }

@@ -27,10 +27,17 @@ import { queryClient } from "../src/shared/queries/query-client";
 import { setCurrentSlideId } from "../src/shared/stores/ui-state.svelte";
 import { clearAllLocalCode } from "../src/shared/stores/slide-code.svelte";
 import type { Project, Slide } from "../src/shared/types";
-import { pendingSaves, resolveSaveAt, resetApiMocks } from "./mocks/tauri-api.mock.mts";
+import {
+  pendingSaves,
+  resolveSaveAt,
+  resetApiMocks,
+} from "./mocks/tauri-api.mock.mts";
 
 function makeLineCode(lines: number): string {
-  return Array.from({ length: lines }, (_, i) => `let v${i + 1} = ${i + 1};`).join("\n");
+  return Array.from(
+    { length: lines },
+    (_, i) => `let v${i + 1} = ${i + 1};`,
+  ).join("\n");
 }
 
 function makeProject(code: string, language = "rust"): Project {
@@ -210,7 +217,11 @@ test("CodeEditor: shiki path stays COLORED and exact on every keystroke (no whit
   const off = offsetOfLine(el.value, 3, 5);
   await typeAt(el, off, "X");
   await settle();
-  assert.match(pre.innerHTML, /style="color:/, "colored immediately after keystroke 1");
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "colored immediately after keystroke 1",
+  );
   assert.equal(
     pre.textContent,
     el.value + "\n",
@@ -219,12 +230,20 @@ test("CodeEditor: shiki path stays COLORED and exact on every keystroke (no whit
 
   await typeAt(el, off + 1, "Y");
   await settle();
-  assert.match(pre.innerHTML, /style="color:/, "colored immediately after keystroke 2");
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "colored immediately after keystroke 2",
+  );
   assert.equal(pre.textContent, el.value + "\n");
 
   await typeAt(el, off + 2, "Z");
   await settle();
-  assert.match(pre.innerHTML, /style="color:/, "colored immediately after keystroke 3");
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "colored immediately after keystroke 3",
+  );
   assert.equal(pre.textContent, el.value + "\n", "still exact after a burst");
 
   await m.unmount();
@@ -237,17 +256,29 @@ test("CodeEditor: merustmar deck stays COLORED via the Shiki pipeline", async ()
   const pre = m.overlayEl;
 
   // Colored at mount, and on every keystroke thereafter.
-  assert.match(pre.innerHTML, /style="color:/, "merustmar overlay colored at mount");
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "merustmar overlay colored at mount",
+  );
 
   const off = offsetOfLine(el.value, 1, 3);
   await typeAt(el, off, "A");
   await settle();
-  assert.match(pre.innerHTML, /style="color:/, "merustmar colored after keystroke 1");
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "merustmar colored after keystroke 1",
+  );
   assert.equal(pre.textContent, el.value + "\n", "exact content preserved");
 
   await typeAt(el, off + 1, "B");
   await settle();
-  assert.match(pre.innerHTML, /style="color:/, "merustmar colored after keystroke 2");
+  assert.match(
+    pre.innerHTML,
+    /style="color:/,
+    "merustmar colored after keystroke 2",
+  );
   assert.equal(pre.textContent, el.value + "\n");
 
   await m.unmount();

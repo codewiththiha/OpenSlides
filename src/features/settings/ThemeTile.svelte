@@ -59,7 +59,9 @@
     codeClassName="!absolute left-1/2 top-1/2 !inline-block -translate-x-1/2 -translate-y-1/2"
   >
     {#snippet fallback()}
-      <span class="block text-center font-mono text-[9px] text-muted-foreground">···</span>
+      <span class="block text-center font-mono text-[9px] text-muted-foreground"
+        >···</span
+      >
     {/snippet}
   </CodeThumbnail>
   <div class="flex items-center justify-between bg-card px-2 py-1.5">

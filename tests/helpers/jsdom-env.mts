@@ -87,11 +87,14 @@ g.MutationObserver = dom.window.MutationObserver;
 // jsdom stubs these behind `HTMLMediaElement` only when media features are
 // on; app deps feature-probe them unconditionally (interactive-el checks).
 g.HTMLMediaElement =
-  dom.window.HTMLMediaElement ?? class HTMLMediaElement extends dom.window.HTMLElement {};
+  dom.window.HTMLMediaElement ??
+  class HTMLMediaElement extends dom.window.HTMLElement {};
 g.HTMLVideoElement =
-  dom.window.HTMLVideoElement ?? class HTMLVideoElement extends (g.HTMLMediaElement as never) {};
+  dom.window.HTMLVideoElement ??
+  class HTMLVideoElement extends (g.HTMLMediaElement as never) {};
 g.HTMLAudioElement =
-  dom.window.HTMLAudioElement ?? class HTMLAudioElement extends (g.HTMLMediaElement as never) {};
+  dom.window.HTMLAudioElement ??
+  class HTMLAudioElement extends (g.HTMLMediaElement as never) {};
 g.HTMLImageElement = dom.window.HTMLImageElement;
 const mql = (query: string) => ({
   matches: false,
@@ -110,7 +113,8 @@ g.requestAnimationFrame = raf;
 g.cancelAnimationFrame = clearTimeout;
 // App code uses the window-scoped timers explicitly.
 (dom.window as unknown as Record<string, unknown>).requestAnimationFrame = raf;
-(dom.window as unknown as Record<string, unknown>).cancelAnimationFrame = clearTimeout;
+(dom.window as unknown as Record<string, unknown>).cancelAnimationFrame =
+  clearTimeout;
 
 // Read by src/lib/shiki-worker-client.ts (inline getHighlighter fallback) and
 // src/hooks/useShikiDisplayState.svelte.ts (zero debounce) so the jsdom

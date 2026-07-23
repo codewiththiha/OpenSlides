@@ -25,8 +25,16 @@ import {
   type HighlightTokenLine,
 } from "../src/features/highlights/highlight-tokens.ts";
 
-const rng = (startLine: number, startChar: number, endLine: number, endChar: number) => ({
-  startLine, startChar, endLine, endChar,
+const rng = (
+  startLine: number,
+  startChar: number,
+  endLine: number,
+  endChar: number,
+) => ({
+  startLine,
+  startChar,
+  endLine,
+  endChar,
 });
 
 /* Same fixture the deleted Rust tests used: lines have 31, 32, 0, 21 chars. */
@@ -97,7 +105,7 @@ test("escape happens AFTER slicing — entity cutting is impossible (saga bug #2
 test("renderTokensToSpans: fontStyle bitflags + bgColor, colorless spans", () => {
   assert.equal(
     renderTokensToSpans([
-      { content: "x", color: "#fff" , fontStyle: 1 },
+      { content: "x", color: "#fff", fontStyle: 1 },
       { content: "y", bgColor: "#222", fontStyle: 2 | 4 },
       { content: "z" },
     ]),
@@ -108,7 +116,9 @@ test("renderTokensToSpans: fontStyle bitflags + bgColor, colorless spans", () =>
 });
 
 test("buildPlan: dense entries over empty line (saga bug #3) + selectedText", () => {
-  const tokens = CODE.split("\n").map((l) => [{ content: l, color: "#abb2bf" }]);
+  const tokens = CODE.split("\n").map((l) => [
+    { content: l, color: "#abb2bf" },
+  ]);
   const plan = buildPlan(CODE, tokens, rng(0, 8, 4, 6), "#1e1e1e", 75);
   assert.deepEqual(
     plan.lines.map((l) => [l.lineIndex, l.startChar, l.endChar, l.isEmpty]),
@@ -140,7 +150,13 @@ test("buildPlan: whitespace-only slice on a token line stays colored", () => {
 });
 
 test("buildPlan: eraser color mixes theme bg toward black", () => {
-  const plan = buildPlan("x", plainTokenLines("x"), rng(0, 0, 0, 1), "#ff0000", 50);
+  const plan = buildPlan(
+    "x",
+    plainTokenLines("x"),
+    rng(0, 0, 0, 1),
+    "#ff0000",
+    50,
+  );
   assert.equal(plan.eraserColor, "rgb(128, 0, 0)");
 });
 

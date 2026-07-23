@@ -7,7 +7,10 @@
     class: className,
     children,
     ...rest
-  }: HTMLAttributes<HTMLSpanElement> & { class?: string; children?: Snippet } = $props();
+  }: HTMLAttributes<HTMLSpanElement> & {
+    class?: string;
+    children?: Snippet;
+  } = $props();
 </script>
 
 <span

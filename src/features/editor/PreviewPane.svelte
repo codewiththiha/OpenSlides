@@ -32,7 +32,9 @@
       </RenderBoundary>
     {/key}
     {#if project.settings.showHighlightStepIndicator !== false}
-      <div class="absolute inset-x-0 bottom-2.5 z-40 flex justify-center pointer-events-none">
+      <div
+        class="pointer-events-none absolute inset-x-0 bottom-2.5 z-40 flex justify-center"
+      >
         <div class="pointer-events-auto">
           <HighlightStepIndicator
             compact

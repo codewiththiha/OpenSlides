@@ -23,7 +23,8 @@
   import { api } from "../../src/shared/lib/tauri-api";
   import type { Project } from "../../src/shared/types";
 
-  let { slideId, mode }: { slideId: string; mode: "queued" | "prefix" } = $props();
+  let { slideId, mode }: { slideId: string; mode: "queued" | "prefix" } =
+    $props();
 
   const query = createQuery(
     () => ({

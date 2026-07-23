@@ -7,7 +7,10 @@
  * - LRU for char width (32 entries)
  */
 
-import type { HighlightPlan, HighlightPlanLine } from "@/features/highlights/highlight-tokens";
+import type {
+  HighlightPlan,
+  HighlightPlanLine,
+} from "@/features/highlights/highlight-tokens";
 import { getLineTextNodes } from "$lib/lib/line-nodes-cache";
 import { measureCharWidth } from "$lib/lib/char-width-cache";
 export { measureCharWidth } from "$lib/lib/char-width-cache";
@@ -131,7 +134,8 @@ export function measureHighlight(
     const cws = measureCharWidth(
       codeRoot,
       fontSize,
-      getComputedStyle(codeRoot).fontFamily || "ui-monospace, SFMono-Regular, Menlo, monospace",
+      getComputedStyle(codeRoot).fontFamily ||
+        "ui-monospace, SFMono-Regular, Menlo, monospace",
     );
     if (!cws || !Number.isFinite(cws)) return null;
     const kRect = codeRoot.getBoundingClientRect();
@@ -202,7 +206,8 @@ export function measureHighlightPureMath(
   const charW = measureCharWidth(
     codeRoot,
     fontSize,
-    getComputedStyle(codeRoot).fontFamily || "ui-monospace, SFMono-Regular, Menlo, monospace",
+    getComputedStyle(codeRoot).fontFamily ||
+      "ui-monospace, SFMono-Regular, Menlo, monospace",
   );
   if (!charW || !Number.isFinite(charW)) return null;
 

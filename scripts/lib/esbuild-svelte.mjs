@@ -53,4 +53,10 @@ export function sveltePlugin() {
 }
 
 /** Resolution conditions mirroring what Vite applies in the app build. */
-export const SVELTE_CONDITIONS = ["svelte", "browser", "module", "import", "default"];
+export const SVELTE_CONDITIONS = [
+  "svelte",
+  "browser",
+  "module",
+  "import",
+  "default",
+];

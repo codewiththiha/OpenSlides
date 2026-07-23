@@ -7,9 +7,18 @@
     class: className,
     children,
     ...rest
-  }: HTMLAttributes<HTMLDivElement> & { class?: string; children?: Snippet } = $props();
+  }: HTMLAttributes<HTMLDivElement> & {
+    class?: string;
+    children?: Snippet;
+  } = $props();
 </script>
 
-<div class={cn("rounded-xl border bg-card text-card-foreground shadow-sm", className)} {...rest}>
+<div
+  class={cn(
+    "rounded-xl border bg-card text-card-foreground shadow-sm",
+    className,
+  )}
+  {...rest}
+>
   {@render children?.()}
 </div>

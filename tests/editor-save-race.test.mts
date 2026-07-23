@@ -129,7 +129,11 @@ function mountHarness(
 /** Simulate real typing: native setter bypasses any framework value
  *  tracker, exactly like a user's keystroke does, then a bubbling input.
  *  Async so queued-save microtasks start the write before assertions. */
-async function type(el: HTMLTextAreaElement, next: string, caret = next.length): Promise<void> {
+async function type(
+  el: HTMLTextAreaElement,
+  next: string,
+  caret = next.length,
+): Promise<void> {
   const setter = Object.getOwnPropertyDescriptor(
     window.HTMLTextAreaElement.prototype,
     "value",
@@ -166,7 +170,11 @@ test("pre-fix model: out-of-order saves regress the editor and slam the caret (c
   // localCode shadow left to hide it.
   resolveSaveAt(0);
   await settle();
-  assert.equal(el.value, "let x = 1;a", "editor content regressed to the stale value");
+  assert.equal(
+    el.value,
+    "let x = 1;a",
+    "editor content regressed to the stale value",
+  );
   assert.equal(
     el.selectionStart,
     "let x = 1;a".length,
@@ -197,16 +205,32 @@ test("queued saves: out-of-order resolution is structurally impossible; value an
   // Resolve save A — save B is only released now, in schedule order.
   resolveSaveAt(0);
   await settle();
-  assert.equal(saveCalls.length, 2, "second write released after the first resolved");
-  assert.equal(saveCalls[1].code, "let x = 1;ab", "DB application order = schedule order");
+  assert.equal(
+    saveCalls.length,
+    2,
+    "second write released after the first resolved",
+  );
+  assert.equal(
+    saveCalls[1].code,
+    "let x = 1;ab",
+    "DB application order = schedule order",
+  );
   // Cache stamped "…a" while localCode is still "…ab" (not cleared — newer
   // edit present), so the editor value is untouched.
   assert.equal(snapshot.value, "let x = 1;ab");
-  assert.equal(snapshot.selectionStart, 5, "caret untouched by the shadowed stamp");
+  assert.equal(
+    snapshot.selectionStart,
+    5,
+    "caret untouched by the shadowed stamp",
+  );
 
   resolveSaveAt(0);
   await settle();
-  assert.equal(snapshot.value, "let x = 1;ab", "clearLocalCode → cache transition is same-string");
+  assert.equal(
+    snapshot.value,
+    "let x = 1;ab",
+    "clearLocalCode → cache transition is same-string",
+  );
   assert.equal(snapshot.selectionStart, 5, "caret never moved");
   assert.equal(pendingSaves.length, 0);
   await m.unmount();
@@ -274,7 +298,11 @@ test("enqueueCodeSave: a failed save does not block later ones and rejects its o
   await assert.rejects(enqueueCodeSave("err-slide", "c1", write), /disk full/);
   failFirst = false;
   await enqueueCodeSave("err-slide", "c2", write);
-  assert.deepEqual(started, ["c1", "c2"], "second save ran after the first failed");
+  assert.deepEqual(
+    started,
+    ["c1", "c2"],
+    "second save ran after the first failed",
+  );
 });
 
 test("enqueueCodeSave: chains are independent across slides and the map is cleaned up", async () => {
@@ -287,7 +315,11 @@ test("enqueueCodeSave: chains are independent across slides and the map is clean
   const a = enqueueCodeSave("slide-A", "1", write);
   const b = enqueueCodeSave("slide-B", "1", write);
   await Promise.resolve();
-  assert.deepEqual(started.sort(), ["slide-A:1", "slide-B:1"], "no cross-slide waiting");
+  assert.deepEqual(
+    started.sort(),
+    ["slide-A:1", "slide-B:1"],
+    "no cross-slide waiting",
+  );
   for (const g of gates) g();
   await Promise.all([a, b]);
   // The tail entry is dropped in a Promise.finally — poll briefly instead
@@ -304,7 +336,7 @@ test("enqueueCodeSave: chains are independent across slides and the map is clean
 test("mergeSlidePreservingEditorCode: settings responses cannot regress code", () => {
   const cached = {
     id: "s1",
-    code: "fn main() { println!(\"new\"); }",
+    code: 'fn main() { println!("new"); }',
     duration: 1000,
   } as Slide;
   const incoming = {
@@ -314,7 +346,11 @@ test("mergeSlidePreservingEditorCode: settings responses cannot regress code", (
     transitionDuration: 450,
   } as Slide;
   const merged = mergeSlidePreservingEditorCode(cached, incoming);
-  assert.equal(merged.code, cached.code, "code column preserved from the cache");
+  assert.equal(
+    merged.code,
+    cached.code,
+    "code column preserved from the cache",
+  );
   assert.equal(merged.duration, 2500, "settings fields still applied");
   assert.equal(merged.transitionDuration, 450);
 });

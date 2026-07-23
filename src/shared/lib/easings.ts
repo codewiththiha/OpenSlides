@@ -6,7 +6,12 @@
 
 export type EasingFn = (t: number) => number;
 
-function cubicBezier(p1x: number, p1y: number, p2x: number, p2y: number): EasingFn {
+function cubicBezier(
+  p1x: number,
+  p1y: number,
+  p2x: number,
+  p2y: number,
+): EasingFn {
   const cx = 3 * p1x;
   const bx = 3 * (p2x - p1x) - cx;
   const ax = 1 - cx - bx;

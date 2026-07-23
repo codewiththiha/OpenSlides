@@ -34,7 +34,10 @@
 >
   {#if html}
     <code
-      class={cn("pointer-events-none block overflow-hidden font-mono", codeClassName)}
+      class={cn(
+        "pointer-events-none block overflow-hidden font-mono",
+        codeClassName,
+      )}
       style="font-size: {fontSize}px; line-height: {lineHeight}; white-space: pre;"
       >{@html html}</code
     >

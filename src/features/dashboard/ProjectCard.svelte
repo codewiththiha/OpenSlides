@@ -32,7 +32,7 @@
 </script>
 
 <Card
-  class="group relative cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+  class="group relative cursor-pointer overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 select-none hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
   style="height: {PROJECT_CARD_HEIGHT}px"
   role={isStatic ? undefined : "button"}
   tabindex={isStatic ? undefined : 0}
@@ -59,7 +59,7 @@
   />
 
   <div
-    class="pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pb-9 pt-3"
+    class="pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pt-3 pb-9"
     style="background: {cardTheme.topGradient};"
   >
     <div class="pointer-events-auto pr-24 text-white mix-blend-difference">
@@ -74,7 +74,9 @@
           class="h-7 text-sm font-semibold"
         />
       {:else}
-        <h3 class="truncate text-base font-semibold leading-tight">{project.name}</h3>
+        <h3 class="truncate text-base leading-tight font-semibold">
+          {project.name}
+        </h3>
         <p class="mt-1 text-[11px] opacity-75">
           {project.slideCount} slide{project.slideCount !== 1 ? "s" : ""}
         </p>
@@ -83,8 +85,10 @@
   </div>
 
   {#if !isRenaming && !isStatic}
-    <div class="absolute right-2 top-2 z-20">
-      <HoverActions class="gap-0.5 rounded-md bg-black/10 p-0.5 backdrop-blur-sm">
+    <div class="absolute top-2 right-2 z-20">
+      <HoverActions
+        class="gap-0.5 rounded-md bg-black/10 p-0.5 backdrop-blur-sm"
+      >
         <HoverActionButton
           size="md"
           title="Rename"
@@ -132,14 +136,18 @@
   {/if}
 
   <div
-    class="absolute inset-x-0 bottom-0 z-10 px-3 pb-2.5 pt-9"
+    class="absolute inset-x-0 bottom-0 z-10 px-3 pt-9 pb-2.5"
     style="background: {cardTheme.bottomGradient};"
   >
-    <div class="flex items-center justify-between text-white mix-blend-difference">
+    <div
+      class="flex items-center justify-between text-white mix-blend-difference"
+    >
       <span class="text-[11px] font-medium opacity-80">{project.theme}</span>
       <span class="flex items-center gap-2 text-[11px] opacity-80">
         Updated {formatRelative(project.updatedAt)}
-        <ArrowRight class="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        <ArrowRight
+          class="h-3.5 w-3.5 transition-transform group-hover:translate-x-1"
+        />
       </span>
     </div>
   </div>

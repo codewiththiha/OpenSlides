@@ -2,7 +2,11 @@
   /** Cmd/Ctrl+G quick jump to a slide by number or name. */
   import { Command } from "bits-ui";
   import { Highlighter as HighlighterIcon } from "@lucide/svelte";
-  import { ui, setIsGoToSlideOpen, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
+  import {
+    ui,
+    setIsGoToSlideOpen,
+    setCurrentSlideId,
+  } from "$lib/stores/ui-state.svelte";
   import { slideDisplayName, type Project } from "$lib/types";
   import { cn } from "$lib/lib/utils";
   import Kbd from "$lib/ui/Kbd.svelte";
@@ -45,15 +49,24 @@
           isCurrent && "bg-primary/5",
         )}
       >
-        <span class="w-6 shrink-0 text-right font-mono text-[11px] text-muted-foreground">{index + 1}</span>
-        <span class="min-w-0 flex-1 truncate">{slideDisplayName(slide, index)}</span>
+        <span
+          class="w-6 shrink-0 text-right font-mono text-[11px] text-muted-foreground"
+          >{index + 1}</span
+        >
+        <span class="min-w-0 flex-1 truncate"
+          >{slideDisplayName(slide, index)}</span
+        >
         {#if slide.highlights.length > 0}
-          <span class="flex shrink-0 items-center gap-1 text-[10px] text-amber-400/80">
+          <span
+            class="flex shrink-0 items-center gap-1 text-[10px] text-amber-400/80"
+          >
             <HighlighterIcon class="h-3 w-3" />
             {slide.highlights.length}
           </span>
         {/if}
-        <span class="shrink-0 font-mono text-[10px] text-muted-foreground">{(slide.duration / 1000).toFixed(1)}s</span>
+        <span class="shrink-0 font-mono text-[10px] text-muted-foreground"
+          >{(slide.duration / 1000).toFixed(1)}s</span
+        >
       </Command.Item>
     {/each}
   </Command.Group>

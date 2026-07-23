@@ -34,11 +34,14 @@
     class?: string;
     children?: Snippet;
   } = $props();
-
 </script>
 
 <div
-  use:escapeKey={{ onEscape: () => { if (closeOnEsc) onClose(); } }}
+  use:escapeKey={{
+    onEscape: () => {
+      if (closeOnEsc) onClose();
+    },
+  }}
   class={cn(
     "fixed inset-0 flex bg-black/50 backdrop-blur-sm",
     placement === "center"

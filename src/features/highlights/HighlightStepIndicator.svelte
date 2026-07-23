@@ -50,7 +50,7 @@
     in:fly={{ y: 6, duration: 200 }}
     out:fade={{ duration: 200 }}
     class={cn(
-      "inline-flex select-none items-center gap-2 rounded-full",
+      "inline-flex items-center gap-2 rounded-full select-none",
       "bg-black/55 text-white/90 shadow-lg backdrop-blur-sm",
       "border border-white/10",
       compact ? "px-2 py-1" : "px-3 py-1.5",
@@ -78,13 +78,15 @@
             if (!interactive) return;
             onSelect?.(i);
           }}
-          title={interactive ? `Jump to highlight ${i + 1} of ${total}` : undefined}
+          title={interactive
+            ? `Jump to highlight ${i + 1} of ${total}`
+            : undefined}
           class={cn(
-            "rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300/50 focus-visible:ring-offset-0",
+            "rounded-full focus-visible:ring-2 focus-visible:ring-amber-300/50 focus-visible:ring-offset-0 focus-visible:outline-none",
             compact ? "h-3 w-3" : "h-4 w-4",
             "flex items-center justify-center",
             interactive
-              ? "cursor-pointer hover:scale-125 transition-transform"
+              ? "cursor-pointer transition-transform hover:scale-125"
               : "cursor-default",
           )}
           aria-label="Go to highlight {i + 1}"
@@ -92,7 +94,12 @@
         >
           <span
             class={cn("rounded-full", compact ? "h-1.5 w-1.5" : "h-2 w-2")}
-            style="transform: scale({dotScales[i]?.current ?? 1}); opacity: {i > current ? 0.35 : 1}; background-color: {i <= current ? '#fcd34d' : '#ffffff'}; transition: background-color 150ms ease, opacity 150ms ease;"
+            style="transform: scale({dotScales[i]?.current ?? 1}); opacity: {i >
+            current
+              ? 0.35
+              : 1}; background-color: {i <= current
+              ? '#fcd34d'
+              : '#ffffff'}; transition: background-color 150ms ease, opacity 150ms ease;"
           ></span>
         </button>
       {/each}

@@ -15,7 +15,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { flushSync, mount, unmount } from "svelte";
 import App from "../src/app/App.svelte";
-import { ui, setIsPresenting, setCurrentSlideId } from "../src/shared/stores/ui-state.svelte";
+import {
+  ui,
+  setIsPresenting,
+  setCurrentSlideId,
+} from "../src/shared/stores/ui-state.svelte";
 import { clearAllLocalCode } from "../src/shared/stores/slide-code.svelte";
 import { queryClient } from "../src/shared/queries/query-client";
 import type { Highlight, Project } from "../src/shared/types";
@@ -111,7 +115,9 @@ async function settle(ms = 30): Promise<void> {
 function assertNoAppErrors(context: string): void {
   if (errors.length > 0) {
     const detail = errors
-      .map((e) => (e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e)))
+      .map((e) =>
+        e instanceof Error ? `${e.message}\n${e.stack ?? ""}` : String(e),
+      )
       .join("\n---\n");
     errors.length = 0;
     assert.fail(`app errors during ${context}:\n${detail}`);
@@ -141,7 +147,10 @@ function click(el: Element): void {
 
 test("dashboard card click opens the editor; Present enters and advances the presentation", async () => {
   resetFullApiMocks();
-  seedProjects([makeProject("p1", "First Deck"), makeProject("p2", "Second Deck")]);
+  seedProjects([
+    makeProject("p1", "First Deck"),
+    makeProject("p2", "Second Deck"),
+  ]);
   queryClient.clear();
   clearAllLocalCode();
   setIsPresenting(false);

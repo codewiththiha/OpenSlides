@@ -16,7 +16,9 @@ export function createEditorHistory(args: {
     const slideId = args.slideId();
     if (!el || !slideId || document.activeElement !== el) return false;
     const snapshot =
-      direction === "undo" ? undoEditorHistory(slideId) : redoEditorHistory(slideId);
+      direction === "undo"
+        ? undoEditorHistory(slideId)
+        : redoEditorHistory(slideId);
     if (!snapshot) return false;
     withoutRecording(() => {
       el.value = snapshot.code;
@@ -36,7 +38,10 @@ export function createEditorHistory(args: {
     const exec = (direction: "undo" | "redo") => {
       const el = args.textarea();
       if (!el || document.activeElement !== el) return;
-      if (!applyHistorySnapshot(direction) && typeof document.execCommand === "function") {
+      if (
+        !applyHistorySnapshot(direction) &&
+        typeof document.execCommand === "function"
+      ) {
         document.execCommand(direction);
       }
     };

@@ -19,7 +19,9 @@
 </script>
 
 <section class={cn("space-y-3", borderTop && "border-t pt-4", className)}>
-  <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+  <h3
+    class="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+  >
     {title}
   </h3>
   {#if description}

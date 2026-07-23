@@ -3,10 +3,7 @@ import { api } from "$lib/lib/tauri-api";
 import { projectKeys } from "./keys";
 import { queryClient } from "./query-client";
 import type { Project } from "$lib/types";
-import {
-  projectListMutation,
-  slideMutation,
-} from "./mutation-policy";
+import { projectListMutation, slideMutation } from "./mutation-policy";
 
 export function stackProjectsMutation() {
   return projectListMutation(
@@ -16,7 +13,8 @@ export function stackProjectsMutation() {
       onSuccess: (projects) => {
         queryClient.setQueryData(projectKeys.all, projects);
       },
-      onError: (err: Error) => notify.error(`Couldn't stack presentations: ${err.message}`),
+      onError: (err: Error) =>
+        notify.error(`Couldn't stack presentations: ${err.message}`),
     },
   );
 }
@@ -28,7 +26,8 @@ export function unstackProjectsMutation() {
       onSuccess: (projects) => {
         queryClient.setQueryData(projectKeys.all, projects);
       },
-      onError: (err: Error) => notify.error(`Couldn't unstack presentations: ${err.message}`),
+      onError: (err: Error) =>
+        notify.error(`Couldn't unstack presentations: ${err.message}`),
     },
   );
 }
@@ -41,11 +40,13 @@ export function stackSlidesMutation(projectId: string) {
     {
       invalidateProjectDetail: true,
       onSuccess: (slides) => {
-        queryClient.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
-          old ? { ...old, slides } : old,
+        queryClient.setQueryData<Project>(
+          projectKeys.detail(projectId),
+          (old) => (old ? { ...old, slides } : old),
         );
       },
-      onError: (err: Error) => notify.error(`Couldn't stack slides: ${err.message}`),
+      onError: (err: Error) =>
+        notify.error(`Couldn't stack slides: ${err.message}`),
     },
   );
 }
@@ -57,11 +58,13 @@ export function unstackSlidesMutation(projectId: string) {
     {
       invalidateProjectDetail: true,
       onSuccess: (slides) => {
-        queryClient.setQueryData<Project>(projectKeys.detail(projectId), (old) =>
-          old ? { ...old, slides } : old,
+        queryClient.setQueryData<Project>(
+          projectKeys.detail(projectId),
+          (old) => (old ? { ...old, slides } : old),
         );
       },
-      onError: (err: Error) => notify.error(`Couldn't unstack slides: ${err.message}`),
+      onError: (err: Error) =>
+        notify.error(`Couldn't unstack slides: ${err.message}`),
     },
   );
 }

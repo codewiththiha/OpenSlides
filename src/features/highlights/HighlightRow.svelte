@@ -47,7 +47,6 @@
       ? "…"
       : snippet.replace(/\s+/g, " ").trim() || "(empty selection)",
   );
-
 </script>
 
 <div
@@ -66,11 +65,15 @@
       type="button"
       class="flex min-w-0 flex-1 items-center gap-1.5 text-left"
       onclick={() => onToggleExpand(highlight.id)}
-      title="L{highlight.startLine + 1}:{highlight.startChar} → L{highlight.endLine +
-        1}:{highlight.endChar}"
+      title="L{highlight.startLine +
+        1}:{highlight.startChar} → L{highlight.endLine + 1}:{highlight.endChar}"
     >
-      <span class="shrink-0 font-mono text-[10px] text-primary/80">#{index + 1}</span>
-      <span class="truncate font-mono text-[10px] text-foreground/80">{text}</span>
+      <span class="shrink-0 font-mono text-[10px] text-primary/80"
+        >#{index + 1}</span
+      >
+      <span class="truncate font-mono text-[10px] text-foreground/80"
+        >{text}</span
+      >
     </button>
     <Button
       variant="ghost"
@@ -93,7 +96,10 @@
     <Button
       variant="ghost"
       size="icon"
-      class={cn("h-5 w-5 shrink-0", isPreviewing && "bg-primary/20 text-primary")}
+      class={cn(
+        "h-5 w-5 shrink-0",
+        isPreviewing && "bg-primary/20 text-primary",
+      )}
       onclick={() => onPreview(index)}
     >
       <Eye class="h-3 w-3" />

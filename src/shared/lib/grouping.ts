@@ -12,7 +12,7 @@ export interface GroupChunk<T> {
  */
 export function chunkConsecutive<T>(
   items: T[],
-  getGroupId?: (item: T) => string | null | undefined
+  getGroupId?: (item: T) => string | null | undefined,
 ): GroupChunk<T>[] {
   const result: GroupChunk<T>[] = [];
   if (!items || !Array.isArray(items) || items.length === 0) return result;
@@ -27,7 +27,10 @@ export function chunkConsecutive<T>(
   for (const item of items) {
     if (item === null || item === undefined) continue;
     const rawId = keyFn(item);
-    const validGroupId = rawId && typeof rawId === "string" && rawId.trim().length > 0 ? rawId.trim() : null;
+    const validGroupId =
+      rawId && typeof rawId === "string" && rawId.trim().length > 0
+        ? rawId.trim()
+        : null;
 
     if (validGroupId) {
       if (currentChunk && currentChunk.groupId === validGroupId) {

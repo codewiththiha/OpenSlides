@@ -38,7 +38,10 @@
     onHighlightExitComplete?: () => void;
   } = $props();
 
-  const currentSlide = createCurrentSlide(() => project, () => slideId);
+  const currentSlide = createCurrentSlide(
+    () => project,
+    () => slideId,
+  );
   const slide = $derived(currentSlide.activeSlide);
   const code = $derived(effectiveSlideCode(slide));
 
@@ -46,7 +49,10 @@
   let codeContainerEl = $state<HTMLDivElement | null>(null);
 
   // --- instant preview overrides ---
-  const effective = createEffectiveSettings(() => project, () => slide);
+  const effective = createEffectiveSettings(
+    () => project,
+    () => slide,
+  );
 
   const language = $derived(resolveProjectLanguage(project));
   const theme = $derived(previewProjectSetting("theme") ?? project.theme);
@@ -82,7 +88,9 @@
 </script>
 
 {#if !slide}
-  <div class="flex h-full w-full items-center justify-center text-muted-foreground">
+  <div
+    class="flex h-full w-full items-center justify-center text-muted-foreground"
+  >
     No slides
   </div>
 {:else if !shiki.displayHighlighter}

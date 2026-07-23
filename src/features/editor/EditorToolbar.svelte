@@ -29,7 +29,10 @@
     setIsSettingsOpen,
     setIsCommandOpen,
   } from "$lib/stores/ui-state.svelte";
-  import { exportProjectMutation, updateSlideSettingsMutation } from "$lib/queries";
+  import {
+    exportProjectMutation,
+    updateSlideSettingsMutation,
+  } from "$lib/queries";
   import { modKeyLabel } from "$lib/lib/platform";
   import { cn, formatDurationShort } from "$lib/lib/utils";
   import { slideDisplayName } from "$lib/types";
@@ -50,7 +53,9 @@
   const exportMutation = exportProjectMutation();
   // Stable per mount (rendered only after the project loads, under the
   // project-keyed EditorInner) — untrack() marks the capture as deliberate.
-  const updateSlideSettings = updateSlideSettingsMutation(untrack(() => project.id));
+  const updateSlideSettings = updateSlideSettingsMutation(
+    untrack(() => project.id),
+  );
 
   let editingSlideName = $state(false);
   let slideNameDraft = $state("");
@@ -91,21 +96,24 @@
       <Home class="h-4 w-4" />
     </Button>
     <div class="min-w-0">
-      <div class="truncate text-sm font-medium leading-tight">
+      <div class="truncate text-sm leading-tight font-medium">
         {project.name}
       </div>
       <div
         class="truncate text-[10px] text-muted-foreground"
         title="Estimated length: {formatDurationShort(totalDurationMs)}"
       >
-        {project.slides.length} slide{project.slides.length !== 1 ? "s" : ""} ·
-        ~{formatDurationShort(totalDurationMs)} · {project.theme}
+        {project.slides.length} slide{project.slides.length !== 1 ? "s" : ""} · ~{formatDurationShort(
+          totalDurationMs,
+        )} · {project.theme}
       </div>
     </div>
   {/snippet}
 
   {#snippet trailing()}
-    <div class="pointer-events-none absolute inset-x-0 flex items-center justify-center px-40">
+    <div
+      class="pointer-events-none absolute inset-x-0 flex items-center justify-center px-40"
+    >
       {#if editingSlideName}
         <InlineEditableText
           value={slideNameDraft}
@@ -126,7 +134,9 @@
           }}
         >
           <span class="truncate">{activeSlideName}</span>
-          <Pencil class="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/name:opacity-100" />
+          <Pencil
+            class="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/name:opacity-100"
+          />
         </button>
       {/if}
     </div>

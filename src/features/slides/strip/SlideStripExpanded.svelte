@@ -13,7 +13,10 @@
   import { setCurrentSlideId, ui } from "$lib/stores/ui-state.svelte";
   import { cn } from "$lib/lib/utils";
   import type { Slide } from "$lib/types";
-  import SlideCard, { ITEM_HEIGHT, ITEM_WIDTH } from "@/features/slides/SlideCard.svelte";
+  import SlideCard, {
+    ITEM_HEIGHT,
+    ITEM_WIDTH,
+  } from "@/features/slides/SlideCard.svelte";
   import StackExpandedControls from "$lib/ui/stack/StackExpandedControls.svelte";
   import StackDeck from "$lib/ui/stack/StackDeck.svelte";
   import SlideSearchDialog from "@/features/slides/SlideSearchDialog.svelte";
@@ -22,7 +25,10 @@
   import ConfirmDialog from "$lib/ui/ConfirmDialog.svelte";
   import SlideStripDndZone from "./SlideStripDndZone.svelte";
   import { provideSlideCardActions } from "../slide-card-actions.svelte";
-  import type { createSlideStripState, StripItem } from "../slide-strip-state.svelte";
+  import type {
+    createSlideStripState,
+    StripItem,
+  } from "../slide-strip-state.svelte";
   import type { createSlideStripDnd } from "../dnd/slide-dnd.svelte";
   import type { createSlideStripSelection } from "./SlideStripSelectionController.svelte";
   import type { createSlideStripContextMenu } from "./SlideStripContextMenuController.svelte";
@@ -59,11 +65,16 @@
     onRemove: (id: string) => void;
     onDuplicate: (id: string) => void;
     unstackSlides: (ids: string[]) => void;
-    addSlide: { addSlide: () => Promise<unknown> | unknown; isPending: boolean };
+    addSlide: {
+      addSlide: () => Promise<unknown> | unknown;
+      isPending: boolean;
+    };
     flipMs: number;
   } = $props();
 
-  const dragDisabled = $derived(searchQuery.trim().length > 0 || rename.renamingId !== null);
+  const dragDisabled = $derived(
+    searchQuery.trim().length > 0 || rename.renamingId !== null,
+  );
 
   // Cards read rename/action wiring from context (§2.1) — only per-card
   // data (slide, tab stop, multi-select state) stays in props. Provided
@@ -93,7 +104,8 @@
 </script>
 
 {#snippet stackTargetOverlay(targetId: string, ownerItemId: string)}
-  {@const isDraggingOther = dnd.draggingId !== null && dnd.draggingId !== ownerItemId}
+  {@const isDraggingOther =
+    dnd.draggingId !== null && dnd.draggingId !== ownerItemId}
   <div
     data-stack-target={targetId}
     class={cn(
@@ -125,7 +137,7 @@
 
 {#snippet shadowPlaceholder(item: StripItem)}
   <div
-    class="shrink-0 rounded-md border-2 border-dashed border-primary/50 bg-primary/10 self-center"
+    class="shrink-0 self-center rounded-md border-2 border-dashed border-primary/50 bg-primary/10"
     style="width: {item.expanded
       ? item.slides.length * (ITEM_WIDTH + 8) + 96
       : ITEM_WIDTH}px; height: {ITEM_HEIGHT}px;"
@@ -237,8 +249,8 @@
 
   <ConfirmDialog
     open={selection.confirmBulkDelete}
-    title="Delete {selection.selectedSlideIds.size} selected slide{selection.selectedSlideIds.size ===
-    1
+    title="Delete {selection.selectedSlideIds.size} selected slide{selection
+      .selectedSlideIds.size === 1
       ? ''
       : 's'}?"
     description="This cannot be undone."

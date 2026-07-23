@@ -1,7 +1,14 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import { ui, setPreviewProjectSetting, setPreviewSlideSetting } from "$lib/stores/ui-state.svelte";
-  import { updateProjectSettingsMutation, updateSlideSettingsMutation } from "$lib/queries";
+  import {
+    ui,
+    setPreviewProjectSetting,
+    setPreviewSlideSetting,
+  } from "$lib/stores/ui-state.svelte";
+  import {
+    updateProjectSettingsMutation,
+    updateSlideSettingsMutation,
+  } from "$lib/queries";
   import SliderField from "$lib/ui/SliderField.svelte";
   import type { Project, Slide } from "$lib/types";
 
@@ -14,11 +21,14 @@
 
   const previewProject = $derived(ui.previewProject);
   const previewSlide = $derived(ui.previewSlides.get(slide.id));
-  const globalTransitionEnabled = $derived(project.settings.useGlobalTransition);
+  const globalTransitionEnabled = $derived(
+    project.settings.useGlobalTransition,
+  );
   const globalStaggerEnabled = $derived(project.settings.useGlobalStagger);
   const transition = $derived(
     globalTransitionEnabled
-      ? (previewProject.globalTransitionDuration ?? project.settings.globalTransitionDuration)
+      ? (previewProject.globalTransitionDuration ??
+          project.settings.globalTransitionDuration)
       : (previewSlide?.transitionDuration ?? slide.transitionDuration),
   );
   const stagger = $derived(
@@ -44,8 +54,13 @@
         ? setPreviewProjectSetting("globalTransitionDuration", v)
         : setPreviewSlideSetting(slide.id, "transitionDuration", v)}
     onCommit={(v) => {
-      if (globalTransitionEnabled) projectSettingsMutation.mutate({ globalTransitionDuration: v });
-      else settingsMutation.mutate({ slideId: slide.id, payload: { transitionDuration: v } });
+      if (globalTransitionEnabled)
+        projectSettingsMutation.mutate({ globalTransitionDuration: v });
+      else
+        settingsMutation.mutate({
+          slideId: slide.id,
+          payload: { transitionDuration: v },
+        });
     }}
   />
   <SliderField
@@ -62,8 +77,10 @@
         ? setPreviewProjectSetting("globalStagger", v)
         : setPreviewSlideSetting(slide.id, "stagger", v)}
     onCommit={(v) => {
-      if (globalStaggerEnabled) projectSettingsMutation.mutate({ globalStagger: v });
-      else settingsMutation.mutate({ slideId: slide.id, payload: { stagger: v } });
+      if (globalStaggerEnabled)
+        projectSettingsMutation.mutate({ globalStagger: v });
+      else
+        settingsMutation.mutate({ slideId: slide.id, payload: { stagger: v } });
     }}
   />
   <SliderField
@@ -75,6 +92,7 @@
     step={100}
     format={(v) => `${v}ms`}
     onPreview={(v) => setPreviewSlideSetting(slide.id, "duration", v)}
-    onCommit={(v) => settingsMutation.mutate({ slideId: slide.id, payload: { duration: v } })}
+    onCommit={(v) =>
+      settingsMutation.mutate({ slideId: slide.id, payload: { duration: v } })}
   />
 </div>

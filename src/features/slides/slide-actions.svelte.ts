@@ -33,7 +33,8 @@ export function createSlideDeleter(
     if (!snapshot) return;
 
     if (pendingFocusId) {
-      pendingFocusId.current = list[index + 1]?.id ?? list[index - 1]?.id ?? null;
+      pendingFocusId.current =
+        list[index + 1]?.id ?? list[index - 1]?.id ?? null;
     }
 
     deleteSlide.mutate(id, {
@@ -103,14 +104,21 @@ export function createSlideStackActions(projectId: string) {
   const stackMutation = stackSlidesMutation(projectId);
   const unstackMutation = unstackSlidesMutation(projectId);
 
-  function stackSlides(sourceIds: string[], targetId: string, opts?: { onSuccess?: () => void }) {
+  function stackSlides(
+    sourceIds: string[],
+    targetId: string,
+    opts?: { onSuccess?: () => void },
+  ) {
     stackMutation.mutate(
       { sourceIds, targetId },
       { onSuccess: opts?.onSuccess },
     );
   }
 
-  function unstackSlides(slideIds: string[], opts?: { onSuccess?: () => void }) {
+  function unstackSlides(
+    slideIds: string[],
+    opts?: { onSuccess?: () => void },
+  ) {
     unstackMutation.mutate(slideIds, { onSuccess: opts?.onSuccess });
   }
 

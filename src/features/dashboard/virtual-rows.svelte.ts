@@ -11,7 +11,8 @@ export function createProjectRowVirtualizer(args: { rowCount: () => number }) {
   let columnCount = $state(3);
   $effect(() => {
     const update = () =>
-      (columnCount = window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3);
+      (columnCount =
+        window.innerWidth < 768 ? 1 : window.innerWidth < 1024 ? 2 : 3);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);

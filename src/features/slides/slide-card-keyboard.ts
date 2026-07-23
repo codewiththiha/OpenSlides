@@ -18,7 +18,15 @@ export function handleSlideCardKeyDown(
     actions: SlideCardActions;
   },
 ): void {
-  const { slideId, title, isRenaming, isMultiSelectMode, navigationIds, cardRefs, actions } = args;
+  const {
+    slideId,
+    title,
+    isRenaming,
+    isMultiSelectMode,
+    navigationIds,
+    cardRefs,
+    actions,
+  } = args;
   if (e.target !== e.currentTarget || isRenaming) return;
 
   if (isMultiSelectMode && (e.key === "Enter" || e.key === " ")) {
@@ -28,7 +36,12 @@ export function handleSlideCardKeyDown(
     return;
   }
 
-  if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "Home" || e.key === "End") {
+  if (
+    e.key === "ArrowRight" ||
+    e.key === "ArrowLeft" ||
+    e.key === "Home" ||
+    e.key === "End"
+  ) {
     e.preventDefault();
     e.stopPropagation();
     if (!cardRefs || navigationIds.length === 0) return;
@@ -38,7 +51,9 @@ export function handleSlideCardKeyDown(
         ? 0
         : e.key === "End"
           ? navigationIds.length - 1
-          : (currentIndex + (e.key === "ArrowRight" ? 1 : -1) + navigationIds.length) %
+          : (currentIndex +
+              (e.key === "ArrowRight" ? 1 : -1) +
+              navigationIds.length) %
             navigationIds.length;
     const next = cardRefs.get(navigationIds[nextIndex]!);
     next?.focus();

@@ -32,7 +32,6 @@
 
   let inputEl = $state<HTMLInputElement | null>(null);
 
-
   $effect(() => {
     if (!open) return;
     const raf = requestAnimationFrame(() => inputEl?.focus());
@@ -54,7 +53,12 @@
     style="z-index: {Z_INDEX.command};"
     transition:fade={{ duration: 150, easing: EASE_DIM }}
   >
-    <button type="button" class="absolute inset-0 cursor-default" aria-label="Close search" onclick={onClose}></button>
+    <button
+      type="button"
+      class="absolute inset-0 cursor-default"
+      aria-label="Close search"
+      onclick={onClose}
+    ></button>
     <div
       use:focusTrap
       class="relative w-full max-w-lg overflow-hidden rounded-xl border bg-card shadow-2xl"
@@ -72,14 +76,18 @@
           placeholder={scope === "slides"
             ? "Find slides by name or code…"
             : "Find in the current editor…"}
-          aria-label={scope === "slides" ? "Find slides by name or code" : "Find in the current editor"}
+          aria-label={scope === "slides"
+            ? "Find slides by name or code"
+            : "Find in the current editor"}
           class="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
         <span class="text-[10px] text-muted-foreground">{modKeyLabel()}F</span>
       </div>
       <div class="flex items-center gap-2 px-4 py-3 text-xs">
         <span class="mr-1 text-muted-foreground">Search</span>
-        <label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted">
+        <label
+          class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
+        >
           <input
             type="radio"
             name="search-scope"
@@ -88,7 +96,9 @@
           />
           Slides
         </label>
-        <label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted">
+        <label
+          class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted"
+        >
           <input
             type="radio"
             name="search-scope"

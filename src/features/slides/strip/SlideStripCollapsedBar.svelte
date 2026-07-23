@@ -10,7 +10,10 @@
     addSlide,
   }: {
     slides: Slide[];
-    addSlide: { addSlide: () => Promise<unknown> | unknown; isPending: boolean };
+    addSlide: {
+      addSlide: () => Promise<unknown> | unknown;
+      isPending: boolean;
+    };
   } = $props();
 </script>
 

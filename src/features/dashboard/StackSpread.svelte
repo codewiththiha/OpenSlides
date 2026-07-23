@@ -126,22 +126,32 @@
 
   /* Motion values */
   const backdrop = new Tween(0, { duration: 240, easing: EASE_DIM });
-  const wrap = new Spring({ opacity: 0, scale: 0.85 }, { stiffness: 300, damping: 25 });
-  const controls = new Spring({ opacity: 0, scale: 0.5 }, { stiffness: 350, damping: 22 });
+  const wrap = new Spring(
+    { opacity: 0, scale: 0.85 },
+    { stiffness: 300, damping: 25 },
+  );
+  const controls = new Spring(
+    { opacity: 0, scale: 0.5 },
+    { stiffness: 350, damping: 22 },
+  );
 
   $effect(() => {
     void backdrop.set(isClosing ? 0 : 1, { duration: 240, easing: EASE_DIM });
   });
 
   $effect(() => {
-    void wrap.set(isClosing ? { opacity: 0, scale: 0.85 } : { opacity: 1, scale: 1 });
+    void wrap.set(
+      isClosing ? { opacity: 0, scale: 0.85 } : { opacity: 1, scale: 1 },
+    );
   });
 
   $effect(() => {
     const closed = isClosing;
     const timer = window.setTimeout(
       () => {
-        void controls.set(closed ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 });
+        void controls.set(
+          closed ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 },
+        );
       },
       closed ? 0 : 150,
     );
@@ -151,7 +161,7 @@
 
 <div
   use:portal
-  class="fixed inset-0 select-none overflow-hidden"
+  class="fixed inset-0 overflow-hidden select-none"
   style="z-index: {Z_INDEX.hoverPreview || 200};"
 >
   <!-- Transparent catcher backdrop -->
@@ -165,7 +175,9 @@
   <!-- Highlight wrapper around the spread -->
   <div
     class="absolute rounded-2xl border-2 border-primary/25 bg-primary/[0.04] shadow-[0_0_40px_rgba(0,0,0,0.3)]"
-    style="left: {fanCenterX - spreadWidth / 2}px; top: {fanCenterY - spreadHeight / 2}px; width: {spreadWidth}px; height: {spreadHeight}px; opacity: {wrap
+    style="left: {fanCenterX - spreadWidth / 2}px; top: {fanCenterY -
+      spreadHeight /
+        2}px; width: {spreadWidth}px; height: {spreadHeight}px; opacity: {wrap
       .current.opacity}; transform: scale({wrap.current.scale});"
   ></div>
 
@@ -174,7 +186,8 @@
     class="absolute z-50 flex items-center gap-1.5"
     style="left: {fanCenterX + spreadWidth / 2 - 4}px; top: {fanCenterY -
       spreadHeight / 2 -
-      4}px; opacity: {controls.current.opacity}; transform: scale({controls.current.scale});"
+      4}px; opacity: {controls.current.opacity}; transform: scale({controls
+      .current.scale});"
   >
     <button
       type="button"

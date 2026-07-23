@@ -155,9 +155,7 @@ export const api = {
 
   reorderSlides: (projectId: string, slideIds: string[]) => {
     const p = mustGet(projectId);
-    p.slides.sort(
-      (a, b) => slideIds.indexOf(a.id) - slideIds.indexOf(b.id),
-    );
+    p.slides.sort((a, b) => slideIds.indexOf(a.id) - slideIds.indexOf(b.id));
     return Promise.resolve(clone(p));
   },
 
@@ -172,7 +170,8 @@ export const api = {
 
   stackProjects: () => Promise.resolve([] as ProjectSummary[]),
   unstackProjects: () => Promise.resolve([] as ProjectSummary[]),
-  stackSlides: (projectId: string) => api.getProject(projectId).then((p) => p.slides),
+  stackSlides: (projectId: string) =>
+    api.getProject(projectId).then((p) => p.slides),
   unstackSlides: (projectId: string) =>
     api.getProject(projectId).then((p) => p.slides),
 };

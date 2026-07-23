@@ -18,7 +18,8 @@
   <div use:portal>
     <div
       class="pointer-events-none fixed rotate-2 cursor-grabbing opacity-90 shadow-2xl"
-      style="z-index: 999; left: {session.originLeft + (session.x - session.startX)}px; top: {session.originTop +
+      style="z-index: 999; left: {session.originLeft +
+        (session.x - session.startX)}px; top: {session.originTop +
         (session.y - session.startY)}px;"
     >
       {#if session.payload.kind === "fan-item"}

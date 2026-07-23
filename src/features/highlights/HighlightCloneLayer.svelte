@@ -46,12 +46,19 @@
   <div
     class="h-full w-full"
     style="transform-origin: center center; will-change: transform;"
-    transition:grow|global={{ duration: sizeMs, easing: EASE_SCALE, from: 1, to: scaleTarget }}
+    transition:grow|global={{
+      duration: sizeMs,
+      easing: EASE_SCALE,
+      from: 1,
+      to: scaleTarget,
+    }}
   >
     {#each measurement.segments as seg (seg.line.lineIndex)}
       <pre
         class="absolute whitespace-pre"
-        style="left: {seg.rect.x - union.x}px; top: {seg.rect.y - union.y}px; margin: 0; padding: 0; background: transparent; font-family: inherit; font-size: inherit; line-height: inherit; letter-spacing: inherit;">{@html seg.line.html}</pre>
+        style="left: {seg.rect.x - union.x}px; top: {seg.rect.y -
+          union.y}px; margin: 0; padding: 0; background: transparent; font-family: inherit; font-size: inherit; line-height: inherit; letter-spacing: inherit;">{@html seg
+          .line.html}</pre>
     {/each}
   </div>
 </div>

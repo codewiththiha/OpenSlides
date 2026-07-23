@@ -21,7 +21,10 @@
 
 <div class="flex min-w-0 items-center justify-between gap-1">
   <div class="flex min-w-0 items-center gap-1">
-    <DragHandle onclick={(e) => e.stopPropagation()} aria-label="Drag to reorder slide" />
+    <DragHandle
+      onclick={(e) => e.stopPropagation()}
+      aria-label="Drag to reorder slide"
+    />
     {#if isRenaming}
       <InlineEditableText
         value={renameValue}

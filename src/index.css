@@ -25,7 +25,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono:
+    "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo,
+    monospace;
 }
 
 @layer base {
@@ -131,7 +133,6 @@
   cursor: not-allowed;
   opacity: 0.5;
 }
-
 
 /* Keep the toast lane above the persistent slide-selection action bubbles. */
 :root[data-slide-selection-active] [data-sonner-toaster] {
@@ -257,7 +258,10 @@
   border-radius: 0.4rem !important;
   cursor: pointer !important;
   opacity: 0.65;
-  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .toast-openslides [data-close-button]:hover,
@@ -276,11 +280,21 @@
   box-shadow: 0 8px 24px hsl(0 0% 0% / 0.18) !important;
 }
 
-.toast-tone-default { border-color: hsl(var(--border)) !important; }
-.toast-tone-success { border-color: hsl(142 70% 45% / 0.9) !important; }
-.toast-tone-error { border-color: hsl(0 72% 55% / 0.9) !important; }
-.toast-tone-warning { border-color: hsl(38 92% 50% / 0.9) !important; }
-.toast-tone-info { border-color: hsl(217 91% 60% / 0.9) !important; }
+.toast-tone-default {
+  border-color: hsl(var(--border)) !important;
+}
+.toast-tone-success {
+  border-color: hsl(142 70% 45% / 0.9) !important;
+}
+.toast-tone-error {
+  border-color: hsl(0 72% 55% / 0.9) !important;
+}
+.toast-tone-warning {
+  border-color: hsl(38 92% 50% / 0.9) !important;
+}
+.toast-tone-info {
+  border-color: hsl(217 91% 60% / 0.9) !important;
+}
 
 .toast-glow.toast-tone-success {
   box-shadow:
@@ -340,11 +354,18 @@
 }
 
 @keyframes openslides-present-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .openslides-progress-anim { animation: none !important; transform: scaleX(1); }
+  .openslides-progress-anim {
+    animation: none !important;
+    transform: scaleX(1);
+  }
 }
 
 /* Dashboard drag: block text selection + native drag ghosts while a

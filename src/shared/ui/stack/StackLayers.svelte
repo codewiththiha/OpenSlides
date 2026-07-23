@@ -29,11 +29,11 @@
           "absolute inset-0 rounded-xl border border-border/80 bg-card shadow-sm transition-all duration-300 ease-out",
           isSlide
             ? hovered
-              ? "rotate-[-4deg] -translate-x-2.5 translate-y-1 scale-95"
-              : "rotate-[-2deg] -translate-x-1.5 translate-y-0.5 scale-[0.98]"
+              ? "-translate-x-2.5 translate-y-1 scale-95 rotate-[-4deg]"
+              : "-translate-x-1.5 translate-y-0.5 scale-[0.98] rotate-[-2deg]"
             : hovered
-              ? "rotate-[-5deg] -translate-x-3.5 translate-y-1.5 scale-95 shadow-md"
-              : "rotate-[-3deg] -translate-x-2 translate-y-1 scale-[0.98]",
+              ? "-translate-x-3.5 translate-y-1.5 scale-95 rotate-[-5deg] shadow-md"
+              : "-translate-x-2 translate-y-1 scale-[0.98] rotate-[-3deg]",
         )}
       ></div>
     {/if}
@@ -43,11 +43,11 @@
         "absolute inset-0 rounded-xl border border-border/90 bg-card shadow-sm transition-all duration-300 ease-out",
         isSlide
           ? hovered
-            ? "rotate-[4deg] translate-x-2.5 translate-y-1 scale-95"
-            : "rotate-[2deg] translate-x-1.5 translate-y-0.5 scale-[0.98]"
+            ? "translate-x-2.5 translate-y-1 scale-95 rotate-[4deg]"
+            : "translate-x-1.5 translate-y-0.5 scale-[0.98] rotate-[2deg]"
           : hovered
-            ? "rotate-[5deg] translate-x-3.5 translate-y-1.5 scale-95 shadow-md"
-            : "rotate-[3deg] translate-x-2 translate-y-1 scale-[0.98]",
+            ? "translate-x-3.5 translate-y-1.5 scale-95 rotate-[5deg] shadow-md"
+            : "translate-x-2 translate-y-1 scale-[0.98] rotate-[3deg]",
       )}
     ></div>
   </div>

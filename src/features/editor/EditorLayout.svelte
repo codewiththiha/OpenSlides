@@ -140,7 +140,9 @@
 
           <Pane
             bind:this={codePane}
-            defaultSize={isCodePanelCollapsed ? CODE_COLLAPSED_SIZE : ui.codePanelSize}
+            defaultSize={isCodePanelCollapsed
+              ? CODE_COLLAPSED_SIZE
+              : ui.codePanelSize}
             minSize={18}
             maxSize={70}
             collapsible
@@ -183,7 +185,9 @@
       />
       <Pane
         bind:this={slidesPane}
-        defaultSize={isBottomPanelCollapsed ? SLIDES_COLLAPSED_SIZE : slidesExpandedSize}
+        defaultSize={isBottomPanelCollapsed
+          ? SLIDES_COLLAPSED_SIZE
+          : slidesExpandedSize}
         minSize={SLIDES_MIN_EXPANDED_SIZE}
         maxSize={28}
         collapsible

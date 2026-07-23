@@ -35,13 +35,19 @@
     defaultFg: string;
     code: string;
     onChange: (value: string) => void;
-    onKeyDown: (e: KeyboardEvent & { currentTarget: HTMLTextAreaElement }) => void;
-    onKeyUp: (e: KeyboardEvent & { currentTarget: HTMLTextAreaElement }) => void;
+    onKeyDown: (
+      e: KeyboardEvent & { currentTarget: HTMLTextAreaElement },
+    ) => void;
+    onKeyUp: (
+      e: KeyboardEvent & { currentTarget: HTMLTextAreaElement },
+    ) => void;
     onSelect: (e: Event & { currentTarget: HTMLTextAreaElement }) => void;
     onMouseUp: (e: MouseEvent & { currentTarget: HTMLTextAreaElement }) => void;
     onBlur: () => void;
     onScroll: () => void;
-    onContextMenu: (e: MouseEvent & { currentTarget: HTMLTextAreaElement }) => void;
+    onContextMenu: (
+      e: MouseEvent & { currentTarget: HTMLTextAreaElement },
+    ) => void;
     gutterEl?: HTMLDivElement | null;
     preEl?: HTMLPreElement | null;
     textareaEl?: HTMLTextAreaElement | null;
@@ -53,13 +59,12 @@
     <div
       bind:this={gutterEl}
       aria-hidden="true"
-      class="shrink-0 select-none overflow-hidden border-r border-border/50 bg-muted/30 py-4 text-right font-mono text-muted-foreground/70"
+      class="shrink-0 overflow-hidden border-r border-border/50 bg-muted/30 py-4 text-right font-mono text-muted-foreground/70 select-none"
       style="width: {gutterWidth}rem; font-size: {editorFontSize}px; line-height: {lineHeight}; padding-right: 0.5rem;"
     >
       <pre
-        class="m-0 whitespace-pre text-right"
-        style="font-size: {editorFontSize}px; line-height: {lineHeight}; margin: 0; padding: 0; background: transparent;"
-      >{lineNumbersText}</pre>
+        class="m-0 text-right whitespace-pre"
+        style="font-size: {editorFontSize}px; line-height: {lineHeight}; margin: 0; padding: 0; background: transparent;">{lineNumbersText}</pre>
     </div>
   {/if}
 
@@ -67,9 +72,11 @@
     <pre
       bind:this={preEl}
       aria-hidden="true"
-      class="editor-highlight pointer-events-none absolute inset-0 overflow-auto py-4 pl-3 pr-4 font-mono"
-      style="font-size: {editorFontSize}px; line-height: {lineHeight}; white-space: pre;"
-    >{#if highlightedHtml}<code>{@html highlightedHtml + "\n"}</code>{:else}<code style="color: {defaultFg};">{code + "\n"}</code>{/if}</pre>
+      class="editor-highlight pointer-events-none absolute inset-0 overflow-auto py-4 pr-4 pl-3 font-mono"
+      style="font-size: {editorFontSize}px; line-height: {lineHeight}; white-space: pre;">{#if highlightedHtml}<code
+          >{@html highlightedHtml + "\n"}</code
+        >{:else}<code style="color: {defaultFg};">{code + "\n"}</code
+        >{/if}</pre>
     <textarea
       bind:this={textareaEl}
       data-openslides-editor
@@ -95,7 +102,7 @@
       lang="en"
       inputmode="text"
       enterkeyhint="enter"
-      class="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pl-3 pr-4 font-mono text-transparent caret-foreground outline-none"
+      class="absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent py-4 pr-4 pl-3 font-mono text-transparent caret-foreground outline-none"
       wrap="off"
       style="font-size: {editorFontSize}px; line-height: {lineHeight}; tab-size: 2; white-space: pre; -webkit-text-size-adjust: 100%;"
     ></textarea>

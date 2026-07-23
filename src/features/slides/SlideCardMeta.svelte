@@ -40,7 +40,9 @@
           "group-hover:opacity-100",
           (isSelected || progress >= 0) && "opacity-100",
         )}
-        title="{hlCount} highlight{hlCount > 1 ? 's' : ''} — steps through with → before the next slide{progress >= 0
+        title="{hlCount} highlight{hlCount > 1
+          ? 's'
+          : ''} — steps through with → before the next slide{progress >= 0
           ? ` · showing ${progress + 1}/${hlCount}`
           : ''}"
       >

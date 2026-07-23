@@ -24,9 +24,6 @@
     /** Callback to close the menu */
     onClose: () => void;
   } = $props();
-
-
-
 </script>
 
 {#if visible}

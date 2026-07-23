@@ -11,7 +11,7 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "$lib": path.resolve(__dirname, "./src/shared"),
+      $lib: path.resolve(__dirname, "./src/shared"),
     },
   },
   worker: {

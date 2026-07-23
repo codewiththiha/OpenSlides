@@ -6,8 +6,6 @@
 
   let { fr, onClose }: { fr: FindReplaceApi; onClose: () => void } = $props();
 
-
-
   function onFindKeyDown(e: KeyboardEvent) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -18,7 +16,9 @@
   }
 </script>
 
-<div class="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/30 px-2 py-1.5">
+<div
+  class="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/30 px-2 py-1.5"
+>
   <div class="flex items-center gap-1">
     <Search class="h-3 w-3 text-muted-foreground" />
     <input
@@ -31,12 +31,26 @@
       onkeydown={onFindKeyDown}
     />
     <span class="text-[10px] text-muted-foreground">
-      {fr.matches.length ? `${fr.currentMatchIndex + 1}/${fr.matches.length}` : "0/0"}
+      {fr.matches.length
+        ? `${fr.currentMatchIndex + 1}/${fr.matches.length}`
+        : "0/0"}
     </span>
-    <Button variant="ghost" size="icon" class="h-6 w-6" onclick={fr.goPrev} title="Previous (Shift+Enter)">
+    <Button
+      variant="ghost"
+      size="icon"
+      class="h-6 w-6"
+      onclick={fr.goPrev}
+      title="Previous (Shift+Enter)"
+    >
       <ChevronUp class="h-3 w-3" />
     </Button>
-    <Button variant="ghost" size="icon" class="h-6 w-6" onclick={fr.goNext} title="Next (Enter)">
+    <Button
+      variant="ghost"
+      size="icon"
+      class="h-6 w-6"
+      onclick={fr.goNext}
+      title="Next (Enter)"
+    >
       <ChevronDown class="h-3 w-3" />
     </Button>
   </div>
@@ -48,10 +62,22 @@
       value={fr.replaceTerm}
       oninput={(e) => (fr.replaceTerm = e.currentTarget.value)}
     />
-    <Button variant="ghost" size="sm" class="h-6 text-xs" onclick={fr.replaceCurrent} disabled={!fr.matches.length}>
+    <Button
+      variant="ghost"
+      size="sm"
+      class="h-6 text-xs"
+      onclick={fr.replaceCurrent}
+      disabled={!fr.matches.length}
+    >
       Replace
     </Button>
-    <Button variant="ghost" size="sm" class="h-6 text-xs" onclick={fr.replaceAll} disabled={!fr.matches.length}>
+    <Button
+      variant="ghost"
+      size="sm"
+      class="h-6 text-xs"
+      onclick={fr.replaceAll}
+      disabled={!fr.matches.length}
+    >
       Replace All
     </Button>
     <label class="flex items-center gap-1 text-[10px] text-muted-foreground">

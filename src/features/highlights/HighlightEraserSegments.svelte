@@ -31,7 +31,9 @@
 {#each measurement.segments as seg (`${highlightId}-eraser-${seg.line.lineIndex}`)}
   <div
     class="pointer-events-none absolute z-20"
-    style="left: {seg.rect.x}px; top: {seg.rect.y}px; width: {seg.rect.width}px; height: {seg.rect.height}px; background-color: {plan.eraserColor}; will-change: opacity; transform: translateZ(0);"
+    style="left: {seg.rect.x}px; top: {seg.rect.y}px; width: {seg.rect
+      .width}px; height: {seg.rect
+      .height}px; background-color: {plan.eraserColor}; will-change: opacity; transform: translateZ(0);"
     transition:fade|global={{ duration: dimMs, easing: EASE_DIM }}
     onoutrostart={onOutroStart}
     onoutroend={onOutroEnd}

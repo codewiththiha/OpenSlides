@@ -26,7 +26,9 @@
     class={cn(
       "relative z-10 flex h-full w-full",
       stagePad,
-      centerBlock ? "items-center justify-center" : "items-center justify-start",
+      centerBlock
+        ? "items-center justify-center"
+        : "items-center justify-start",
     )}
   >
     <style>

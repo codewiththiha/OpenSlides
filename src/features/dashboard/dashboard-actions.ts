@@ -25,7 +25,9 @@ import {
 } from "$lib/lib/app-menu.svelte";
 import type { createDashboardState } from "./dashboard-state.svelte";
 
-export function createDashboardActions(st: ReturnType<typeof createDashboardState>) {
+export function createDashboardActions(
+  st: ReturnType<typeof createDashboardState>,
+) {
   const createMutation = createProjectMutation();
   const duplicateMutation = duplicateProjectMutation();
   const deleteMutation = deleteProjectMutation();
@@ -36,7 +38,8 @@ export function createDashboardActions(st: ReturnType<typeof createDashboardStat
   const open = (id: string) => void push(`/editor/${id}`);
   const duplicate = (id: string) => duplicateMutation.mutate(id);
   const exportProject = (id: string) => exportMutation.mutate(id);
-  const requestDelete = (id: string, name: string) => (st.deleteTarget = { id, name });
+  const requestDelete = (id: string, name: string) =>
+    (st.deleteTarget = { id, name });
 
   function confirmDelete() {
     if (st.deleteTarget) {
@@ -50,13 +53,19 @@ export function createDashboardActions(st: ReturnType<typeof createDashboardStat
       const project = await createMutation.mutateAsync(
         st.newName.trim() || "Untitled Presentation",
       );
-      if (st.selectedTheme && st.selectedTheme !== "dark-plus" && st.selectedTheme !== project.theme) {
+      if (
+        st.selectedTheme &&
+        st.selectedTheme !== "dark-plus" &&
+        st.selectedTheme !== project.theme
+      ) {
         try {
           await api.updateProjectTheme(project.id, st.selectedTheme);
         } catch {
           // The deck itself exists and is ready to edit even if its optional
           // theme update fails, so do not strand the user on the dashboard.
-          notify.error("Presentation created, but the selected theme could not be applied");
+          notify.error(
+            "Presentation created, but the selected theme could not be applied",
+          );
         }
       }
       st.resetForm();

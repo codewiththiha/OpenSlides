@@ -105,7 +105,10 @@ export function createSlideStripDnd(args: {
     const { items: next, info } = e.detail;
 
     // ── Drag start: always apply so the shadow placeholder appears ──
-    if (info.trigger === TRIGGERS.DRAG_STARTED && info.source === SOURCES.POINTER) {
+    if (
+      info.trigger === TRIGGERS.DRAG_STARTED &&
+      info.source === SOURCES.POINTER
+    ) {
       draggingId = String(info.id);
       dragSource = dndItems.find((i) => i.id === draggingId) ?? null;
       window.addEventListener("pointermove", onPointerMove);

@@ -11,7 +11,11 @@ const REQUEST_DEBOUNCE_MS = 400;
 type ThumbnailEntry = { html: string };
 const cache = new LruMap<string, ThumbnailEntry>(MAX_CACHE_ENTRIES);
 
-function truncateCode(code: string, maxLines: number, maxChars: number): string {
+function truncateCode(
+  code: string,
+  maxLines: number,
+  maxChars: number,
+): string {
   return code.split("\n").slice(0, maxLines).join("\n").slice(0, maxChars);
 }
 
@@ -35,7 +39,11 @@ export function createSlideThumbnail(args: () => SlideThumbnailArgs) {
   let entryKey = "";
 
   const truncatedCode = $derived(
-    truncateCode(args().code, args().maxLines ?? MAX_LINES, args().maxChars ?? MAX_CHARS),
+    truncateCode(
+      args().code,
+      args().maxLines ?? MAX_LINES,
+      args().maxChars ?? MAX_CHARS,
+    ),
   );
   const key = $derived(
     `${args().slideId} ${args().theme} ${args().language} ${truncatedCode}`,
@@ -108,7 +116,9 @@ export function createSlideThumbnail(args: () => SlideThumbnailArgs) {
     entry = next;
     void api
       .cacheThumbnail(args().slideId, args().code, freshHtml)
-      .catch((error) => logger.debug("Failed to persist thumbnail cache", error));
+      .catch((error) =>
+        logger.debug("Failed to persist thumbnail cache", error),
+      );
   });
 
   return {

@@ -124,12 +124,16 @@ export const NEW_PRESENTATION_CODE = STARTER_PRESENTATION[0]!.code;
 export type StarterSlideAction = { kind: "append"; slide: StarterSlide };
 
 /** Continue the starter story through slide six, then return to normal Add behavior. */
-export function nextStarterSlideAction(slides: readonly Slide[]): StarterSlideAction | null {
+export function nextStarterSlideAction(
+  slides: readonly Slide[],
+): StarterSlideAction | null {
   const nextIndex = slides.length;
   const isStarterSequence =
     nextIndex > 0 &&
     nextIndex < STARTER_PRESENTATION.length &&
-    slides.every((slide, index) => slide.name === STARTER_PRESENTATION[index]?.name);
+    slides.every(
+      (slide, index) => slide.name === STARTER_PRESENTATION[index]?.name,
+    );
 
   return isStarterSequence
     ? { kind: "append", slide: STARTER_PRESENTATION[nextIndex]! }

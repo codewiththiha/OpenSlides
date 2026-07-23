@@ -41,15 +41,17 @@
   // unselectable so drag-to-stack can't highlight their labels).
   const inputClass =
     "select-text rounded-md border border-input bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-ring";
-
-
 </script>
 
 {#snippet inputSnippet()}
   <input
     use:autofocus
     aria-label={label}
-    class={cn(inputClass, withButtons ? "h-8 flex-1 min-w-0" : "h-7 w-full", className)}
+    class={cn(
+      inputClass,
+      withButtons ? "h-8 min-w-0 flex-1" : "h-7 w-full",
+      className,
+    )}
     {value}
     oninput={(e) => onChange(e.currentTarget.value)}
     onclick={(e) => stopPropagation && e.stopPropagation()}

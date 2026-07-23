@@ -4,7 +4,9 @@ interface UseSlideCardHoverPreviewArgs {
   cardRoot: () => HTMLDivElement | null;
 }
 
-export function createSlideCardHoverPreview(args: UseSlideCardHoverPreviewArgs) {
+export function createSlideCardHoverPreview(
+  args: UseSlideCardHoverPreviewArgs,
+) {
   let showHoverPreview = $state(false);
   let hoverPosition = $state({ left: 8, top: 8 });
   let hoverTimer: number | null = null;

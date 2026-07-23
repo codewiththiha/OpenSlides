@@ -53,7 +53,10 @@
   function handleDrop(session: ProjectDragSession) {
     const decision = decideProjectDrop(session, chunks);
     if (decision.kind === "stack") {
-      stackMut.mutate({ sourceIds: decision.sourceIds, targetId: decision.targetId });
+      stackMut.mutate({
+        sourceIds: decision.sourceIds,
+        targetId: decision.targetId,
+      });
       spread.closeIfNearlyEmpty();
       return;
     }
@@ -114,5 +117,4 @@
   {/if}
 
   <ProjectDragOverlay />
-
 {/if}

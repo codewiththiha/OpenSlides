@@ -1,11 +1,17 @@
-import { sliceSnippets, type SelectionRange } from "@/features/highlights/highlight-tokens";
+import {
+  sliceSnippets,
+  type SelectionRange,
+} from "@/features/highlights/highlight-tokens";
 import type { Highlight } from "$lib/types";
 
 /**
  * Plain-text snippet per highlight (settings panel rows). A plain function
  * consumed through `$derived` at the call site.
  */
-export function highlightSnippets(code: string, highlights: Highlight[]): string[] {
+export function highlightSnippets(
+  code: string,
+  highlights: Highlight[],
+): string[] {
   const ranges: SelectionRange[] = highlights.map(
     ({ startLine, startChar, endLine, endChar }) => ({
       startLine,
