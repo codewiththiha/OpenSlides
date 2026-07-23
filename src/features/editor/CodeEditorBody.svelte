@@ -2,8 +2,8 @@
   /**
    * Editor body: line-number gutter + Shiki highlight overlay + transparent
    * textarea. The textarea is deliberately UNCONTROLLED — its value and
-   * caret are managed imperatively by createCaretSync (React's
-   * defaultValue pattern), so typing never fights a state round-trip.
+   * caret are managed imperatively by createCaretSync, so typing never
+   * fights a state round-trip.
    */
   let {
     editorShowLineNumbers,

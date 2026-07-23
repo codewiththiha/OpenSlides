@@ -1,6 +1,6 @@
 /**
  * Native application menu (macOS menu bar / Windows window menu).
- * Emits window events so React can react without tight coupling.
+ * Emits window events so app code stays loosely coupled.
  */
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/menu";
 import { emit } from "@tauri-apps/api/event";

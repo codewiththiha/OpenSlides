@@ -1,9 +1,8 @@
 <script lang="ts">
   /**
    * HighlightStepIndicator — small floating pill that shows highlight
-   * playback progress for the current slide (●●○ 2/3).
-   *
-   * framer-motion replaced by svelte transitions + a spring for the dots.
+   * playback progress for the current slide (●●○ 2/3). Built from svelte
+   * transitions + a spring for the dots.
    */
   import { fade, fly } from "svelte/transition";
   import { Spring } from "svelte/motion";

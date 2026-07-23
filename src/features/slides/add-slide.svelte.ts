@@ -48,8 +48,9 @@ export function createAddSlide(projectId: string, project: () => Project | undef
       });
       setCurrentSlideId(slide.id);
     } catch {
-      // Mutation hooks own user-facing error toasts. Swallow here so menu,
-      // command-palette, and button handlers do not produce unhandled promises.
+      // Mutation factories own user-facing error toasts. Swallow here so
+      // menu, command-palette, and button handlers do not produce unhandled
+      // promises.
     } finally {
       inFlight = false;
     }

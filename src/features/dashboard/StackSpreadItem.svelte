@@ -2,10 +2,10 @@
   /**
    * One fanned-out project card inside StackSpread.
    *
-   * framer-motion drove left/top/scale/opacity/rotate with
-   * spring(stiffness 260, damping 20, mass 0.8) + a per-index delay.
-   * Svelte's Spring has unit mass, so k/d are divided by 0.8 (325/25) —
-   * the normalized ODE is identical, so the arc of the fan matches.
+   * left/top/scale/opacity/rotate run on a spring with stiffness 325,
+   * damping 25 (Svelte's Spring has unit mass; those are normalized from
+   * mass 0.8 / k 260 / d 20, which solves to the same ODE) + a per-index
+   * delay.
    */
   import { untrack } from "svelte";
   import { Spring } from "svelte/motion";

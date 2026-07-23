@@ -1,6 +1,6 @@
 /**
- * Per-slide caret memory kept outside React/Zustand.
- * Caret updates are interaction bookkeeping, not reactive UI state.
+ * Per-slide caret memory kept outside the reactive stores.
+ * Caret updates are interaction bookkeeping, not UI state.
  */
 export interface CaretPosition {
   start: number;

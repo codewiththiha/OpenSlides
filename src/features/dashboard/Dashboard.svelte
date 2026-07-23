@@ -106,7 +106,7 @@
       st.resetForm();
       void push(`/editor/${project.id}`);
     } catch {
-      // The mutation hook presents the creation error.
+      // The mutation presents the creation error.
     }
   }
 
@@ -115,7 +115,7 @@
       const project = await importMutation.mutateAsync();
       void push(`/editor/${project.id}`);
     } catch {
-      /* mutation hook owns the error toast */
+      /* the mutation owns the error toast */
     }
   }
 

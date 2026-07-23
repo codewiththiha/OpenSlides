@@ -9,7 +9,7 @@ export function createSlideStripSearch(args: {
   let debouncedSearchQuery = $state("");
   let searchResultIds = $state<Set<string> | null>(null);
 
-  // use-debounce replacement: $effect + setTimeout
+  // Debounced query: $effect + setTimeout
   $effect(() => {
     const q = rawSearchQuery;
     const t = window.setTimeout(() => {

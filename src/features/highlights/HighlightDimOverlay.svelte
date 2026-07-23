@@ -2,11 +2,10 @@
   /**
    * Full-stage dim behind an active highlight.
    *
-   * React/framer kept this mounted across steps (key="hl-dim") and tweened
-   * opacity whenever dimAmount changed. The `Tween` reproduces that exactly:
-   * one set() on mount (0 → dimAmount intro) and on every step change.
-   * Removal fades the element out from its current opacity (svelte `fade`
-   * reads it at outro start).
+   * One element stays mounted across steps; a `Tween` runs one set() on
+   * mount (0 → dimAmount intro) and on every step change. Removal fades
+   * the element out from its current opacity (svelte `fade` reads it at
+   * outro start).
    */
   import { untrack } from "svelte";
   import { Tween } from "svelte/motion";

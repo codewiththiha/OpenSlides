@@ -1,7 +1,6 @@
 /**
- * Custom Svelte transitions mirroring the framer-motion variants used by the
- * highlight layer: partial-opacity dim fade and scale-to-target grow.
- * Durations are in MILLISECONDS (Svelte), unlike framer's seconds.
+ * Custom transitions for the highlight layer: partial-opacity dim fade and
+ * scale-to-target grow. Durations are in MILLISECONDS.
  */
 
 export interface DimFadeParams {

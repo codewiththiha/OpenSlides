@@ -1,10 +1,9 @@
 <script lang="ts">
   /**
-   * HighlightLayer — 60fps optimized (Svelte 5 port).
+   * HighlightLayer — 60fps optimized.
    *
-   * React drove the three visual pieces through AnimatePresence with a
-   * manual `pieces` memo. Here the same structure is expressed with
-   * {#if}/{#key} blocks and per-element transitions:
+   * The three visual pieces are expressed with {#if}/{#key} blocks and
+   * per-element transitions:
    *  - dim overlay: mounted while a highlight is active (Tween fades
    *    0 → dimAmount on mount/step change, svelte-fade outro on removal)
    *  - eraser segments: keyed per (highlightId, line) — crossfade on steps
@@ -47,7 +46,7 @@
     onExitComplete?: () => void;
   } = $props();
 
-  const planHook = createHighlightPlan({
+  const planCtl = createHighlightPlan({
     highlight: () => highlight(),
     code: () => code(),
     highlighter: () => highlighter(),
@@ -55,10 +54,10 @@
     language: () => language(),
   });
 
-  const measurementHook = createHighlightMeasurement({
+  const measurementCtl = createHighlightMeasurement({
     container: () => container(),
     codeContainer: () => codeContainer(),
-    plan: () => planHook.plan,
+    plan: () => planCtl.plan,
     fontSize: () => fontSize(),
     lineHeight: () => lineHeight(),
     theme: () => theme(),
@@ -84,8 +83,8 @@
       : 1,
   );
 
-  const plan = $derived(planHook.plan);
-  const measurement = $derived(measurementHook.measurement);
+  const plan = $derived(planCtl.plan);
+  const measurement = $derived(measurementCtl.measurement);
   const hasSegments = $derived(
     Boolean(plan && measurement && measurement.segments.length > 0),
   );

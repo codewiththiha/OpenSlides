@@ -1,9 +1,8 @@
 <script lang="ts">
   /**
    * Dashboard grid cell: pointer-drag source + stack drop target.
-   * (React combined useDraggable + useStackDropTarget here; the Svelte
-   * version starts a project-dnd session on pointerdown and renders the
-   * hover ring from the session's rect-intersection result.)
+   * Starts a project-dnd session on pointerdown and renders the hover ring
+   * from the session's rect-intersection result.
    */
   import { cn } from "$lib/lib/utils";
   import { type ProjectSummary } from "$lib/types";

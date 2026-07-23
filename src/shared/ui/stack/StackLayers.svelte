@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * StackLayers — ghost cards behind the top item of a stack (port of the
-   * React StackLayers). Pure CSS transforms, no motion library needed.
+   * StackLayers — ghost cards behind the top item of a stack. Pure CSS
+   * transforms, no motion library needed.
    */
   import { cn } from "$lib/lib/utils";
 

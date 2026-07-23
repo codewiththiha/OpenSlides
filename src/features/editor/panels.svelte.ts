@@ -50,8 +50,8 @@ export function createCollapsiblePanel({
       if (collapsed) {
         if (!p.isCollapsed()) p.collapse();
       } else if (p.isCollapsed()) {
-        // paneforge's expand() takes no size arg (react-resizable-panels'
-        // expand(minSize) did) — expand, then resize to the persisted size.
+        // paneforge's expand() takes no size arg — expand first, then
+        // resize to the persisted size.
         p.expand();
         p.resize(size());
       }
