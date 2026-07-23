@@ -93,6 +93,15 @@
    * step, kept until the incoming step is ready (see the header). Same-id
    * refreshes (live preview edits, re-measures) overwrite the snapshot
    * without re-keying the clone.
+   *
+   * `visual` is RETAINED forever once set — it never goes back to null.
+   * The clone's props are lazy getters in dev builds, and Svelte
+   * re-evaluates transition params at outro START (introend clears the
+   * cached options): if `visual` were nulled when the last clone unmounts,
+   * those re-reads would hit `null.sizeMs` and crash the boundary. The
+   * separate `shown` flag gates the block instead, so every lazy re-read
+   * during an outro resolves against the valid outgoing snapshot (with the
+   * correct durations).
    */
   const plan = $derived(planCtl.plan);
   const measurement = $derived(measurementCtl.measurement);
@@ -110,6 +119,8 @@
       measurementMatchesPlan(plan, measurement),
     ),
   );
+  /** hl set but not measured yet — the OLD snapshot is still on screen. */
+  const waiting = $derived(Boolean(hl && !incomingReady));
 
   let visual = $state<{
     id: string;
@@ -120,6 +131,7 @@
     dimMs: number;
     sizeMs: number;
   } | null>(null);
+  let shown = $state(false);
 
   /**
    * Last non-null highlight seen; keeps the dim's amount/duration from
@@ -130,7 +142,7 @@
     if (hl) seenHl = hl;
   });
 
-  const dimSource = $derived(visual?.hl ?? hl ?? seenHl);
+  const dimSource = $derived(waiting ? (visual?.hl ?? hl) : (hl ?? seenHl));
   const dimMs = $derived(
     dimSource?.useCustomTransition ? dimSource.dimTransition : DEFAULT_DIM_MS,
   );
@@ -148,7 +160,7 @@
   $effect(() => {
     const cur = hl;
     if (!cur) {
-      visual = null;
+      shown = false;
       return;
     }
     if (!incomingReady) return;
@@ -161,12 +173,15 @@
       dimMs: cur.useCustomTransition ? cur.dimTransition : DEFAULT_DIM_MS,
       sizeMs: cur.useCustomTransition ? cur.sizeUpTransition : DEFAULT_SIZE_MS,
     };
+    shown = true;
   });
 
   // Fade the original text chunk under the clone (under-fade to 0).
+  // Gated by `shown` so originals fade back in even though `visual` is
+  // retained (see note above).
   createHighlightUnderlay({
     codeContainer: () => codeContainer(),
-    measurement: () => visual?.measurement ?? null,
+    measurement: () => (shown ? (visual?.measurement ?? null) : null),
     dimMs: () => visual?.dimMs ?? dimMs,
   });
 
@@ -183,7 +198,7 @@
   }
 </script>
 
-{#if hl || visual}
+{#if hl}
   <HighlightDimOverlay
     {dimAmount}
     {dimMs}
@@ -192,16 +207,19 @@
   />
 {/if}
 
-{#if visual}
+{#if shown && visual}
   {#key visual.id}
+    <!-- Capture the snapshot: props are lazy getters in dev builds and
+         Svelte re-reads transition params when the outro starts. -->
+    {@const e = visual}
     <HighlightCloneLayer
-      measurement={visual.measurement}
-      union={visual.union}
+      measurement={e.measurement}
+      union={e.union}
       fontSize={fontSize()}
       lineHeight={lineHeight()}
-      scaleTarget={visual.scaleTarget}
-      dimMs={visual.dimMs}
-      sizeMs={visual.sizeMs}
+      scaleTarget={e.scaleTarget}
+      dimMs={e.dimMs}
+      sizeMs={e.sizeMs}
       onOutroStart={handleOutroStart}
       onOutroEnd={handleOutroEnd}
     />
