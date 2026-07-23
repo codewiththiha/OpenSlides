@@ -200,9 +200,8 @@ test("toolbar Present button mounts the presentation overlay and stage clicks st
   assert.equal(ui.isPresenting, true, "still presenting after click 1");
   assertNoAppErrors("stage click 1 (reveal highlight 1)");
 
-  // Click 2 → highlight 1 outros FULLY first; only then does highlight 2
-  // reveal (sequential steps — in jsdom the fail-safe drives the reveal).
-  // A click during the outro is swallowed by design, so wait for #2 first.
+  // Click 2 → step directly to highlight 2 (steps overlap: the previous
+  // clone's outro plays together with the incoming intro).
   click(stage);
   await settle();
   await waitFor(
@@ -210,7 +209,7 @@ test("toolbar Present button mounts the presentation overlay and stage clicks st
       [...target.querySelectorAll("[role='status']")].some(
         (el) => el.getAttribute("aria-label") === "Highlight 2 of 2",
       ),
-    "highlight 2 revealed after highlight 1 outro",
+    "highlight 2 revealed",
     4000,
   );
   assertNoAppErrors("stage click 2 (reveal highlight 2)");

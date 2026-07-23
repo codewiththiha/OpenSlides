@@ -37,7 +37,6 @@
     activeSlide,
     activeHighlightIndex,
     previewHighlightIndex,
-    spotlightActive = false,
     onHighlightExitComplete,
     onSelectHighlight,
     editorExpanded,
@@ -47,7 +46,6 @@
     activeSlide?: Slide;
     activeHighlightIndex: number;
     previewHighlightIndex: number;
-    spotlightActive?: boolean;
     onHighlightExitComplete: () => void;
     onSelectHighlight: (index: number) => boolean;
     editorExpanded: boolean;
@@ -127,7 +125,6 @@
             {project}
             {activeSlide}
             {effectiveHighlight}
-            {spotlightActive}
             {onHighlightExitComplete}
             {onSelectHighlight}
           />

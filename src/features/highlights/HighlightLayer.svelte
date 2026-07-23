@@ -4,10 +4,10 @@
    *
    * Two visual pieces, expressed with {#if}/{#key} blocks and per-element
    * transitions:
-   *  - dim overlay: mounted while a highlight is active OR `spotlightActive`
-   *    holds it across a step gap (Tween fades 0 → dimAmount on mount/step
-   *    change, svelte-fade outro on removal)
-   *  - clone layer: {#key highlight.id} — swap on steps
+   *  - dim overlay: mounted while a highlight is active / a step is on
+   *    screen (Tween fades 0 → dimAmount on mount/step change, svelte-fade
+   *    outro on removal)
+   *  - clone layer: {#key visual.id} — swap on steps
    *
    * There is deliberately NO eraser panel under the clone: painting an
    * opaque box over the original text read as a black slab. Instead the
@@ -15,9 +15,14 @@
    * the dim (createHighlightUnderlay), so only the bright clone shows in
    * that spot — no box, no echo.
    *
-   * Step changes are sequenced by createHighlightNav (outro fully, then
-   * intro): the nav parks the index at -1 with `spotlightActive` still true,
-   * so only the clone unmounts here while the dim stays put.
+   * Step changes OVERLAP: the incoming intro starts together with the
+   * outgoing outro. Rendering never follows the async plan/measurement
+   * pipeline directly — `visual` snapshots the last step that was fully
+   * measured (identity-checked against its plan) and only swaps when the
+   * INCOMING step is ready. Anything that was ever on screen therefore
+   * keeps a real, measured clone that ALWAYS plays its outro; a click
+   * landing mid-tokenize simply never mounts the skipped step (its intro
+   * is what would have been killed, not the visible clone's outro).
    *
    * `onExitComplete` mirrors AnimatePresence: a counter is armed by every
    * outrostart and released by its outroend; when it drains to zero the
@@ -29,6 +34,10 @@
   import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
   import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
   import { createHighlightUnderlay } from "@/features/highlights/highlight-underlay.svelte";
+  import {
+    measurementMatchesPlan,
+    type HighlightMeasurement,
+  } from "@/features/highlights/highlight-utils";
   import HighlightDimOverlay from "@/features/highlights/HighlightDimOverlay.svelte";
   import HighlightCloneLayer from "@/features/highlights/HighlightCloneLayer.svelte";
 
@@ -42,7 +51,6 @@
     language,
     fontSize,
     lineHeight,
-    spotlightActive = false,
     onExitComplete,
   }: {
     container: () => HTMLElement | null;
@@ -54,8 +62,6 @@
     language: () => string;
     fontSize: () => number;
     lineHeight: () => number;
-    /** Nav holds the dim across a step gap (outro → intro). */
-    spotlightActive?: boolean;
     onExitComplete?: () => void;
   } = $props();
 
@@ -83,22 +89,50 @@
   const hl = $derived(highlight());
 
   /**
-   * Last non-null highlight seen. The nav drops hl to null during a step
-   * gap while the dim stays mounted; deriving the dim's amount/duration
-   * from this cache prevents a visible dip to the defaults mid-gap (and
-   * keeps custom dim durations on the final outro).
+   * The step actually on screen: a snapshot of the last fully measured
+   * step, kept until the incoming step is ready (see the header). Same-id
+   * refreshes (live preview edits, re-measures) overwrite the snapshot
+   * without re-keying the clone.
+   */
+  const plan = $derived(planCtl.plan);
+  const measurement = $derived(measurementCtl.measurement);
+  const union = $derived(measurement?.union);
+  const hasSegments = $derived(
+    Boolean(plan && measurement && measurement.segments.length > 0),
+  );
+  const incomingReady = $derived(
+    Boolean(
+      hl &&
+      plan &&
+      measurement &&
+      union &&
+      hasSegments &&
+      measurementMatchesPlan(plan, measurement),
+    ),
+  );
+
+  let visual = $state<{
+    id: string;
+    hl: Highlight;
+    measurement: HighlightMeasurement;
+    union: HighlightMeasurement["union"];
+    scaleTarget: number;
+    dimMs: number;
+    sizeMs: number;
+  } | null>(null);
+
+  /**
+   * Last non-null highlight seen; keeps the dim's amount/duration from
+   * dipping to defaults while a final outro fades (hl is already null).
    */
   let seenHl: Highlight | null = null;
   $effect(() => {
     if (hl) seenHl = hl;
   });
-  const dimSource = $derived(hl ?? seenHl);
 
+  const dimSource = $derived(visual?.hl ?? hl ?? seenHl);
   const dimMs = $derived(
     dimSource?.useCustomTransition ? dimSource.dimTransition : DEFAULT_DIM_MS,
-  );
-  const sizeMs = $derived(
-    hl?.useCustomTransition ? hl.sizeUpTransition : DEFAULT_SIZE_MS,
   );
   const dimAmount = $derived((dimSource?.dimAmount ?? 75) / 100);
   const sizeUpAmount = $derived(hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT);
@@ -108,19 +142,33 @@
       : 1,
   );
 
-  const plan = $derived(planCtl.plan);
-  const measurement = $derived(measurementCtl.measurement);
+  // Swap/readiness gate — swap only when the incoming step is measured.
+  // Snapshot settings from the highlight ITSELF (never from dimSource,
+  // which derives from `visual` — that chain would be circular here).
+  $effect(() => {
+    const cur = hl;
+    if (!cur) {
+      visual = null;
+      return;
+    }
+    if (!incomingReady) return;
+    visual = {
+      id: cur.id,
+      hl: cur,
+      measurement: measurement!,
+      union: union!,
+      scaleTarget,
+      dimMs: cur.useCustomTransition ? cur.dimTransition : DEFAULT_DIM_MS,
+      sizeMs: cur.useCustomTransition ? cur.sizeUpTransition : DEFAULT_SIZE_MS,
+    };
+  });
 
   // Fade the original text chunk under the clone (under-fade to 0).
   createHighlightUnderlay({
     codeContainer: () => codeContainer(),
-    measurement: () => measurementCtl.measurement,
-    dimMs: () => dimMs,
+    measurement: () => visual?.measurement ?? null,
+    dimMs: () => visual?.dimMs ?? dimMs,
   });
-  const hasSegments = $derived(
-    Boolean(plan && measurement && measurement.segments.length > 0),
-  );
-  const union = $derived(measurement?.union);
 
   /* AnimatePresence-style exit bookkeeping. */
   let pendingExits = 0;
@@ -135,7 +183,7 @@
   }
 </script>
 
-{#if hl || spotlightActive}
+{#if hl || visual}
   <HighlightDimOverlay
     {dimAmount}
     {dimMs}
@@ -144,22 +192,18 @@
   />
 {/if}
 
-{#if hl}
-  {#if plan && measurement && hasSegments}
-    {#if union}
-      {#key hl.id}
-        <HighlightCloneLayer
-          {measurement}
-          {union}
-          fontSize={fontSize()}
-          lineHeight={lineHeight()}
-          {scaleTarget}
-          {dimMs}
-          {sizeMs}
-          onOutroStart={handleOutroStart}
-          onOutroEnd={handleOutroEnd}
-        />
-      {/key}
-    {/if}
-  {/if}
+{#if visual}
+  {#key visual.id}
+    <HighlightCloneLayer
+      measurement={visual.measurement}
+      union={visual.union}
+      fontSize={fontSize()}
+      lineHeight={lineHeight()}
+      scaleTarget={visual.scaleTarget}
+      dimMs={visual.dimMs}
+      sizeMs={visual.sizeMs}
+      onOutroStart={handleOutroStart}
+      onOutroEnd={handleOutroEnd}
+    />
+  {/key}
 {/if}

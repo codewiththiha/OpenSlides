@@ -21,7 +21,6 @@
     project,
     activeSlide,
     activeHighlightIndex,
-    spotlightActive = false,
     onHighlightExitComplete,
     goNext,
     goPrev,
@@ -31,7 +30,6 @@
     project: Project;
     activeSlide?: Slide;
     activeHighlightIndex: number;
-    spotlightActive?: boolean;
     onHighlightExitComplete: () => void;
     goNext: () => boolean;
     goPrev: () => boolean;
@@ -95,7 +93,6 @@
         slideId={activeSlide?.id}
         isPresenting
         {activeHighlightIndex}
-        {spotlightActive}
         {onHighlightExitComplete}
       />
       {#if project.settings.showHighlightStepIndicator !== false}

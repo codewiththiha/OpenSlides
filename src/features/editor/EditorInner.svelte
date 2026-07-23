@@ -80,7 +80,6 @@
     setCurrentSlideId,
   });
   const activeHighlightIndex = $derived(nav.highlightIndex);
-  const spotlightActive = $derived(nav.spotlightActive);
 
   const { enterPresent, exitPresent } = createPresentFullscreen();
 
@@ -157,7 +156,6 @@
         {project}
         {activeSlide}
         {activeHighlightIndex}
-        {spotlightActive}
         onHighlightExitComplete={nav.handleExitComplete}
         goNext={nav.goNext}
         goPrev={nav.goPrev}
@@ -182,7 +180,6 @@
         {activeSlide}
         {activeHighlightIndex}
         previewHighlightIndex={ui.previewHighlightIndex}
-        {spotlightActive}
         onHighlightExitComplete={nav.handleExitComplete}
         onSelectHighlight={nav.goToHighlight}
         editorExpanded={st.editorExpanded}
