@@ -458,6 +458,153 @@ test("present: forward then BACKWARD through highlights (ArrowLeft) — no rende
   target.remove();
 });
 
+test("editor: restored originals end PRISTINE after highlight removal (morph-safe)", async () => {
+  resetFullApiMocks();
+  seedProjects([makeProject()]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(EditorInner, { target, props: { projectId: "p1" } });
+
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("button")].some((b) =>
+        b.textContent?.trim().startsWith("Present"),
+      ),
+    "toolbar Present button",
+  );
+
+  const pressKey = (k: string) => {
+    window.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: k, cancelable: true }),
+    );
+    flushSync();
+  };
+  const itemSpans = () =>
+    [...target.querySelectorAll(".shiki-magic-move-item")] as HTMLElement[];
+
+  pressKey("1"); // reveal highlight 1 (covers line 0: "let a = 1;")
+  await settle();
+  // Under-fade engaged: at least one token span is at opacity 0 under the clone.
+  await waitFor(
+    () => itemSpans().some((el) => el.style.opacity === "0"),
+    "original highlighted span faded under the clone",
+    4000,
+  );
+  assertNoAppErrors("under-fade engaged");
+
+  pressKey("0"); // back to clean — restore fade starts
+  await settle(500 + 80 + 400); // restore (dimMs) + settle buffer + slack
+
+  // Restore contract: no token span may keep an inline opacity transition —
+  // a leftover `transition: opacity …` would override shiki-magic-move's
+  // class-driven transitions and make these exact tokens teleport on the
+  // next slide morph while untouched tokens glide.
+  const lingering = itemSpans().filter((el) =>
+    el.style.transition.includes("opacity"),
+  );
+  assert.deepEqual(
+    lingering.map((el) => el.textContent),
+    [],
+    "no span may keep a leftover inline opacity transition",
+  );
+  assert.ok(
+    itemSpans().every((el) => el.style.opacity !== "0"),
+    "restored originals are fully visible again",
+  );
+  assertNoAppErrors("restore settle");
+
+  await unmount(app);
+  target.remove();
+});
+
+test("present: slide morph waits for restored originals (custom dim > size)", async () => {
+  resetFullApiMocks();
+  const proj = makeProject();
+  // One highlight, dim much longer than size: the clone fade outro ends
+  // exactly with the restore fade (dimMs) — without restore bookkeeping the
+  // morph would start while originals are mid-restore / still styled.
+  proj.slides[0]!.highlights = [
+    {
+      ...makeHighlight("h1", 0),
+      sizeUpEnabled: true,
+      sizeUpAmount: 150,
+      useCustomTransition: true,
+      dimTransition: 1600,
+      sizeUpTransition: 300,
+    },
+  ];
+  seedProjects([proj]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(EditorInner, { target, props: { projectId: "p1" } });
+
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("button")].some((b) =>
+        b.textContent?.trim().startsWith("Present"),
+      ),
+    "toolbar Present button",
+  );
+  const presentBtn = [...target.querySelectorAll("button")].find((b) =>
+    b.textContent?.trim().startsWith("Present"),
+  ) as HTMLButtonElement;
+  click(presentBtn);
+  flushSync();
+  await waitFor(
+    () => Boolean(target.querySelector("#openslides-present-root")),
+    "presentation overlay root",
+  );
+
+  const pressKey = (k: string) => {
+    window.dispatchEvent(
+      new window.KeyboardEvent("keydown", { key: k, cancelable: true }),
+    );
+    flushSync();
+  };
+
+  pressKey("ArrowRight"); // reveal the only highlight
+  await settle();
+  await waitFor(
+    () =>
+      (
+        [...target.querySelectorAll(".shiki-magic-move-item")] as HTMLElement[]
+      ).some((el) => el.style.opacity === "0"),
+    "original highlighted span faded under the clone",
+    4000,
+  );
+  assertNoAppErrors("reveal");
+
+  // Fail-safe budget: max(1600, 300) + 250 = 1850 — always after this test's
+  // normal-path assertions, so it can't accidentally satisfy them.
+  pressKey("ArrowRight"); // past the last highlight → outro → advance
+  await sleep(1600 + 40); // fade outros end at 1600; settle is 1600 + 80
+  flushSync();
+  assert.equal(
+    ui.currentSlideId,
+    "s1",
+    "morph must NOT start before restored originals are pristine",
+  );
+  await waitFor(
+    () => ui.currentSlideId === "s2",
+    "advance once restores settled",
+    3000,
+  );
+  assertNoAppErrors("restore-gated advance");
+
+  await unmount(app);
+  target.remove();
+});
+
 test("editor: size-up highlight toggled rapidly forward/backward — no render crash", async () => {
   resetFullApiMocks();
   const proj = makeProject();

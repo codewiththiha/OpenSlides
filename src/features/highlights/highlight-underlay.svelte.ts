@@ -14,9 +14,22 @@
  * invisible in practice under the dim, and splitting text nodes would
  * disturb magic-move's keyed DOM. PRE/CODE/root ancestors are never faded
  * (a plain-text node whose parent is the code block must not blank it).
- * The leftover inline `transition` after restore is inert: token spans
- * carry no other direct opacity changes and keyframe animations (magic
- * move) take precedence over inline styles while running.
+ *
+ * RESTORE CONTRACT (load-bearing for slide transitions): a restored span
+ * must end PRISTINE — no leftover inline `transition` — and a queued slide
+ * morph must not see it mid-restore. shiki-magic-move animates slide
+ * transitions with stylesheet CLASSES (`transition: all …` on
+ * .shiki-magic-move-move / -leave / -enter), and inline styles override
+ * stylesheet rules: a leftover inline `transition: opacity …` silently
+ * disables the transform transition on exactly these spans, so previously
+ * highlighted tokens TELEPORT to their final morph position while every
+ * other token glides. Hence:
+ *  - the inline transition is wiped once the fade-in completes
+ *    (dimMs + SETTLE_BUFFER_MS), and
+ *  - every restore participates in the layer's exit bookkeeping via
+ *    onRestoreStart/onRestoreEnd: a slide advance queued behind the clone
+ *    outro then can't start the morph until every restored span is fully
+ *    visible AND pristine, however custom dim/size durations compare.
  */
 import type { HighlightMeasurement } from "@/features/highlights/highlight-utils";
 import { getLineTextNodes } from "$lib/lib/line-nodes-cache";
@@ -24,10 +37,20 @@ import { getLineTextNodes } from "$lib/lib/line-nodes-cache";
 /** CSS form of EASE_DIM (see easings.ts) for the inline transition. */
 const EASE_DIM_CSS = "cubic-bezier(0.25, 0.1, 0.25, 1)";
 
+/**
+ * Grace after the nominal fade-in end before a restored span's inline
+ * transition is wiped and its exit released — transition completion lands
+ * a frame or two after the nominal duration.
+ */
+const SETTLE_BUFFER_MS = 80;
+
 interface UseHighlightUnderlayArgs {
   codeContainer: () => HTMLElement | null;
   measurement: () => HighlightMeasurement | null;
   dimMs: () => number;
+  /** Exit bookkeeping arm/release (see the restore contract above). */
+  onRestoreStart?: () => void;
+  onRestoreEnd?: () => void;
 }
 
 /** Token-level spans overlapping at least one measured selection segment. */
@@ -70,17 +93,45 @@ function collectTargets(
 export function createHighlightUnderlay(args: UseHighlightUnderlayArgs) {
   /** Currently faded spans → captured inline opacity (restored on exit). */
   const active = new Map<HTMLElement, { opacity: string }>();
+  /** Restored spans whose inline transition still needs wiping → timer. */
+  const settling = new Map<HTMLElement, number>();
+
+  /** Cancel a pending settle (re-fade / re-restore) and release its exit. */
+  function cancelSettle(el: HTMLElement) {
+    const timer = settling.get(el);
+    if (timer === undefined) return;
+    window.clearTimeout(timer);
+    settling.delete(el);
+    args.onRestoreEnd?.();
+  }
 
   function fade(el: HTMLElement, dimMs: number) {
+    cancelSettle(el);
     active.set(el, { opacity: el.style.opacity });
     el.style.transition = `opacity ${dimMs}ms ${EASE_DIM_CSS}`;
     el.style.opacity = "0";
   }
 
   function restore(el: HTMLElement, dimMs: number) {
+    cancelSettle(el);
     el.style.transition = `opacity ${dimMs}ms ${EASE_DIM_CSS}`;
     el.style.opacity = active.get(el)?.opacity ?? "";
     active.delete(el);
+    // Arm an exit so a slide advance queued behind the clone outro only
+    // starts its shiki morph once this span is fully faded back in AND
+    // pristine (see the restore contract in the header).
+    args.onRestoreStart?.();
+    settling.set(
+      el,
+      window.setTimeout(() => {
+        settling.delete(el);
+        // Without this wipe the leftover inline transition overrides
+        // shiki-magic-move's class-driven transition on the next slide
+        // morph and these exact tokens teleport instead of gliding.
+        el.style.transition = "";
+        args.onRestoreEnd?.();
+      }, dimMs + SETTLE_BUFFER_MS),
+    );
   }
 
   $effect(() => {
@@ -100,9 +151,16 @@ export function createHighlightUnderlay(args: UseHighlightUnderlayArgs) {
     }
   });
 
-  // Layer unmount mid-highlight: put every original back.
+  // Layer unmount mid-highlight: put every original back INSTANTLY — no
+  // animation and no settle bookkeeping, since the layer's exit counter
+  // dies with the component and the fail-safe owns forward progress.
   $effect(() => () => {
-    const dimMs = args.dimMs();
-    for (const el of [...active.keys()]) restore(el, dimMs);
+    for (const [el, { opacity }] of active) {
+      el.style.transition = "";
+      el.style.opacity = opacity;
+    }
+    active.clear();
+    for (const timer of settling.values()) window.clearTimeout(timer);
+    settling.clear();
   });
 }
