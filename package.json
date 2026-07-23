@@ -13,6 +13,7 @@
     "test:save-race": "node scripts/run-save-race-tests.mjs"
   },
   "dependencies": {
+    "@lucide/svelte": "^1.25.0",
     "@tanstack/svelte-query": "^6.1.38",
     "@tanstack/svelte-virtual": "^3.13.34",
     "@tauri-apps/api": "^2",
@@ -21,8 +22,6 @@
     "bits-ui": "^2.18.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cmdk-sv": "^0.0.19",
-    "lucide-svelte": "^1.0.1",
     "paneforge": "^1.0.2",
     "shiki": "^3.8.0",
     "shiki-magic-move": "^1.2.0",

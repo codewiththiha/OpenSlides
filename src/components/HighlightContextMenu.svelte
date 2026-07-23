@@ -3,7 +3,7 @@
    * Custom context menu that appears when highlight mode is enabled
    * and the user right-clicks with text selected in the code editor.
    */
-  import { Highlighter as HighlightIcon, X } from "lucide-svelte";
+  import { Highlighter as HighlightIcon, X } from "@lucide/svelte";
   import { Z_INDEX } from "./ui/Overlay.svelte";
   import { EASE_DIM } from "./highlights/easings";
 

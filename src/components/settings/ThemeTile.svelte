@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Check } from "lucide-svelte";
+  import { Check } from "@lucide/svelte";
   import CodeThumbnail from "../ui/CodeThumbnail.svelte";
   import { useShikiDisplayHtml } from "@/hooks/useShikiDisplayState.svelte";
   import type { ThemeName } from "@/types";

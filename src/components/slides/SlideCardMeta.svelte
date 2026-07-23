@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Highlighter as HighlighterIcon } from "lucide-svelte";
+  import { Highlighter as HighlighterIcon } from "@lucide/svelte";
   import { cn } from "@/lib/utils";
   import Badge from "../ui/Badge.svelte";
 

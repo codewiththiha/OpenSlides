@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pencil, Copy, Trash2 } from "lucide-svelte";
+  import { Pencil, Copy, Trash2 } from "@lucide/svelte";
   import HoverActions from "../ui/HoverActions.svelte";
   import HoverActionButton from "../ui/HoverActionButton.svelte";
 

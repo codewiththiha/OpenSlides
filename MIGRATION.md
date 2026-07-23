@@ -15,9 +15,9 @@ native menu protocol are identical.
 | @dnd-kit/*                            | svelte-dnd-action + custom pointer DnD (dashboard) |
 | framer-motion                         | svelte/transition + svelte/motion (Spring/Tween)   |
 | @radix-ui/*                           | bits-ui                                            |
-| cmdk                                  | cmdk-sv                                            |
+| cmdk                                  | bits-ui Command (cmdk-sv's official successor)     |
 | sonner                                | svelte-sonner                                      |
-| lucide-react                          | lucide-svelte                                      |
+| lucide-react                          | @lucide/svelte                                     |
 | react-resizable-panels                | paneforge                                          |
 | @tanstack/react-virtual               | @tanstack/svelte-virtual (Readable store)          |
 | use-debounce                          | `$effect` + `setTimeout` (editor saves, search)    |
@@ -51,13 +51,17 @@ native menu protocol are identical.
   `useHighlightNav`, `HighlightLayer`).
 - framer springs retuned to equivalent unit-mass Svelte spring constants;
   durations converted seconds → ms.
-- cmdk-sv's root component is `Command.Root` (not bare `<Command>`).
+- Command menus use bits-ui's `Command` namespace (cmdk-sv pulled in a
+  Svelte-4-only @melt-ui peer): items mark selection with a presence-only
+  `data-selected` attribute (was `data-selected=true`), groups use a
+  `GroupHeading` child instead of a `heading` prop, and items without
+  text-derived values get an explicit lowercase `value` for filtering.
 - bits-ui v2 Slider has no `Track` subcomponent (plain span inside the
   Root's children snippet; `Thumb` requires `index`).
 - paneforge `expand()` takes no size argument (unlike
   react-resizable-panels): expand + resize instead.
-- lucide-svelte ships legacy `SvelteComponentTyped` classes, so icon-taking
-  props use the `IconComponent` type from `src/lib/icon-types.ts`.
+- @lucide/svelte icons are standard Svelte 5 components (the deprecated
+  `lucide-svelte` package shipped legacy class components).
 
 ## Tests
 

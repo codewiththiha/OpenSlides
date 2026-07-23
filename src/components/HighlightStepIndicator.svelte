@@ -7,7 +7,7 @@
    */
   import { fade, fly } from "svelte/transition";
   import { Spring } from "svelte/motion";
-  import { Highlighter as HighlighterIcon } from "lucide-svelte";
+  import { Highlighter as HighlighterIcon } from "@lucide/svelte";
   import { cn } from "@/lib/utils";
 
   let {

@@ -1,7 +1,7 @@
 <script lang="ts">
-  // NOTE: cmdk-sv's `Command` export is a namespace — the root component is
-  // `Command.Root` (bare `<Command>` only worked via cmdk's React CJS shape).
-  import { Command } from "cmdk-sv";
+  // bits-ui v2 ships the cmdk components (cmdk-sv's successor) — same
+  // Root/Input/List/Empty/Group/Item architecture and default filtering.
+  import { Command } from "bits-ui";
   import type { Snippet } from "svelte";
   import Overlay, { OVERLAY_Z } from "./Overlay.svelte";
 

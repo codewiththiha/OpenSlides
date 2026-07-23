@@ -2,7 +2,7 @@
   /**
    * Keyboard shortcuts cheatsheet — open with `?` (Shift+/).
    */
-  import { X } from "lucide-svelte";
+  import { X } from "@lucide/svelte";
   import { ui, setIsShortcutsOpen } from "@/store/ui-state.svelte";
   import { modKeyLabel } from "@/lib/platform";
   import { SHORTCUTS } from "@/lib/shortcuts";

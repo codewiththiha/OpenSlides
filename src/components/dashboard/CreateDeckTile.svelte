@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { Loader2, Plus, X } from "lucide-svelte";
+  import { Loader2, Plus, X } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
   import Input from "../ui/Input.svelte";
   import CodeThumbnail from "../ui/CodeThumbnail.svelte";

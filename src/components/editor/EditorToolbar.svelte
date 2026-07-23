@@ -15,7 +15,7 @@
     Sun,
     Command as CommandIcon,
     Pencil,
-  } from "lucide-svelte";
+  } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
   import TitleBar from "../TitleBar.svelte";
   import SaveStatusBadge from "./SaveStatusBadge.svelte";

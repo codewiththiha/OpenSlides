@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { Plus, Upload, FolderOpen } from "lucide-svelte";
+  import { Plus, Upload, FolderOpen } from "@lucide/svelte";
   import Button from "../ui/Button.svelte";
   import EmptyState from "../ui/EmptyState.svelte";
   import AsyncState from "../states/AsyncState.svelte";

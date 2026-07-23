@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pause, Play } from "lucide-svelte";
+  import { Pause, Play } from "@lucide/svelte";
   import Kbd from "../ui/Kbd.svelte";
 
   let {

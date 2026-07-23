@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileCode } from "lucide-svelte";
+  import { FileCode } from "@lucide/svelte";
   import { useSlideThumbnail } from "@/hooks/useSlideThumbnail.svelte";
   import { type ProjectSummary } from "@/types";
   import CodeThumbnail from "../ui/CodeThumbnail.svelte";

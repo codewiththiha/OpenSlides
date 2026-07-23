@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Persistent batch controls for selected slide cards. */
-  import type { IconComponent } from "@/lib/icon-types";
-  import { ArrowLeftToLine, ArrowRightToLine, Layers3, Trash2, X } from "lucide-svelte";
+  import type { Component } from "svelte";
+  import { ArrowLeftToLine, ArrowRightToLine, Layers3, Trash2, X } from "@lucide/svelte";
   import { Z_INDEX } from "../ui/Overlay.svelte";
   import { EASE_DIM } from "../highlights/easings";
   import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@
 
 {#snippet bubbleButton(
   label: string,
-  Icon: IconComponent,
+  Icon: Component<{ class?: string }>,
   onclick: () => void,
   disabled = false,
   destructive = false,

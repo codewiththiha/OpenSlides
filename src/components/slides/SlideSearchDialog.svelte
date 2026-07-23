@@ -4,7 +4,7 @@
 
 <script lang="ts">
   /** Centered find control that leaves the workspace visible behind it. */
-  import { Search } from "lucide-svelte";
+  import { Search } from "@lucide/svelte";
   import { fade } from "svelte/transition";
   import { Z_INDEX } from "../ui/Overlay.svelte";
   import { modKeyLabel } from "@/lib/platform";
