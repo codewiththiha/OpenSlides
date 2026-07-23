@@ -53,3 +53,17 @@ Tests (`test:highlight`, 13 cases) import these directly.
 During presentation the same layer drives the "everything dims except the
 active highlight" step reveal; `HighlightStepIndicator` shows progress and
 `PresentOverlay`/`PreviewPane` pass `activeHighlightIndex` down.
+
+- Step changes are **sequential**: a click plays the current highlight's
+  outro fully (dim held, clone scales down + fades) and only then the next
+  highlight's intro — never a crossfade. `createHighlightNav` parks
+  `highlightIndex` at -1 with the next step queued in `pending`;
+  `nav.spotlightActive` is threaded down so only the dim overlay survives
+  the gap (`HighlightLayer` also caches the last highlight so a held dim
+  keeps its custom amount/duration).
+- Eraser boxes are intro-only: on outro they vanish instantly since the
+  clone text's own fade carries the exit (a lingering solid panel reads as
+  a black slab under the fading text).
+- The last highlight's outro plays fully before the slide advances (the
+  layer's exit-complete signal drives the advance, with the fail-safe timer
+  as backstop).
