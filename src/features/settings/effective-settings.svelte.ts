@@ -1,5 +1,8 @@
-import { ui } from "$lib/stores/ui-state.svelte";
 import type { Project, Slide } from "$lib/types";
+import {
+  previewProjectSettings,
+  previewSlideSettings,
+} from "./preview-settings";
 
 export function createEffectiveSettings(
   project: () => Project,
@@ -7,10 +10,8 @@ export function createEffectiveSettings(
 ) {
   const settings = $derived(project().settings);
   const target = $derived(slide?.() ?? project().slides[0]);
-  const previewProject = $derived(ui.previewProject);
-  const previewSlide = $derived(
-    target ? ui.previewSlides.get(target.id) : undefined,
-  );
+  const previewProject = $derived(previewProjectSettings());
+  const previewSlide = $derived(previewSlideSettings(target?.id));
 
   const result = $derived.by(() => {
     const globalTransitionDuration =

@@ -15,6 +15,7 @@
     type Project,
   } from "$lib/types";
   import { ui } from "$lib/stores/ui-state.svelte";
+  import { previewProjectSetting } from "@/features/settings/preview-settings";
   import HighlightContextMenu from "@/features/highlights/HighlightContextMenu.svelte";
   import { untrack } from "svelte";
   import { createCodeEditorState } from "./code-editor-state.svelte";
@@ -73,7 +74,7 @@
 
   const rawEditorFontSize = $derived(project.settings.editorFontSize || 14);
   const editorFontSize = $derived(
-    ui.previewProject.editorFontSize ?? rawEditorFontSize,
+    previewProjectSetting("editorFontSize") ?? rawEditorFontSize,
   );
   const lineHeight = 1.55;
   const lineCount = $derived(Math.max(1, code.split("\n").length));

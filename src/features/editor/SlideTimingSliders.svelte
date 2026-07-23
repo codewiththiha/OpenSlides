@@ -1,10 +1,13 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import {
-    ui,
     setPreviewProjectSetting,
     setPreviewSlideSetting,
   } from "$lib/stores/ui-state.svelte";
+  import {
+    previewProjectSettings,
+    previewSlideSettings,
+  } from "@/features/settings/preview-settings";
   import {
     updateProjectSettingsMutation,
     updateSlideSettingsMutation,
@@ -19,8 +22,8 @@
   const settingsMutation = updateSlideSettingsMutation(projectId);
   const projectSettingsMutation = updateProjectSettingsMutation(projectId);
 
-  const previewProject = $derived(ui.previewProject);
-  const previewSlide = $derived(ui.previewSlides.get(slide.id));
+  const previewProject = $derived(previewProjectSettings());
+  const previewSlide = $derived(previewSlideSettings(slide.id));
   const globalTransitionEnabled = $derived(
     project.settings.useGlobalTransition,
   );

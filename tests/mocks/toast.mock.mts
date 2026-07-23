@@ -1,4 +1,4 @@
-/** Mock of src/lib/toast — the real one pulls in sonner/React components. */
+/** Mock of $lib/lib/toast — keeps the notify surface without the toast UI layer. */
 export const toastCalls: Array<{ kind: string; msg: string }> = [];
 export const notify = {
   success: (msg: string) => {

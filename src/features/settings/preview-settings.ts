@@ -5,7 +5,10 @@
  *   const fontSize = $derived(previewProjectSetting("fontSize") ?? project.settings.fontSize);
  */
 import { ui } from "$lib/stores/ui-state.svelte";
-import type { PreviewProjectSettings } from "$lib/stores/types";
+import type {
+  PreviewProjectSettings,
+  PreviewSlideSettings,
+} from "$lib/stores/types";
 import type { Highlight } from "$lib/types";
 
 export function previewProjectSettings(): PreviewProjectSettings {
@@ -16,6 +19,12 @@ export function previewProjectSetting<K extends keyof PreviewProjectSettings>(
   key: K,
 ): PreviewProjectSettings[K] | undefined {
   return ui.previewProject[key];
+}
+
+export function previewSlideSettings(
+  slideId: string | undefined,
+): PreviewSlideSettings | undefined {
+  return slideId ? ui.previewSlides.get(slideId) : undefined;
 }
 
 export function previewHighlightSettings(
