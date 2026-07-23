@@ -4,12 +4,12 @@ import { projectKeys } from "./keys";
 import { queryClient } from "./query-client";
 import type { Project } from "$lib/types";
 import {
-  useProjectListInvalidatingMutation,
-  useSlideMutation,
-} from "./useProjectMutation";
+  projectListMutation,
+  slideMutation,
+} from "./mutation-policy";
 
-export function useStackProjects() {
-  return useProjectListInvalidatingMutation(
+export function stackProjectsMutation() {
+  return projectListMutation(
     ({ sourceIds, targetId }: { sourceIds: string[]; targetId: string }) =>
       api.stackProjects(sourceIds, targetId),
     {
@@ -21,8 +21,8 @@ export function useStackProjects() {
   );
 }
 
-export function useUnstackProjects() {
-  return useProjectListInvalidatingMutation(
+export function unstackProjectsMutation() {
+  return projectListMutation(
     (projectIds: string[]) => api.unstackProjects(projectIds),
     {
       onSuccess: (projects) => {
@@ -33,8 +33,8 @@ export function useUnstackProjects() {
   );
 }
 
-export function useStackSlides(projectId: string) {
-  return useSlideMutation(
+export function stackSlidesMutation(projectId: string) {
+  return slideMutation(
     projectId,
     ({ sourceIds, targetId }: { sourceIds: string[]; targetId: string }) =>
       api.stackSlides(projectId, sourceIds, targetId),
@@ -50,8 +50,8 @@ export function useStackSlides(projectId: string) {
   );
 }
 
-export function useUnstackSlides(projectId: string) {
-  return useSlideMutation(
+export function unstackSlidesMutation(projectId: string) {
+  return slideMutation(
     projectId,
     (slideIds: string[]) => api.unstackSlides(projectId, slideIds),
     {

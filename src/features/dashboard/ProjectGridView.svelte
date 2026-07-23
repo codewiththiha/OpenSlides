@@ -15,8 +15,11 @@
   import StackSpread from "./StackSpread.svelte";
   import StackDeck from "$lib/ui/stack/StackDeck.svelte";
   import { chunkConsecutive, type GroupChunk } from "$lib/lib/grouping";
-  import { useStackProjects, useUnstackProjects } from "$lib/queries/stacks";
-  import { useAutoDissolveStacks } from "@/hooks/useAutoDissolveStacks.svelte";
+  import {
+    stackProjectsMutation,
+    unstackProjectsMutation,
+  } from "$lib/queries/stacks";
+  import { autoDissolveStacks } from "$lib/lib/stacking.svelte";
   import {
     projectDnd,
     setProjectDropHandler,
@@ -65,14 +68,14 @@
 
   let parentEl = $state<HTMLDivElement | null>(null);
 
-  const stackProjectsMutation = useStackProjects();
-  const unstackProjectsMutation = useUnstackProjects();
+  const stackMut = stackProjectsMutation();
+  const unstackMut = unstackProjectsMutation();
 
-  useAutoDissolveStacks(
+  autoDissolveStacks(
     () => projects,
     (p) => p.groupId,
     (p) => p.id,
-    (ids) => unstackProjectsMutation.mutate(ids),
+    (ids) => unstackMut.mutate(ids),
   );
 
   const chunks = $derived(chunkConsecutive(projects));
@@ -163,7 +166,7 @@
         sourceCellId !== targetChunkId &&
         !sourceIds.includes(targetId)
       ) {
-        stackProjectsMutation.mutate({ sourceIds, targetId });
+        stackMut.mutate({ sourceIds, targetId });
         closeIfNearlyEmpty();
         return;
       }
@@ -173,7 +176,7 @@
     if (payload.kind === "fan-item") {
       const dist = Math.hypot(session.x - session.startX, session.y - session.startY);
       if (dist > 120) {
-        unstackProjectsMutation.mutate([payload.project.id]);
+        unstackMut.mutate([payload.project.id]);
         closeIfNearlyEmpty();
       }
     }
@@ -274,7 +277,7 @@
       {onDelete}
       {duplicateBusy}
       {commitBusy}
-      onUngroup={(ids) => unstackProjectsMutation.mutate(ids)}
+      onUngroup={(ids) => unstackMut.mutate(ids)}
     />
   {/if}
 

@@ -2,7 +2,7 @@
   /**
    * CodeEditorHost — mount wrapper for the REAL CodeEditor in the jsdom
    * typing suite. Feeds the project from the app query cache EXACTLY like
-   * EditorInner.svelte does (useProject → prop), so onSuccess cache stamps
+   * EditorInner.svelte does (projectQuery → prop), so onSuccess cache stamps
    * flow in as fresh slide objects while tests control resolution order.
    */
   import { createQuery } from "@tanstack/svelte-query";

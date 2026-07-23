@@ -12,13 +12,13 @@
    *
    * `onExitComplete` mirrors AnimatePresence: a counter is armed by every
    * outrostart and released by its outroend; when it drains to zero the
-   * callback fires once (useHighlightNav's finishPending is idempotent, and
+   * callback fires once (createHighlightNav's finishPending is idempotent, and
    * its fail-safe timer covers the "nothing animated" case).
    */
   import type { Highlighter } from "shiki";
   import type { Highlight } from "$lib/types";
-  import { useHighlightPlan } from "@/hooks/useHighlightPlan.svelte";
-  import { useHighlightMeasurement } from "@/hooks/useHighlightMeasurement.svelte";
+  import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
+  import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
   import HighlightDimOverlay from "@/features/highlights/HighlightDimOverlay.svelte";
   import HighlightEraserSegments from "@/features/highlights/HighlightEraserSegments.svelte";
   import HighlightCloneLayer from "@/features/highlights/HighlightCloneLayer.svelte";
@@ -47,7 +47,7 @@
     onExitComplete?: () => void;
   } = $props();
 
-  const planHook = useHighlightPlan({
+  const planHook = createHighlightPlan({
     highlight: () => highlight(),
     code: () => code(),
     highlighter: () => highlighter(),
@@ -55,7 +55,7 @@
     language: () => language(),
   });
 
-  const measurementHook = useHighlightMeasurement({
+  const measurementHook = createHighlightMeasurement({
     container: () => container(),
     codeContainer: () => codeContainer(),
     plan: () => planHook.plan,

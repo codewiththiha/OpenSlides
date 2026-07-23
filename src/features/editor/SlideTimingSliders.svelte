@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import { ui, setPreviewProjectSetting, setPreviewSlideSetting } from "$lib/stores/ui-state.svelte";
-  import { useUpdateSettings, useUpdateSlideSettings } from "$lib/queries";
+  import { updateProjectSettingsMutation, updateSlideSettingsMutation } from "$lib/queries";
   import SliderField from "$lib/ui/SliderField.svelte";
   import type { Project, Slide } from "$lib/types";
 
@@ -9,8 +9,8 @@
 
   // Stable per mount — untrack() marks the one-time id capture.
   const projectId = untrack(() => project.id);
-  const settingsMutation = useUpdateSlideSettings(projectId);
-  const projectSettingsMutation = useUpdateSettings(projectId);
+  const settingsMutation = updateSlideSettingsMutation(projectId);
+  const projectSettingsMutation = updateProjectSettingsMutation(projectId);
 
   const previewProject = $derived(ui.previewProject);
   const previewSlide = $derived(ui.previewSlides.get(slide.id));

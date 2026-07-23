@@ -19,9 +19,9 @@
     setSlidesPanelSize,
   } from "$lib/stores/ui-state.svelte";
   import {
-    useCollapsiblePanel,
+    createCollapsiblePanel,
     type PaneHandle,
-  } from "@/hooks/useCollapsiblePanel.svelte";
+  } from "@/features/editor/panels.svelte";
   import { cn } from "$lib/lib/utils";
   import type { Project, Slide } from "$lib/types";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
@@ -69,7 +69,7 @@
     expand: expandCodePanel,
     collapse: collapseCodePanel,
     onResize: onCodePanelResize,
-  } = useCollapsiblePanel({
+  } = createCollapsiblePanel({
     panel: () => codePane,
     isCollapsed: () => ui.isCodePanelCollapsed,
     setCollapsed: setIsCodePanelCollapsed,
@@ -78,7 +78,7 @@
     collapseThreshold: CODE_COLLAPSE_THRESHOLD,
   });
 
-  const { onResize: onSlidesPanelResize } = useCollapsiblePanel({
+  const { onResize: onSlidesPanelResize } = createCollapsiblePanel({
     panel: () => slidesPane,
     isCollapsed: () => ui.isBottomPanelCollapsed,
     setCollapsed: setIsBottomPanelCollapsed,

@@ -8,7 +8,7 @@
   import Button from "$lib/ui/Button.svelte";
   import Input from "$lib/ui/Input.svelte";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
-  import { useShikiDisplayHtml } from "@/hooks/useShikiDisplayState.svelte";
+  import { shikiDisplayHtml } from "$lib/shiki/shiki-display.svelte";
   import { THEMES } from "$lib/lib/themes";
   import { cn } from "$lib/lib/utils";
 
@@ -38,7 +38,7 @@
 
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  const preview = useShikiDisplayHtml(() => ({
+  const preview = shikiDisplayHtml(() => ({
     code: DEFAULT_WELCOME,
     language: "typescript",
     theme: selectedTheme || "dark-plus",

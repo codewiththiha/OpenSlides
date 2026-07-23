@@ -10,7 +10,7 @@ interface UseCodeEditorCaretArgs {
   editorSnapshot: { current: Snapshot };
 }
 
-export function useCodeEditorCaret(args: UseCodeEditorCaretArgs) {
+export function createCaretSync(args: UseCodeEditorCaretArgs) {
   let previousSlideId: string | undefined = undefined;
 
   // Keep the uncontrolled textarea synchronized before paint. A same-slide

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Check } from "@lucide/svelte";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
-  import { useShikiDisplayHtml } from "@/hooks/useShikiDisplayState.svelte";
+  import { shikiDisplayHtml } from "$lib/shiki/shiki-display.svelte";
   import type { ThemeName } from "$lib/types";
   import { cn } from "$lib/lib/utils";
 
@@ -23,7 +23,7 @@
     sample: string;
   } = $props();
 
-  const tile = useShikiDisplayHtml(() => ({
+  const tile = shikiDisplayHtml(() => ({
     code: sample,
     language: "typescript",
     theme: value,

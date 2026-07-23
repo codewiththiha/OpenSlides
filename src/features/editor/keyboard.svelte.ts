@@ -1,5 +1,5 @@
 /**
- * useEditorKeyboard — isolated keyboard handling for Editor.
+ * createEditorKeyboard — isolated keyboard handling for Editor.
  *
  * Reads latest UI state imperatively inside the handler (no closure deps),
  * and reads the nav callbacks through an accessor so the listener is
@@ -24,7 +24,7 @@ interface UseEditorKeyboardArgs {
   exitPresent: () => void | Promise<void>;
 }
 
-export function useEditorKeyboard(args: () => UseEditorKeyboardArgs) {
+export function createEditorKeyboard(args: () => UseEditorKeyboardArgs) {
   $effect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const { goNext, goPrev, goToHighlight, exitPresent } = args();

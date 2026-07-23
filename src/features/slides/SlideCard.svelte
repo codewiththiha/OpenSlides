@@ -6,7 +6,7 @@
 <script lang="ts">
   import { cn } from "$lib/lib/utils";
   import { slideDisplayName, themeBackground, type Slide } from "$lib/types";
-  import { useSlideThumbnail } from "@/hooks/useSlideThumbnail.svelte";
+  import { createSlideThumbnail } from "@/features/slides/slide-thumbnail.svelte";
   import { ui, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
   import { localCode } from "$lib/stores/slide-code.svelte";
   import SearchSnippet from "./SearchSnippet.svelte";
@@ -15,7 +15,7 @@
   import SlideCardActions from "./SlideCardActions.svelte";
   import SlideCardMeta from "./SlideCardMeta.svelte";
   import SlideCardHoverPreview from "./SlideCardHoverPreview.svelte";
-  import { useSlideCardHoverPreview } from "./useSlideCardHoverPreview.svelte";
+  import { createSlideCardHoverPreview } from "./slide-card-preview.svelte";
 
   let {
     slide,
@@ -76,19 +76,19 @@
 
   let cardRootEl = $state<HTMLDivElement | null>(null);
 
-  const thumbnail = useSlideThumbnail(() => ({
+  const thumbnail = createSlideThumbnail(() => ({
     slideId: slide.id,
     code: thumbnailCode,
     theme,
     language,
     initialHtml: slide.thumbnailHtml,
   }));
-  const hover = useSlideCardHoverPreview({
+  const hover = createSlideCardHoverPreview({
     isOverlay: false,
     enableHoverPreview: () => enableHoverPreview,
     cardRoot: () => cardRootEl,
   });
-  const hoverThumbnail = useSlideThumbnail(() => ({
+  const hoverThumbnail = createSlideThumbnail(() => ({
     slideId: slide.id,
     code: thumbnailCode,
     theme,

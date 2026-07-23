@@ -6,7 +6,7 @@ import type { AppMenuEvent } from "$lib/lib/app-menu";
 
 export type AppMenuHandlers = Partial<Record<AppMenuEvent, () => void>>;
 
-export function useAppMenu(handlers: () => AppMenuHandlers) {
+export function subscribeToAppMenu(handlers: () => AppMenuHandlers) {
   $effect(() => {
     const unsubs: Array<() => void> = [];
     // Snapshot the handler map for this subscription round — listeners read

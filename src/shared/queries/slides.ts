@@ -13,9 +13,9 @@ import type { Project, Slide } from "$lib/types";
 import { projectKeys } from "./keys";
 import { queryClient } from "./query-client";
 import {
-  useProjectListInvalidatingMutation,
-  useSlideMutation,
-} from "./useProjectMutation";
+  projectListMutation,
+  slideMutation,
+} from "./mutation-policy";
 
 /**
  * Merge a slide returned by a settings/command response into the cached one
@@ -39,8 +39,8 @@ export function mergeSlidePreservingEditorCode(
   };
 }
 
-export function useUpdateSlideCode() {
-  return useProjectListInvalidatingMutation(
+export function updateSlideCodeMutation() {
+  return projectListMutation(
     ({ slideId, code }: { slideId: string; code: string }) =>
       enqueueCodeSave(slideId, code),
     {
@@ -107,8 +107,8 @@ function clearCommittedSlidePreview(slideId: string, payload: SlideSettingsPatch
   }
 }
 
-export function useUpdateSlideSettings(projectId: string) {
-  return useSlideMutation(
+export function updateSlideSettingsMutation(projectId: string) {
+  return slideMutation(
     projectId,
     ({ slideId, payload }: { slideId: string; payload: SlideSettingsPatch }) =>
       api.updateSlideSettings(slideId, payload),
@@ -170,8 +170,8 @@ export function useUpdateSlideSettings(projectId: string) {
   );
 }
 
-export function useCreateSlide(projectId: string) {
-  return useSlideMutation(
+export function createSlideMutation(projectId: string) {
+  return slideMutation(
     projectId,
     (opts?: { code?: string; name?: string }) => api.createSlide(projectId, opts),
     {
@@ -181,8 +181,8 @@ export function useCreateSlide(projectId: string) {
   );
 }
 
-export function useDeleteSlide(projectId: string) {
-  return useSlideMutation(
+export function deleteSlideMutation(projectId: string) {
+  return slideMutation(
     projectId,
     (slideId: string) => api.deleteSlide(projectId, slideId),
     {
@@ -194,8 +194,8 @@ export function useDeleteSlide(projectId: string) {
   );
 }
 
-export function useDuplicateSlide(projectId: string) {
-  return useSlideMutation(
+export function duplicateSlideMutation(projectId: string) {
+  return slideMutation(
     projectId,
     (slideId: string) => api.duplicateSlide(projectId, slideId),
     {
@@ -212,8 +212,8 @@ export function useDuplicateSlide(projectId: string) {
   );
 }
 
-export function useRestoreSlide(projectId: string) {
-  return useSlideMutation(
+export function restoreSlideMutation(projectId: string) {
+  return slideMutation(
     projectId,
     ({ slide, insertAt }: { slide: Slide; insertAt?: number }) =>
       api.restoreSlide(projectId, slide, insertAt),
@@ -227,8 +227,8 @@ export function useRestoreSlide(projectId: string) {
   );
 }
 
-export function useReorderSlides(projectId: string) {
-  return useSlideMutation(
+export function reorderSlidesMutation(projectId: string) {
+  return slideMutation(
     projectId,
     (slideIds: string[]) => api.reorderSlides(projectId, slideIds),
     {

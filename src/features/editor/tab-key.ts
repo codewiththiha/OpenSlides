@@ -13,7 +13,7 @@ function removeIndent(line: string): { line: string; removed: number } {
   return { line, removed: 0 };
 }
 
-export function useCodeEditorTabKey(args: UseCodeEditorTabKeyArgs) {
+export function createTabKeyHandler(args: UseCodeEditorTabKeyArgs) {
   /**
    * Handle Tab / Shift+Tab indentation. Multi-line selections operate on every
    * selected line; a single-line selection keeps the normal insert behavior.

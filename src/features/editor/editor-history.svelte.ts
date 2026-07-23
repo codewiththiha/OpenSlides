@@ -4,7 +4,7 @@ import {
   withoutRecording,
 } from "$lib/lib/editor-history";
 
-export function useEditorHistory(args: {
+export function createEditorHistory(args: {
   slideId: () => string | undefined;
   textarea: () => HTMLTextAreaElement | null;
   handleChange: (value: string) => void;

@@ -3,13 +3,13 @@ import { notify } from "$lib/lib/toast";
 import { api, isCancelledError, type SettingsPatch } from "$lib/lib/tauri-api";
 import { projectKeys } from "./keys";
 import { queryClient } from "./query-client";
-import { useProjectMutation } from "./useProjectMutation";
+import { projectMutation } from "./mutation-policy";
 import { showUndoToast } from "$lib/lib/settings-undo";
 import { clearPreviewProjectSetting } from "$lib/stores/ui-state.svelte";
 import type { PreviewProjectSettings } from "$lib/stores/types";
 import type { Project, ProjectSettings, ThemeName } from "$lib/types";
 
-export function useProjects() {
+export function projectsQuery() {
   return createQuery(
     () => ({
       queryKey: projectKeys.all,
@@ -23,7 +23,7 @@ export function useProjects() {
   );
 }
 
-export function useProject(projectId: string | undefined) {
+export function projectQuery(projectId: string | undefined) {
   return createQuery(
     () => ({
       queryKey: projectKeys.detail(projectId ?? ""),
@@ -34,30 +34,30 @@ export function useProject(projectId: string | undefined) {
   );
 }
 
-export function useCreateProject() {
-  return useProjectMutation((name: string) => api.createProject(name), {
+export function createProjectMutation() {
+  return projectMutation((name: string) => api.createProject(name), {
     onSuccess: () => notify.success("Presentation created"),
     onError: (err: Error) =>
       notify.error(`Couldn't create presentation: ${err.message}`),
   });
 }
 
-export function useDuplicateProject() {
-  return useProjectMutation((id: string) => api.duplicateProject(id), {
+export function duplicateProjectMutation() {
+  return projectMutation((id: string) => api.duplicateProject(id), {
     onSuccess: () => notify.success("Presentation duplicated"),
     onError: (err: Error) => notify.error(`Couldn't duplicate: ${err.message}`),
   });
 }
 
-export function useDeleteProject() {
-  return useProjectMutation((id: string) => api.deleteProject(id), {
+export function deleteProjectMutation() {
+  return projectMutation((id: string) => api.deleteProject(id), {
     onSuccess: () => notify.success("Presentation deleted"),
     onError: (err: Error) => notify.error(`Couldn't delete: ${err.message}`),
   });
 }
 
-export function useRenameProject() {
-  return useProjectMutation(
+export function renameProjectMutation() {
+  return projectMutation(
     ({ projectId, name }: { projectId: string; name: string }) =>
       api.renameProject(projectId, name),
     {
@@ -102,8 +102,8 @@ function describeProjectChange(
   return null;
 }
 
-export function useUpdateSettings(projectId: string) {
-  return useProjectMutation<Project, SettingsPatch, { before?: ProjectSettings }>(
+export function updateProjectSettingsMutation(projectId: string) {
+  return projectMutation<Project, SettingsPatch, { before?: ProjectSettings }>(
     (settings) => api.updateProjectSettings(projectId, settings),
     {
       onMutate: () => {
@@ -145,8 +145,8 @@ export function useUpdateSettings(projectId: string) {
   );
 }
 
-export function useUpdateTheme(projectId: string) {
-  return useProjectMutation(
+export function updateProjectThemeMutation(projectId: string) {
+  return projectMutation(
     (theme: ThemeName) => api.updateProjectTheme(projectId, theme),
     {
       onSuccess: (project) => {
@@ -157,7 +157,7 @@ export function useUpdateTheme(projectId: string) {
   );
 }
 
-export function useExportProject() {
+export function exportProjectMutation() {
   return createMutation(
     () => ({
       mutationFn: (projectId: string) => api.exportProjectToJson(projectId),
@@ -173,8 +173,8 @@ export function useExportProject() {
   );
 }
 
-export function useImportProject() {
-  return useProjectMutation<Project, void>(
+export function importProjectMutation() {
+  return projectMutation<Project, void>(
     () => api.importProjectFromJson(),
     {
       onSuccess: () => {

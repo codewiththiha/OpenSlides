@@ -1,5 +1,5 @@
 import { ui, setPreviewHighlightIndex } from "$lib/stores/ui-state.svelte";
-import { useUpdateSlideSettings } from "$lib/queries";
+import { updateSlideSettingsMutation } from "$lib/queries";
 import { selectionToRange } from "@/features/highlights/highlight-tokens";
 import { createDefaultHighlight } from "@/features/highlights/highlight-factory";
 import type { Highlight } from "$lib/types";
@@ -14,8 +14,8 @@ export interface HighlightCrudArgs {
   saveCaret: () => void;
 }
 
-export function useHighlightCrud(args: HighlightCrudArgs) {
-  const mutation = useUpdateSlideSettings(args.projectId);
+export function createHighlightCrud(args: HighlightCrudArgs) {
+  const mutation = updateSlideSettingsMutation(args.projectId);
 
   let visible = $state(false);
   let position = $state({ x: 0, y: 0 });
@@ -197,4 +197,4 @@ export function useHighlightCrud(args: HighlightCrudArgs) {
   };
 }
 
-export type HighlightCrudApi = ReturnType<typeof useHighlightCrud>;
+export type HighlightCrudApi = ReturnType<typeof createHighlightCrud>;

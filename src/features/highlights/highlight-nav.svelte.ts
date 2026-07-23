@@ -1,5 +1,5 @@
 /**
- * useHighlightNav — step-wise navigation state for "sub-slide" highlights.
+ * createHighlightNav — step-wise navigation state for "sub-slide" highlights.
  *
  * Presentation flow per slide:
  *   1. → reveals highlight #1 (intro: dim + erase + scale-up)
@@ -44,7 +44,7 @@ interface UseHighlightNavArgs {
   setCurrentSlideId: (id: string | null) => void;
 }
 
-export function useHighlightNav(args: UseHighlightNavArgs) {
+export function createHighlightNav(args: UseHighlightNavArgs) {
   /** True while an outro is playing and input is temporarily swallowed. */
   let highlightIndex = $state(-1);
   let pending: PendingNav | null = null;

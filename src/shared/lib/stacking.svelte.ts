@@ -6,7 +6,7 @@ import { findSingleMemberGroups } from "$lib/lib/stacking";
  * Effect only tracks `items` — the callbacks are read untracked so identity
  * changes don't retrigger dissolution.
  */
-export function useAutoDissolveStacks<T>(
+export function autoDissolveStacks<T>(
   items: () => T[],
   getGroupId: (i: T) => string | null | undefined,
   getId: (i: T) => string,
