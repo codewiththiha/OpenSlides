@@ -11,7 +11,7 @@
   import Button from "$lib/ui/Button.svelte";
   import { cn } from "$lib/lib/utils";
   import HighlightSettingsForm from "./HighlightSettingsForm.svelte";
-  import { EASE_DIM } from "./easings";
+  import { EASE_DIM } from "$lib/lib/easings";
   import type { Highlight } from "$lib/types";
 
   let {

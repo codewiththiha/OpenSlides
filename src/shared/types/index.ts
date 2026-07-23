@@ -26,23 +26,7 @@ export const SUPPORTED_LANGUAGES = [
   { value: "merustmar", label: "Merustmar" },
 ] as const;
 
-export type ThemeName =
-  | "dark-plus"
-  | "dracula"
-  | "github-dark"
-  | "github-light"
-  | "nord"
-  | "poimandres"
-  | "min-light"
-  | "min-dark"
-  | "monokai"
-  | "solarized-dark"
-  | "solarized-light"
-  | "andromeeda"
-  | "aurora-x"
-  | "catppuccin-latte"
-  | "catppuccin-mocha"
-  | "night-owl";
+export type { ThemeName } from "$lib/lib/theme-meta";
 
 export {
   THEMES,

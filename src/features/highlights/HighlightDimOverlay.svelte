@@ -10,7 +10,7 @@
   import { untrack } from "svelte";
   import { Tween } from "svelte/motion";
   import { fade } from "svelte/transition";
-  import { EASE_DIM } from "./easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   let {
     dimAmount,

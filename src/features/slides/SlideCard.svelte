@@ -6,7 +6,7 @@
 <script lang="ts">
   import { cn } from "$lib/lib/utils";
   import { slideDisplayName, themeBackground, type Slide } from "$lib/types";
-  import { createSlideThumbnail } from "@/features/slides/slide-thumbnail.svelte";
+  import { createSlideThumbnail } from "$lib/shiki/slide-thumbnail.svelte";
   import { ui, setCurrentSlideId } from "$lib/stores/ui-state.svelte";
   import { localCode } from "$lib/stores/slide-code.svelte";
   import SearchSnippet from "./SearchSnippet.svelte";

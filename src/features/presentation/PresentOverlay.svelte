@@ -4,7 +4,7 @@
    * HighlightStepIndicator is clickable to jump to steps.
    * Presentation timer + progress bar for autoplay (UI animation only).
    */
-  import SlidePreview from "$lib/components/SlidePreview.svelte";
+  import SlidePreview from "@/features/preview/SlidePreview.svelte";
   import HighlightStepIndicator from "@/features/highlights/HighlightStepIndicator.svelte";
   import ProgressBar from "$lib/ui/ProgressBar.svelte";
   import AutoplayTimerChip from "@/features/presentation/AutoplayTimerChip.svelte";

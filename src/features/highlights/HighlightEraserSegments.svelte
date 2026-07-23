@@ -9,7 +9,7 @@
   import { fade } from "svelte/transition";
   import type { HighlightMeasurement } from "@/features/highlights/highlight-utils";
   import type { HighlightPlan } from "@/features/highlights/highlight-tokens";
-  import { EASE_DIM } from "./easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   let {
     highlightId,

@@ -5,7 +5,7 @@
   import type { Component } from "svelte";
   import { CheckSquare, Pencil, SquareDashedMousePointer } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
-  import { EASE_DIM } from "@/features/highlights/easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   let {
     open,

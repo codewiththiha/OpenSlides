@@ -8,7 +8,7 @@
   import { fade } from "svelte/transition";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { modKeyLabel } from "$lib/lib/platform";
-  import { EASE_DIM } from "@/features/highlights/easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   let {
     open,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SlidePreview from "$lib/components/SlidePreview.svelte";
+  import SlidePreview from "@/features/preview/SlidePreview.svelte";
   import RenderBoundary from "$lib/components/RenderBoundary.svelte";
   import HighlightStepIndicator from "@/features/highlights/HighlightStepIndicator.svelte";
   import type { Project, Slide } from "$lib/types";
