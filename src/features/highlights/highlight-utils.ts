@@ -186,6 +186,21 @@ export function measureHighlight(
 }
 
 /**
+ * True when `measurement` was produced from THIS plan object — segments
+ * reference `plan.lines` members by identity in every measure path. Guards
+ * the layer against the in-flight window where a NEW plan is resolved but
+ * the previous measurement (from the OLD plan) hasn't been recomputed yet.
+ */
+export function measurementMatchesPlan(
+  plan: HighlightPlan,
+  measurement: HighlightMeasurement,
+): boolean {
+  return measurement.segments.every((s) =>
+    plan.lines.some((l) => l === s.line),
+  );
+}
+
+/**
  * Pure-math measurement — no Range, <0.1ms, 60fps.
  */
 export function measureHighlightPureMath(

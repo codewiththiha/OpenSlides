@@ -54,13 +54,15 @@ During presentation the same layer drives the "everything dims except the
 active highlight" step reveal; `HighlightStepIndicator` shows progress and
 `PresentOverlay`/`PreviewPane` pass `activeHighlightIndex` down.
 
-- Step changes are **sequential**: a click plays the current highlight's
-  outro fully (dim held, clone scales down + fades) and only then the next
-  highlight's intro — never a crossfade. `createHighlightNav` parks
-  `highlightIndex` at -1 with the next step queued in `pending`;
-  `nav.spotlightActive` is threaded down so only the dim overlay survives
-  the gap (`HighlightLayer` also caches the last highlight so a held dim
-  keeps its custom amount/duration).
+- Step changes **overlap**: the nav steps `highlightIndex` directly and the
+  incoming intro starts together with the outgoing outro. `HighlightLayer`
+  never renders from the async plan/measurement pipeline directly — it
+  snapshots the last fully measured step (`visual`, identity-checked
+  against its plan via `measurementMatchesPlan`) and swaps only when the
+  incoming step is ready. Anything that was ever on screen keeps a real,
+  measured clone, so the outgoing outro **always plays**; a click landing
+  mid-tokenize just never mounts the skipped step. Same-id refreshes
+  (live preview edits, re-measures) update the snapshot without re-keying.
 - There are **no painted panels over the code** (the old eraser boxes /
   `mixTowardBlack` read as black slabs and were deleted). Instead
   `createHighlightUnderlay` fades the ORIGINAL token spans of the

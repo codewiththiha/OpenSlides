@@ -8,14 +8,12 @@
     project,
     activeSlide,
     effectiveHighlight,
-    spotlightActive = false,
     onHighlightExitComplete,
     onSelectHighlight,
   }: {
     project: Project;
     activeSlide?: Slide;
     effectiveHighlight: number;
-    spotlightActive?: boolean;
     onHighlightExitComplete: () => void;
     onSelectHighlight: (index: number) => boolean;
   } = $props();
@@ -29,7 +27,6 @@
           {project}
           slideId={activeSlide?.id}
           activeHighlightIndex={effectiveHighlight}
-          {spotlightActive}
           {onHighlightExitComplete}
         />
       </RenderBoundary>

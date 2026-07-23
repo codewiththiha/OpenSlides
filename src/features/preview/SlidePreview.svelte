@@ -28,7 +28,6 @@
     slideId,
     isPresenting = false,
     activeHighlightIndex = -1,
-    spotlightActive = false,
     onHighlightExitComplete,
   }: {
     project: Project;
@@ -36,8 +35,6 @@
     slideId?: string;
     isPresenting?: boolean;
     activeHighlightIndex?: number;
-    /** Keep the dim mounted while a step outro plays before the next intro. */
-    spotlightActive?: boolean;
     onHighlightExitComplete?: () => void;
   } = $props();
 
@@ -133,7 +130,6 @@
       language={() => shiki.displayLanguage}
       fontSize={() => previewFontSize}
       lineHeight={() => lineHeight}
-      {spotlightActive}
       onExitComplete={onHighlightExitComplete}
     />
   </PreviewStage>
