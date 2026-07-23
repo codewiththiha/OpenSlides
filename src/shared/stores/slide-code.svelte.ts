@@ -6,7 +6,7 @@
  * A's card and nothing else.
  */
 
-export const localCode = $state<Record<string, string>>({});
+const localCode = $state<Record<string, string>>({});
 
 interface SlideLike {
   id: string;

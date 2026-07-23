@@ -196,5 +196,3 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     previewHighlight,
   };
 }
-
-export type HighlightCrudApi = ReturnType<typeof createHighlightCrud>;

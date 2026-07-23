@@ -3,7 +3,7 @@
  */
 import type { Slide } from "$lib/types";
 
-export interface StackHoverRect {
+interface StackHoverRect {
   left: number;
   right: number;
   top: number;

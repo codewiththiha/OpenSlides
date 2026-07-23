@@ -16,7 +16,7 @@ function isLightTheme(theme: string): boolean {
   return THEME_MAP.get(theme as ThemeName)?.light ?? false;
 }
 
-export function isDarkTheme(theme: string): boolean {
+function isDarkTheme(theme: string): boolean {
   return !isLightTheme(theme);
 }
 

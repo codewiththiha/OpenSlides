@@ -40,7 +40,7 @@ export interface SelectionRange {
 
 /** One styled run of raw text. `fontStyle` uses Shiki's bitflags
  *  (1 = italic, 2 = bold, 4 = underline); Merustmar tokens never set it. */
-export interface HighlightToken {
+interface HighlightToken {
   content: string;
   color?: string;
   bgColor?: string;

@@ -4,7 +4,7 @@
  * place. Listener helpers return an unlisten function for `$effect` cleanup.
  */
 
-export const APP_EVENTS = {
+const APP_EVENTS = {
   openSearch: "openslides:open-search",
   findInCode: "openslides:find-in-code",
   undo: "openslides:undo",

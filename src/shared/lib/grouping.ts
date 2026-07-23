@@ -1,4 +1,4 @@
-export type ChunkKind = "single" | "stack";
+type ChunkKind = "single" | "stack";
 
 export interface GroupChunk<T> {
   kind: ChunkKind;

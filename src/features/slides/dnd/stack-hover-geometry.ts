@@ -5,10 +5,10 @@
  */
 import type { StackHoverElement } from "./dnd-types";
 
-export const STACK_ENTER_X = 0.16;
-export const STACK_ENTER_Y = 0.12;
-export const STACK_EXIT_X = 0.05;
-export const STACK_EXIT_Y = 0.04;
+const STACK_ENTER_X = 0.16;
+const STACK_ENTER_Y = 0.12;
+const STACK_EXIT_X = 0.05;
+const STACK_EXIT_Y = 0.04;
 
 export function findStackHoverId(opts: {
   pointer: { x: number; y: number };

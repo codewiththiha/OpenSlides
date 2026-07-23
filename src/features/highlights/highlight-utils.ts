@@ -12,14 +12,14 @@ import { getLineTextNodes } from "$lib/lib/line-nodes-cache";
 import { measureCharWidth } from "$lib/lib/char-width-cache";
 export { measureCharWidth } from "$lib/lib/char-width-cache";
 
-export interface HighlightLineRect {
+interface HighlightLineRect {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-export interface MeasuredSegment {
+interface MeasuredSegment {
   line: HighlightPlanLine;
   rect: HighlightLineRect;
 }

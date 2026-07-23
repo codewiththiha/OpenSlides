@@ -4,7 +4,7 @@
  */
 import type { FinalizeDecision, StripItemLike } from "./dnd-types";
 
-export function idsEqual(a: string[], b: string[]): boolean {
+function idsEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => b[i] === v);
 }
 
