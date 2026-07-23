@@ -53,9 +53,10 @@ export default tseslint.config(
   },
   // §7.2 ui mutation discipline: components mutate `ui` only through the
   // setters exported by the store — never with direct ui.x = assignments.
+  // (The setters themselves live in the ui/ slices.)
   {
     files: ["src/**/*.{ts,svelte}"],
-    ignores: ["src/shared/stores/ui-state.svelte.ts"],
+    ignores: ["src/shared/stores/ui/**"],
     rules: {
       "no-restricted-syntax": [
         "error",
