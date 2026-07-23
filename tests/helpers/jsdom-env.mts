@@ -41,6 +41,7 @@ g.DocumentType = dom.window.DocumentType;
 g.SVGElement = dom.window.SVGElement;
 g.HTMLTemplateElement = dom.window.HTMLTemplateElement;
 g.Event = dom.window.Event;
+g.CustomEvent = dom.window.CustomEvent;
 g.KeyboardEvent = dom.window.KeyboardEvent;
 g.MouseEvent = dom.window.MouseEvent;
 g.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
