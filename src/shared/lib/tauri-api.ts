@@ -29,9 +29,9 @@ export type SettingsPatch = Partial<ProjectSettings>;
  * across the IPC bridge.
  */
 /** Error codes the backend sends in its structured { code, message } shape. */
-export type CommandErrorCode = "CANCELLED" | "ERROR";
+type CommandErrorCode = "CANCELLED" | "ERROR";
 
-export interface CommandError extends Error {
+interface CommandError extends Error {
   code?: CommandErrorCode;
 }
 

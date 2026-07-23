@@ -29,7 +29,7 @@ const focus = (
  * An original six-slide TypeScript story. Each slide reshapes the same idea
  * so Magic Move has meaningful changes to animate instead of simple additions.
  */
-export const STARTER_PRESENTATION: readonly StarterSlide[] = [
+const STARTER_PRESENTATION: readonly StarterSlide[] = [
   {
     name: "1. Open with an idea",
     code: `// Every presentation starts with one clear idea.

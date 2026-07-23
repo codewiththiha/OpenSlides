@@ -7,7 +7,7 @@ import {
   type ShikiDisplayStatus,
 } from "./shiki-policies";
 
-export interface ShikiHighlighterDisplayArgs {
+interface ShikiHighlighterDisplayArgs {
   theme: string;
   language: string;
   enabled?: boolean;
@@ -18,7 +18,7 @@ export interface ShikiHighlighterDisplayArgs {
   >;
 }
 
-export function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
+function shikiHighlighterDisplay(args: () => ShikiHighlighterDisplayArgs) {
   const resolvedPolicy = $derived(
     resolvePolicy(args().policyName ?? "magicMove", args().policy),
   );

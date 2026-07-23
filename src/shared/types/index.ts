@@ -4,7 +4,7 @@
  * these types mirror the IPC JSON contracts.
  */
 
-export type CodeAlign = "left" | "center";
+type CodeAlign = "left" | "center";
 
 export const SUPPORTED_LANGUAGES = [
   { value: "typescript", label: "TypeScript" },
@@ -29,10 +29,8 @@ export const SUPPORTED_LANGUAGES = [
 export type { ThemeName } from "$lib/lib/theme-meta";
 
 export {
-  THEMES,
   THEME_OPTIONS,
   themeBackground,
-  isDarkTheme,
   fallbackForeground,
 } from "$lib/lib/themes";
 

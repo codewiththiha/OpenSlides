@@ -235,7 +235,7 @@ export function clearAllPreviewSettings() {
 /* ------------------------------------------------------------------ */
 /* Cross-cutting actions                                               */
 /* ------------------------------------------------------------------ */
-export { setLocalCode, clearLocalCode } from "./slide-code.svelte";
+export { clearLocalCode } from "./slide-code.svelte";
 
 export function resetEditorUi() {
   clearAllLocalCode();

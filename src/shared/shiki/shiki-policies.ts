@@ -21,7 +21,7 @@ export interface ShikiDisplayPolicy {
   maxCodeLength: number;
 }
 
-export const SHIKI_DISPLAY_POLICIES = {
+const SHIKI_DISPLAY_POLICIES = {
   /** Editor overlay: keep current same-document HTML while typing, clear unsafe states. */
   editor: {
     loadingPolicy: "keep-last",

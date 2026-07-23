@@ -24,13 +24,6 @@ export function previewHighlightSettings(
   return highlightId ? ui.previewHighlights.get(highlightId) : undefined;
 }
 
-export function previewHighlightSetting<K extends keyof Highlight>(
-  highlightId: string,
-  key: K,
-): Highlight[K] | undefined {
-  return ui.previewHighlights.get(highlightId)?.[key];
-}
-
 export function previewMergedHighlights<T extends Highlight>(
   highlights: readonly T[],
 ): T[] {

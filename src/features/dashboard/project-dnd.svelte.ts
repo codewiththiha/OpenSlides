@@ -112,7 +112,7 @@ function cleanup() {
   document.documentElement.classList.remove(ACTIVE_CLASS);
 }
 
-export function cancelProjectDrag() {
+function cancelProjectDrag() {
   cleanup();
   projectDnd.session = null;
 }

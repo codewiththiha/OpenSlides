@@ -5,8 +5,8 @@
  */
 import { applyUiTheme } from "./theme";
 
-export const UI_STORAGE_KEY = "openslides-ui";
-export const UI_STORAGE_VERSION = 2;
+const UI_STORAGE_KEY = "openslides-ui";
+const UI_STORAGE_VERSION = 2;
 export const DEFAULT_CODE_SIZE = 42;
 export const DEFAULT_SLIDES_SIZE = 14;
 

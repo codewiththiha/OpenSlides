@@ -15,8 +15,6 @@ export const SHORTCUTS = {
   duplicateSlide: { keys: ["mod", "Shift", "D"], description: "Duplicate slide" },
 } as const;
 
-export type ShortcutKey = keyof typeof SHORTCUTS;
-
 /** Convert a definition into a Tauri menu accelerator string. */
 export function shortcutAccelerator(def: { keys: readonly string[] }): string {
   return def.keys.map((k) => (k === "mod" ? "CmdOrCtrl" : k)).join("+");

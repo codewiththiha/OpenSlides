@@ -4,7 +4,7 @@
  * from memory and every write mutates it, mirroring the Rust backend's
  * contracts closely enough for UI-level navigation tests.
  */
-import type { Project, ProjectSummary, Slide } from "../../src/types.ts";
+import type { Project, ProjectSummary, Slide } from "../../src/shared/types";
 
 let db = new Map<string, Project>();
 let seq = 0;
