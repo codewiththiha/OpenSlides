@@ -16,7 +16,6 @@ import assert from "node:assert/strict";
 import {
   buildPlan,
   decompose,
-  mixTowardBlack,
   plainTokenLines,
   renderTokensToSpans,
   selectionToRange,
@@ -119,7 +118,7 @@ test("buildPlan: dense entries over empty line (saga bug #3) + selectedText", ()
   const tokens = CODE.split("\n").map((l) => [
     { content: l, color: "#abb2bf" },
   ]);
-  const plan = buildPlan(CODE, tokens, rng(0, 8, 4, 6), "#1e1e1e", 75);
+  const plan = buildPlan(CODE, tokens, rng(0, 8, 4, 6));
   assert.deepEqual(
     plan.lines.map((l) => [l.lineIndex, l.startChar, l.endChar, l.isEmpty]),
     [
@@ -138,37 +137,15 @@ test("buildPlan: dense entries over empty line (saga bug #3) + selectedText", ()
 });
 
 test("buildPlan: null tokens → plain fallback (escaped, uncolored)", () => {
-  const plan = buildPlan("a<b\ncde", null, rng(0, 0, 1, 2), "#000000", 75);
+  const plan = buildPlan("a<b\ncde", null, rng(0, 0, 1, 2));
   assert.equal(plan.lines[0].html, "a&lt;b");
   assert.equal(plan.lines[1].html, "cd");
 });
 
 test("buildPlan: whitespace-only slice on a token line stays colored", () => {
   const tokens: HighlightTokenLine[] = [[{ content: "   ", color: "#abb2bf" }]];
-  const plan = buildPlan("   ", tokens, rng(0, 0, 0, 2), "#000000", 75);
+  const plan = buildPlan("   ", tokens, rng(0, 0, 0, 2));
   assert.equal(plan.lines[0].html, '<span style="color:#abb2bf">  </span>');
-});
-
-test("buildPlan: eraser color mixes theme bg toward black", () => {
-  const plan = buildPlan(
-    "x",
-    plainTokenLines("x"),
-    rng(0, 0, 0, 1),
-    "#ff0000",
-    50,
-  );
-  assert.equal(plan.eraserColor, "rgb(128, 0, 0)");
-});
-
-test("mixTowardBlack: ports the deleted Rust mixer semantics", () => {
-  assert.equal(mixTowardBlack("#1e1e1e", 75), "rgb(8, 8, 8)"); // 30 × 0.25 = 7.5 → 8
-  assert.equal(mixTowardBlack("#ff0000", 0), "rgb(255, 0, 0)");
-  assert.equal(mixTowardBlack("#ff0000", 100), "rgb(0, 0, 0)");
-  assert.equal(mixTowardBlack("#ff0000", 150), "rgb(0, 0, 0)"); // clamped
-  assert.equal(mixTowardBlack("#ff0000", -5), "rgb(255, 0, 0)"); // clamped
-  assert.equal(mixTowardBlack("#fff", 50), "#fff"); // non-6-digit passes through
-  assert.equal(mixTowardBlack("rgb(1,2,3)", 50), "rgb(1,2,3)");
-  assert.equal(mixTowardBlack("  #00ff00  ", 50), "rgb(0, 128, 0)"); // trimmed
 });
 
 test("selectionToRange: flat offsets (UTF-16) → line/char, order-normalized", () => {
