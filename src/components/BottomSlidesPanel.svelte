@@ -8,10 +8,13 @@
    *  - `dndzone` (svelte-dnd-action) over VISIBLE items: one item per single
    *    slide / collapsed stack / fanned-out stack wrapper. Reorders map back
    *    to chunk-level arrayMove exactly like the React version.
-   *  - Stack drops are detected with a pointer tracker: center-region
-   *    overlays (data-stack-target feedback; hit zones via data-stack-card)
-   *    are hit-tested via elementsFromPoint — same "center means stack,
-   *    edges mean reorder" rule as the dnd-kit droppables.
+   *  - Stack drops are detected with a pointer tracker: rect-math hit zones
+   *    on data-stack-card wrappers (data-stack-target overlays are pure
+   *    feedback) — same "center means stack, edges mean reorder" rule as
+   *    the dnd-kit droppables. While the pointer sits inside a stack zone,
+   *    consider-events are NOT applied, so the receiver card can't slide
+   *    out from under the cursor (svelte-dnd-action keeps re-firing, we
+   *    keep declining until the pointer leaves the zone).
    *  - The dragged clone (lib-generated) replaces DragOverlay; a dashed
    *    shadow placeholder marks the insertion slot (bounded FLIP of the rest).
    */
@@ -289,20 +292,31 @@
 
   function handleConsider(e: CustomEvent<DndEvent<StripItem>>) {
     const { items: next, info } = e.detail;
-    dndItems = next;
+
+    // ── Drag start: always apply so the shadow placeholder appears ──
     if (info.trigger === TRIGGERS.DRAG_STARTED && info.source === SOURCES.POINTER) {
       draggingId = String(info.id);
       dragSource = dndItems.find((i) => i.id === draggingId) ?? null;
       window.addEventListener("pointermove", onPointerMove);
+      dndItems = next; // shadow placeholder replaces the dragged card
+      return;
     }
-    if (
-      info.trigger === TRIGGERS.DRAGGED_OVER_INDEX ||
-      info.trigger === TRIGGERS.DRAGGED_ENTERED ||
-      info.trigger === TRIGGERS.DRAGGED_LEFT
-    ) {
-      // Zone content shifted under a stationary pointer – re-hit-test.
-      updateStackHover();
+
+    // ── Hit-test BEFORE applying the reorder ──
+    // The DOM still shows the pre-reorder layout (Svelte batches updates),
+    // so the rects match exactly what the user sees right now.
+    updateStackHover();
+
+    if (stackHoverId) {
+      // Pointer is inside a card's stack zone → suppress the reorder so
+      // the target card doesn't slide away from under the cursor.
+      // svelte-dnd-action will keep firing consider; we keep saying "no"
+      // until the pointer leaves the stack zone.
+      return; // ← dndItems is NOT updated → no visual reorder
     }
+
+    // ── Normal reorder mode (pointer near card edges) ──
+    dndItems = next;
   }
 
   function arraysEqual(a: string[], b: string[]) {
