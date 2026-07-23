@@ -19,6 +19,7 @@
   import { createSlideCardHoverPreview } from "./slide-card-preview.svelte";
 
   import { consumeSlideCardActions } from "./slide-card-actions.svelte";
+  import { handleSlideCardKeyDown } from "./slide-card-keyboard";
 
   let {
     slide,
@@ -100,54 +101,16 @@
     };
   }
 
-  function handleCardKeyDown(e: KeyboardEvent & { currentTarget: HTMLDivElement }) {
-    if (e.target !== e.currentTarget || isRenaming) return;
-
-    if (isMultiSelectMode && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      e.stopPropagation();
-      cardActions.toggleMultiSelect(slide.id);
-      return;
-    }
-
-    if (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "Home" || e.key === "End") {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!cardRefs || navigationIds.length === 0) return;
-      const currentIndex = navigationIds.indexOf(slide.id);
-      const nextIndex =
-        e.key === "Home"
-          ? 0
-          : e.key === "End"
-            ? navigationIds.length - 1
-            : (currentIndex + (e.key === "ArrowRight" ? 1 : -1) + navigationIds.length) %
-              navigationIds.length;
-      const next = cardRefs.get(navigationIds[nextIndex]);
-      next?.focus();
-      next?.scrollIntoView({ inline: "nearest", block: "nearest" });
-      return;
-    }
-
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      e.stopPropagation();
-      setCurrentSlideId(slide.id);
-      return;
-    }
-
-    if (e.key === "Delete" || e.key === "Backspace") {
-      e.preventDefault();
-      e.stopPropagation();
-      cardActions.remove(slide.id);
-      return;
-    }
-
-    if (e.key === "F2") {
-      e.preventDefault();
-      e.stopPropagation();
-      cardActions.startRename(slide.id, title);
-    }
-  }
+  const onCardKeyDown = (e: KeyboardEvent & { currentTarget: HTMLDivElement }) =>
+    handleSlideCardKeyDown(e, {
+      slideId: slide.id,
+      title,
+      isRenaming,
+      isMultiSelectMode,
+      navigationIds,
+      cardRefs,
+      actions: cardActions,
+    });
 </script>
 
 <div
@@ -157,7 +120,7 @@
   role="option"
   aria-selected={isSelected}
   tabindex={isTabStop ? 0 : -1}
-  onkeydown={handleCardKeyDown}
+  onkeydown={onCardKeyDown}
   class={cn(
     "group relative flex h-[118px] min-w-0 shrink-0 cursor-pointer select-none flex-col gap-1 self-center overflow-hidden rounded-md border p-2 will-change-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
     isSelected
