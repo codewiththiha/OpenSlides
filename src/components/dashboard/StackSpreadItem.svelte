@@ -13,6 +13,25 @@
   import { computeFanLayout } from "@/lib/stacking";
   import ProjectCard from "./ProjectCard.svelte";
   import { beginProjectDrag, projectDnd } from "@/lib/project-dnd.svelte";
+  import { EASE_DIM } from "../highlights/easings";
+
+  /** Intro: slide up + fade combined, staggered per index. */
+  function riseFade(
+    _node: Element,
+    {
+      duration = 300,
+      delay = 0,
+      y = 18,
+      easing = EASE_DIM,
+    }: { duration?: number; delay?: number; y?: number; easing?: (t: number) => number } = {},
+  ) {
+    return {
+      duration,
+      delay,
+      easing,
+      css: (t: number) => `opacity: ${t}; transform: translateY(${(1 - t) * y}px);`,
+    };
+  }
 
   const CARD_WIDTH = 220;
   const CARD_HEIGHT = 180;
@@ -85,7 +104,7 @@
       session.active,
   );
 
-  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 50);
+  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 35);
 
   const originState = $derived({
     left: originLeft,
@@ -103,7 +122,7 @@
       left: originLeft,
       top: originTop,
       scale: 0.5,
-      opacity: 0,
+      opacity: 1, // fade-in is owned by the riseFade intro transition
       rotate: 0,
     })),
     SPRING_OPTS,
@@ -149,21 +168,23 @@
     : 30 + index}; left: {pos.current.left}px; top: {pos.current.top}px; transform: scale({pos
     .current.scale}) rotate({pos.current.rotate}deg); opacity: {pos.current.opacity};"
 >
-  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
-    <ProjectCard
-      {project}
-      {isRenaming}
-      {renameValue}
-      {onRenameValueChange}
-      {onCommitRename}
-      {onCancelRename}
-      {onStartRename}
-      {onOpen}
-      {onDuplicate}
-      {onExport}
-      {onDelete}
-      {duplicateBusy}
-      {commitBusy}
-    />
+  <div in:riseFade={{ duration: 300, delay: delayMs, y: 18 }}>
+    <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+      <ProjectCard
+        {project}
+        {isRenaming}
+        {renameValue}
+        {onRenameValueChange}
+        {onCommitRename}
+        {onCancelRename}
+        {onStartRename}
+        {onOpen}
+        {onDuplicate}
+        {onExport}
+        {onDelete}
+        {duplicateBusy}
+        {commitBusy}
+      />
+    </div>
   </div>
 </div>

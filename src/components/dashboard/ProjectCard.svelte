@@ -43,7 +43,7 @@
 </script>
 
 <Card
-  class="group relative h-[180px] cursor-pointer overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
+  class="group relative h-[180px] cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg"
   onclick={() => {
     if (!isRenaming) onOpen(project.id);
   }}

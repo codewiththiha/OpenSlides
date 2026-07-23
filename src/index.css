@@ -347,9 +347,19 @@
   .openslides-progress-anim { animation: none !important; transform: scaleX(1); }
 }
 
-/* Pointer-drag sessions (dashboard project stacks) */
+/* Dashboard drag: block text selection + native drag ghosts while a
+   project-dnd session is active (class toggled in lib/project-dnd.svelte.ts). */
 .project-dnd-active,
 .project-dnd-active * {
   user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.project-dnd-active {
   cursor: grabbing !important;
+}
+
+.project-dnd-active img {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
