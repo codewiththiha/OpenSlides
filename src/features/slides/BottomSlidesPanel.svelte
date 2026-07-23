@@ -1,39 +1,33 @@
 <script lang="ts">
   /**
-   * Horizontal slide strip (Svelte 5 port).
+   * Horizontal slide strip.
    *
-   * React rendered a @dnd-kit DndContext + SortableContext over ALL slide ids
-   * with per-chunk sortable items, center-only stack drop targets, and a
-   * DragOverlay clone. Here:
    *  - `dndzone` (svelte-dnd-action) over VISIBLE items: one item per single
    *    slide / collapsed stack / fanned-out stack wrapper. Reorders map back
-   *    to chunk-level arrayMove exactly like the React version.
+   *    to chunk-level arrayMove over the underlying slide order.
    *  - Stack drops are detected with a pointer tracker: rect-math hit zones
    *    on data-stack-card wrappers (data-stack-target overlays are pure
-   *    feedback) — same "center means stack, edges mean reorder" rule as
-   *    the dnd-kit droppables. While the pointer sits inside a stack zone,
-   *    consider-events are NOT applied, so the receiver card can't slide
-   *    out from under the cursor (svelte-dnd-action keeps re-firing, we
-   *    keep declining until the pointer leaves the zone). Reorders that DO
-   *    apply are placed by the POINTER (lib/stack-targeting), not by the
-   *    clone's center — otherwise the center crosses a card's midpoint
-   *    while the pointer is still short of it and the receiver keeps
-   *    hopping to the far side of the cursor.
-   *  - The dragged clone (lib-generated) replaces DragOverlay; a dashed
-   *    shadow placeholder marks the insertion slot (bounded FLIP of the rest).
+   *    feedback) — "center means stack, edges mean reorder". While the
+   *    pointer sits inside a stack zone, consider-events are NOT applied,
+   *    so the receiver card can't slide out from under the cursor
+   *    (svelte-dnd-action keeps re-firing, we keep declining until the
+   *    pointer leaves the zone). Reorders that DO apply are placed by the
+   *    POINTER (lib/stack-targeting), not by the dragged clone's center —
+   *    otherwise the center crosses a card's midpoint while the pointer is
+   *    still short of it and the receiver keeps hopping to the far side of
+   *    the cursor.
+   *  - The dragged clone (lib-generated) provides the drag preview; a
+   *    dashed shadow placeholder marks the insertion slot (bounded FLIP of
+   *    the rest).
    */
   import { untrack } from "svelte";
-  import {
-    dndzone,
-    TRIGGERS,
-    SOURCES,
-    type DndEvent,
-  } from "svelte-dnd-action";
+  import { dndzone } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
   import { Plus } from "@lucide/svelte";
   import { SvelteSet } from "svelte/reactivity";
   import { resolveProjectLanguage, type Project, type Slide } from "$lib/types";
-  import { pointerInsertIndex, shadowInsertAt } from "$lib/lib/stack-targeting";
+  import { createSlideStripState, type StripItem } from "./slide-strip-state.svelte";
+  import { createSlideStripDnd } from "./slide-dnd.svelte";
   import { createSlideStripSearch } from "@/features/slides/slide-search.svelte";
   import { createRenameState } from "$lib/lib/rename-state.svelte";
   import { createAddSlide } from "@/features/slides/add-slide.svelte";
@@ -55,7 +49,6 @@
     setCurrentSlideId,
     setIsBottomPanelCollapsed,
   } from "$lib/stores/ui-state.svelte";
-  import { chunkConsecutive } from "$lib/lib/grouping";
   import { autoDissolveStacks } from "$lib/lib/stacking.svelte";
   import { updateSlideSettingsMutation } from "$lib/queries";
   import { isTypingTarget } from "$lib/lib/keyboard";
@@ -71,25 +64,7 @@
     activeHighlightIndex?: number;
   } = $props();
 
-  interface StripItem {
-    id: string;
-    slides: Slide[];
-    groupId: string | null;
-    /** Whole section fanned out inside one wrapper item. */
-    expanded: boolean;
-    isDndShadowItem?: boolean;
-  }
-
   const FLIP_MS = 150;
-  const DRAGGED_CLONE_SELECTOR = "#dnd-action-dragged-el";
-
-  /* Stack targeting geometry — fractions of a card rect.
-     ENTER = visible dashed zone; EXIT = larger "stay" region so pointer
-     jitter near the edge doesn't drop the target (hysteresis). */
-  const STACK_ENTER_X = 0.16;
-  const STACK_ENTER_Y = 0.12;
-  const STACK_EXIT_X = 0.05;
-  const STACK_EXIT_Y = 0.04;
 
   const isCollapsed = $derived(collapsed ?? ui.isBottomPanelCollapsed);
 
@@ -112,51 +87,28 @@
     unstackSlides,
   );
 
-  let expandedSectionId = $state<string | null>(null);
 
-  /* Local working copy of the slide order (React's `ordered` state): keeps
-   * optimistic reorders/renames while the query cache catches up. */
-  let ordered = $state<Slide[]>([]);
-  $effect(() => {
-    const src = project.slides;
-    untrack(() => {
-      if (
-        ordered.length !== src.length ||
-        src.some((s, i) => ordered[i] !== s)
-      ) {
-        ordered = src;
-      }
-    });
-  });
-
-  /* Roving-focus bookkeeping (plain, non-reactive structures). */
-  const cardRefs = new Map<string, HTMLDivElement>();
-  const pendingFocusId = { current: null as string | null };
-
-  function registerCardRef(id: string, node: HTMLDivElement | null) {
-    if (node) cardRefs.set(id, node);
-    else cardRefs.delete(id);
-  }
-
-  $effect(() => {
-    void ordered;
-    const id = pendingFocusId.current;
-    if (!id) return;
-    untrack(() => {
-      const node = cardRefs.get(id);
-      if (!node) return;
-      node.focus();
-      node.scrollIntoView({ inline: "nearest", block: "nearest" });
-      pendingFocusId.current = null;
-    });
-  });
 
   const search = createSlideStripSearch({
     projectId,
-    ordered: () => ordered,
+    ordered: () => strip.ordered,
   });
   const searchQuery = $derived(search.searchQuery);
   const filteredOrdered = $derived(search.filteredOrdered);
+
+  const strip = createSlideStripState({
+    slides: () => project.slides,
+    filteredOrdered: () => filteredOrdered,
+  });
+  const dnd = createSlideStripDnd({
+    baseItems: () => strip.baseItems,
+    filtering: () => searchQuery.trim().length > 0,
+    resolveSourceIds,
+    ordered: () => strip.ordered,
+    setOrdered: (slides) => (strip.ordered = slides),
+    onStack: stackSlides,
+    onReorder: (ids, opts) => reorderSlides(ids, opts),
+  });
 
   const selectedSlideIds = new SvelteSet<string>();
   let isMultiSelectMode = $state(false);
@@ -188,7 +140,7 @@
         { slideId: id, payload: { name: finalName } },
         {
           onSuccess: () => {
-            ordered = ordered.map((s) => (s.id === id ? { ...s, name: finalName } : s));
+            strip.ordered = strip.ordered.map((s) => (s.id === id ? { ...s, name: finalName } : s));
             resolve();
           },
           onError: () => resolve(),
@@ -198,183 +150,16 @@
   });
 
   const deleter = createSlideDeleter(projectId, {
-    ordered: () => ordered,
+    ordered: () => strip.ordered,
     renamingId: () => rename.renamingId,
-    pendingFocusId,
+    pendingFocusId: strip.pendingFocusId,
   });
 
-  const slideChunks = $derived(chunkConsecutive(filteredOrdered));
-  const navIds = $derived(filteredOrdered.map((s) => s.id));
-  const tabStopId = $derived(
-    filteredOrdered.find((s) => s.id === ui.currentSlideId)?.id ?? filteredOrdered[0]?.id,
-  );
 
-  /* ------------------------ DnD (svelte-dnd-action) ---------------------- */
-  const baseItems = $derived.by(() =>
-    slideChunks.map((chunk) => {
-      const isStack = chunk.kind === "stack" && chunk.items.length > 1;
-      const expanded = isStack && chunk.groupId === expandedSectionId;
-      return {
-        id: isStack ? `stack:${chunk.groupId}` : chunk.items[0].id,
-        slides: chunk.items,
-        groupId: isStack ? (chunk.groupId ?? null) : null,
-        expanded,
-      } satisfies StripItem;
-    }),
-  );
-
-  let dndItems = $state<StripItem[]>([]);
-  let draggingId = $state<string | null>(null);
-  let stackHoverId = $state<string | null>(null);
-  /** Payload of the dragged item, snapshotted at DRAG_STARTED. */
-  let dragSource: StripItem | null = null;
-  const pointer = { x: 0, y: 0 };
-  let zoneEl = $state<HTMLElement | undefined>(undefined);
-
-  $effect(() => {
-    const base = baseItems;
-    untrack(() => {
-      if (draggingId) return; // never clobber an in-flight drag preview
-      if (
-        dndItems.length !== base.length ||
-        base.some(
-          (b, i) =>
-            dndItems[i]?.id !== b.id ||
-            dndItems[i]?.slides !== b.slides ||
-            dndItems[i]?.expanded !== b.expanded,
-        )
-      ) {
-        dndItems = base;
-      }
-    });
-  });
-
-  let hoverRaf = 0;
-  function updateStackHover() {
-    if (!draggingId || !dragSource) {
-      stackHoverId = null;
-      return;
-    }
-    const draggedSection = dragSource.slides[0]?.sectionId?.trim() || null;
-    const draggedIds = new Set(dragSource.slides.map((s) => s.id));
-    const els = document.querySelectorAll<HTMLElement>("[data-stack-card]");
-    let found: string | null = null;
-    for (const el of els) {
-      // Ignore the lib-generated dragged clone and the dragged source itself.
-      if (el.closest(DRAGGED_CLONE_SELECTOR)) continue;
-      const targetId = el.getAttribute("data-stack-card");
-      if (!targetId || draggedIds.has(targetId)) continue;
-      // Stacking onto a sibling of the same section is meaningless.
-      const section = el.dataset.stackSection?.trim();
-      if (draggedSection && section && section === draggedSection) continue;
-      const r = el.getBoundingClientRect();
-      // Hysteresis: the currently-hovered card keeps its larger "stay" region.
-      const ix = stackHoverId === targetId ? STACK_EXIT_X : STACK_ENTER_X;
-      const iy = stackHoverId === targetId ? STACK_EXIT_Y : STACK_ENTER_Y;
-      if (
-        pointer.x >= r.left + r.width * ix &&
-        pointer.x <= r.right - r.width * ix &&
-        pointer.y >= r.top + r.height * iy &&
-        pointer.y <= r.bottom - r.height * iy
-      ) {
-        found = targetId;
-        break;
-      }
-    }
-    stackHoverId = found;
-  }
-
-  function onPointerMove(e: PointerEvent) {
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
-    // One hit-test per frame max — keeps 60fps during drag.
-    if (!hoverRaf) {
-      hoverRaf = requestAnimationFrame(() => {
-        hoverRaf = 0;
-        updateStackHover();
-      });
-    }
-  }
-
-  function handleConsider(e: CustomEvent<DndEvent<StripItem>>) {
-    const { items: next, info } = e.detail;
-
-    // ── Drag start: always apply so the shadow placeholder appears ──
-    if (info.trigger === TRIGGERS.DRAG_STARTED && info.source === SOURCES.POINTER) {
-      draggingId = String(info.id);
-      dragSource = dndItems.find((i) => i.id === draggingId) ?? null;
-      window.addEventListener("pointermove", onPointerMove);
-      dndItems = next; // shadow placeholder replaces the dragged card
-      return;
-    }
-
-    // ── Hit-test BEFORE applying the reorder ──
-    // The DOM still shows the pre-reorder layout (Svelte batches updates),
-    // so the rects match exactly what the user sees right now.
-    updateStackHover();
-
-    if (stackHoverId) {
-      // Pointer is inside a card's stack zone → suppress the reorder so
-      // the target card doesn't slide away from under the cursor.
-      // svelte-dnd-action will keep firing consider; we keep saying "no"
-      // until the pointer leaves the stack zone.
-      return; // ← dndItems is NOT updated → no visual reorder
-    }
-
-    // ── Pointer-based insertion (the pointer beats the clone's center) ──
-    // The lib's OVER_INDEX indices come from the floating clone's CENTER,
-    // which crosses a card's midpoint BEFORE the pointer is over that card
-    // (worse the further the grab point is from the card's center) —
-    // applying those verbatim made receivers hop to the far side of the
-    // cursor on every approach. Instead, insert the shadow only where the
-    // pointer itself has reached; "unchanged" declines the reorder, so the
-    // receiving card stays exactly where the user sees it.
-    if (
-      info.trigger === TRIGGERS.DRAGGED_OVER_INDEX ||
-      info.trigger === TRIGGERS.DRAGGED_ENTERED
-    ) {
-      const shadowIdx = dndItems.findIndex((i) => i.isDndShadowItem);
-      const zone = zoneEl;
-      const zoneRect = zone?.getBoundingClientRect();
-      // Shadow re-entering the zone, or the pointer is vertically off the
-      // strip → take the lib's order verbatim.
-      if (
-        shadowIdx === -1 ||
-        !zone ||
-        !zoneRect ||
-        pointer.y < zoneRect.top ||
-        pointer.y > zoneRect.bottom
-      ) {
-        dndItems = next;
-        return;
-      }
-      const centers: number[] = [];
-      for (let i = 0; i < zone.children.length; i++) {
-        const c = zone.children[i] as HTMLElement;
-        // offsetLeft/offsetWidth ignore FLIP transforms → stable mid-shuffle.
-        centers.push(c.offsetLeft + c.offsetWidth / 2);
-      }
-      const domIndex = pointerInsertIndex(pointer.x - zoneRect.left, centers);
-      const { insertAt, unchanged } = shadowInsertAt(domIndex, shadowIdx);
-      if (unchanged) return;
-      const shadow = dndItems[shadowIdx];
-      const rest = dndItems.filter((i) => !i.isDndShadowItem);
-      const reordered = [...rest.slice(0, insertAt), shadow, ...rest.slice(insertAt)];
-      if (reordered.some((it, i) => it !== dndItems[i])) dndItems = reordered;
-      return;
-    }
-
-    // ── Everything else (left the zone / dropped outside) applies verbatim ──
-    dndItems = next;
-  }
-
-  function arraysEqual(a: string[], b: string[]) {
-    return a.length === b.length && a.every((v, i) => b[i] === v);
-  }
 
   /**
-   * React's resolveSourceIds: a visible card maps to its whole slide section,
-   * even when the visible card is just the first member (or a lone member).
+   * A visible card maps to its whole slide section, even when the visible
+   * card is just the first member (or a lone member).
    */
   function resolveSourceIds(activeId: string): string[] {
     const slide = project.slides.find((s) => s.id === activeId);
@@ -386,64 +171,9 @@
       : [activeId];
   }
 
-  function handleFinalize(e: CustomEvent<DndEvent<StripItem>>) {
-    const { items: next } = e.detail;
-    window.removeEventListener("pointermove", onPointerMove);
-    if (hoverRaf) {
-      cancelAnimationFrame(hoverRaf);
-      hoverRaf = 0;
-    }
-    // Refresh from the FINAL pointer position, so the drop lands on the
-    // card actually under the cursor at release (dnd-kit parity).
-    updateStackHover();
-    const source = dragSource;
-    const stackTarget = stackHoverId;
-    draggingId = null;
-    dragSource = null;
-    stackHoverId = null;
-
-    const clean = next.filter((i) => !i.isDndShadowItem);
-
-    // While filtering, dragging is disabled — restore visuals and bail.
-    if (searchQuery.trim() || !source) {
-      dndItems = baseItems;
-      return;
-    }
-
-    // Center drop → stack the dragged whole onto the target slide.
-    if (stackTarget) {
-      dndItems = baseItems; // revert the reorder preview
-      const sourceIds = resolveSourceIds(source.slides[0].id);
-      if (sourceIds.length > 0 && !sourceIds.includes(stackTarget)) {
-        stackSlides(sourceIds, stackTarget);
-      }
-      return;
-    }
-
-    const nextIds = clean.flatMap((i) => i.slides.map((s) => s.id));
-    const prevIds = baseItems.flatMap((i) => i.slides.map((s) => s.id));
-
-    if (arraysEqual(nextIds, prevIds)) {
-      dndItems = baseItems;
-      return;
-    }
-
-    // Optimistic reorder + rollback (React's setOrdered + onError restore).
-    const prevOrdered = ordered;
-    dndItems = clean;
-    ordered = nextIds
-      .map((id) => ordered.find((s) => s.id === id))
-      .filter((s): s is Slide => Boolean(s));
-    reorderSlides(nextIds, {
-      onError: () => {
-        ordered = prevOrdered;
-      },
-    });
-  }
-
   /* ----------------------- Selection / menu actions ---------------------- */
   const selectedInOrder = () =>
-    ordered.filter((slide) => selectedSlideIds.has(slide.id)).map((slide) => slide.id);
+    strip.ordered.filter((slide) => selectedSlideIds.has(slide.id)).map((slide) => slide.id);
 
   function toggleSlideSelection(id: string, position?: { x: number; y: number }) {
     if (selectedSlideIds.has(id)) selectedSlideIds.delete(id);
@@ -475,7 +205,7 @@
   function selectAllSlides() {
     isMultiSelectMode = true;
     selectedSlideIds.clear();
-    for (const slide of ordered) selectedSlideIds.add(slide.id);
+    for (const slide of strip.ordered) selectedSlideIds.add(slide.id);
     closeContextMenu();
   }
 
@@ -515,7 +245,7 @@
     const selected = selectedInOrder();
     if (!selected.length) return;
     const selectedSet = new Set(selected);
-    const remaining = ordered.filter((slide) => !selectedSet.has(slide.id)).map((slide) => slide.id);
+    const remaining = strip.ordered.filter((slide) => !selectedSet.has(slide.id)).map((slide) => slide.id);
     reorderSlides(destination === "start" ? [...selected, ...remaining] : [...remaining, ...selected]);
     closeContextMenu();
   }
@@ -534,7 +264,7 @@
 
   function deleteSelected() {
     const selected = selectedInOrder();
-    if (!selected.length || selected.length >= ordered.length) return;
+    if (!selected.length || selected.length >= strip.ordered.length) return;
     confirmBulkDelete = true;
     closeContextMenu();
   }
@@ -589,22 +319,18 @@
   const handleRemove = deleter.deleteSlideWithUndo;
   const handleDuplicate = duplicateSlide;
 
-  function originalIndex(slideId: string) {
-    const i = ordered.findIndex((s) => s.id === slideId);
-    return i >= 0 ? i : 0;
-  }
 </script>
 
 {#snippet stackTargetOverlay(targetId: string, ownerItemId: string)}
   <!-- Hit testing lives in updateStackHover() (rect math) — this element is
        pure feedback, so it never intercepts the dnd zone's pointer events. -->
-  {@const isDraggingOther = draggingId !== null && draggingId !== ownerItemId}
+  {@const isDraggingOther = dnd.draggingId !== null && dnd.draggingId !== ownerItemId}
   <div
     data-stack-target={targetId}
     class={cn(
       "pointer-events-none absolute inset-x-[16%] inset-y-[12%] z-30 rounded-lg border-2 border-dashed transition-all duration-150",
       isDraggingOther ? "opacity-100" : "opacity-0",
-      stackHoverId === targetId
+      dnd.stackHoverId === targetId
         ? "scale-[1.03] border-solid border-primary bg-primary/20 shadow-lg ring-2 ring-primary ring-offset-1 ring-offset-background"
         : "border-primary/40 bg-primary/[0.05]",
     )}
@@ -614,7 +340,7 @@
 {#snippet cardFor(slide: Slide)}
   <SlideCard
     {slide}
-    index={originalIndex(slide.id)}
+    index={strip.originalIndex(slide.id)}
     isRenaming={rename.renamingId === slide.id}
     renameValue={rename.renamingId === slide.id ? rename.value : ""}
     highlightProgress={activeHighlightIndex}
@@ -624,10 +350,10 @@
     onRemove={handleRemove}
     onRename={rename.start}
     onDuplicate={handleDuplicate}
-    registerCardRef={registerCardRef}
-    cardRefs={cardRefs}
-    navigationIds={navIds}
-    isTabStop={slide.id === tabStopId}
+    registerCardRef={strip.registerCardRef}
+    cardRefs={strip.cardRefs}
+    navigationIds={strip.navIds}
+    isTabStop={slide.id === strip.tabStopId}
     {isMultiSelectMode}
     isMultiSelected={selectedSlideIds.has(slide.id)}
     onToggleMultiSelect={toggleSlideSelection}
@@ -652,7 +378,7 @@
   <div
     class="flex h-full min-h-[36px] items-stretch overflow-x-auto border-y border-border/50 bg-card/60"
   >
-    {#each ordered as slide, index (slide.id)}
+    {#each strip.ordered as slide, index (slide.id)}
       <button
         type="button"
         onclick={() => setCurrentSlideId(slide.id)}
@@ -686,12 +412,12 @@
       <!-- The zone must contain ONLY item children (the lib pairs children to
            items by index), so the add-slide button lives outside it. -->
       <div
-        bind:this={zoneEl}
+        bind:this={dnd.zoneEl}
         class="relative flex min-h-0 shrink-0 items-center gap-2"
         role="listbox"
         aria-label="Slides"
         use:dndzone={{
-          items: dndItems,
+          items: dnd.items,
           flipDurationMs: FLIP_MS,
           dragDisabled: Boolean(searchQuery.trim()) || rename.renamingId !== null,
           type: "slide-strip",
@@ -700,10 +426,10 @@
           zoneTabIndex: -1,
           morphDisabled: true,
         }}
-        onconsider={handleConsider}
-        onfinalize={handleFinalize}
+        onconsider={dnd.handleConsider}
+        onfinalize={dnd.handleFinalize}
       >
-        {#each dndItems as item (item.id)}
+        {#each dnd.items as item (item.id)}
           <div animate:flip={{ duration: FLIP_MS }} class="relative shrink-0">
             {#if item.isDndShadowItem}
               {@render shadowPlaceholder(item)}
@@ -716,9 +442,9 @@
                   variant="slide-strip"
                   onUngroup={() => {
                     unstackSlides(item.slides.map((s) => s.id));
-                    expandedSectionId = null;
+                    strip.expandedSectionId = null;
                   }}
-                  onClose={() => (expandedSectionId = null)}
+                  onClose={() => (strip.expandedSectionId = null)}
                 />
                 {#each item.slides as slide (slide.id)}
                   <div
@@ -743,7 +469,7 @@
                   variant="slide"
                   class="shrink-0"
                   style="height: {ITEM_HEIGHT}px;"
-                  onExpand={() => (expandedSectionId = item.groupId)}
+                  onExpand={() => (strip.expandedSectionId = item.groupId)}
                   onOpenTop={() => setCurrentSlideId(item.slides[0].id)}
                 >
                   {@render cardFor(item.slides[0])}
@@ -801,7 +527,7 @@
     <SlideSelectionToolbar
       open={isMultiSelectMode}
       selectionCount={selectedSlideIds.size}
-      totalSlides={ordered.length}
+      totalSlides={strip.ordered.length}
       onMoveToStart={() => moveSelected("start")}
       onMoveToEnd={() => moveSelected("end")}
       onGroup={groupSelected}
