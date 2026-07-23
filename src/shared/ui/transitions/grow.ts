@@ -1,5 +1,5 @@
 /**
- * Custom transitions for the highlight layer: scale-to-target grow.
+ * Scale-to-target grow transition (used by the highlight clone layer).
  * Durations are in MILLISECONDS.
  */
 

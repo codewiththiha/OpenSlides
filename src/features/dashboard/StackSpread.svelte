@@ -162,7 +162,7 @@
 <div
   use:portal
   class="fixed inset-0 overflow-hidden select-none"
-  style="z-index: {Z_INDEX.hoverPreview || 200};"
+  style="z-index: {Z_INDEX.hoverPreview};"
 >
   <!-- Transparent catcher backdrop -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
