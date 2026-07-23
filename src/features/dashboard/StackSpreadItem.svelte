@@ -13,7 +13,7 @@
   import { computeFanLayout } from "$lib/lib/stacking";
   import ProjectCard from "./ProjectCard.svelte";
   import { beginProjectDrag, projectDnd } from "@/features/dashboard/project-dnd.svelte";
-  import { EASE_DIM } from "@/features/highlights/easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   /** Intro: slide up + fade combined, staggered per index. */
   function riseFade(

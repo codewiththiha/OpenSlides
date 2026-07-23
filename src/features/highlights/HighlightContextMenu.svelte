@@ -7,7 +7,7 @@
   import { escapeKey } from "$lib/actions/escape-key";
   import { Highlighter as HighlightIcon, X } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
-  import { EASE_DIM } from "@/features/highlights/easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   let {
     visible,

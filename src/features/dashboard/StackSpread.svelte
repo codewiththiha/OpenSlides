@@ -13,7 +13,7 @@
   import StackSpreadItem from "./StackSpreadItem.svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { portal } from "$lib/actions/portal";
-  import { EASE_DIM } from "@/features/highlights/easings";
+  import { EASE_DIM } from "$lib/lib/easings";
 
   let {
     chunk,

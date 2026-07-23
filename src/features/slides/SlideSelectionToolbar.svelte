@@ -3,7 +3,7 @@
   import type { Component } from "svelte";
   import { ArrowLeftToLine, ArrowRightToLine, Layers3, Trash2, X } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
-  import { EASE_DIM } from "@/features/highlights/easings";
+  import { EASE_DIM } from "$lib/lib/easings";
   import { cn } from "$lib/lib/utils";
 
   let {

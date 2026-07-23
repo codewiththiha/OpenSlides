@@ -10,7 +10,7 @@
    */
   import { fade } from "svelte/transition";
   import type { HighlightMeasurement } from "@/features/highlights/highlight-utils";
-  import { EASE_DIM, EASE_SCALE } from "./easings";
+  import { EASE_DIM, EASE_SCALE } from "$lib/lib/easings";
   import { grow } from "./transitions";
 
   let {

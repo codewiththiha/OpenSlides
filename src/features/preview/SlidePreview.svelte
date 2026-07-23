@@ -19,9 +19,9 @@
   import { localCode } from "$lib/stores/slide-code.svelte";
   import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
   import HighlightLayer from "@/features/highlights/HighlightLayer.svelte";
-  import MagicMoveBlock from "@/features/editor/preview/MagicMoveBlock.svelte";
-  import PreviewFallback from "@/features/editor/preview/PreviewFallback.svelte";
-  import PreviewStage from "@/features/editor/preview/PreviewStage.svelte";
+  import MagicMoveBlock from "./MagicMoveBlock.svelte";
+  import PreviewFallback from "./PreviewFallback.svelte";
+  import PreviewStage from "./PreviewStage.svelte";
 
   let {
     project,
