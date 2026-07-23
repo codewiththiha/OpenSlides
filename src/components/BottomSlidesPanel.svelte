@@ -14,7 +14,11 @@
    *    the dnd-kit droppables. While the pointer sits inside a stack zone,
    *    consider-events are NOT applied, so the receiver card can't slide
    *    out from under the cursor (svelte-dnd-action keeps re-firing, we
-   *    keep declining until the pointer leaves the zone).
+   *    keep declining until the pointer leaves the zone). Reorders that DO
+   *    apply are placed by the POINTER (lib/stack-targeting), not by the
+   *    clone's center — otherwise the center crosses a card's midpoint
+   *    while the pointer is still short of it and the receiver keeps
+   *    hopping to the far side of the cursor.
    *  - The dragged clone (lib-generated) replaces DragOverlay; a dashed
    *    shadow placeholder marks the insertion slot (bounded FLIP of the rest).
    */
@@ -29,6 +33,7 @@
   import { Plus } from "@lucide/svelte";
   import { SvelteSet } from "svelte/reactivity";
   import { resolveProjectLanguage, type Project, type Slide } from "@/types";
+  import { pointerInsertIndex, shadowInsertAt } from "@/lib/stack-targeting";
   import { useSlideStripSearch } from "@/hooks/useSlideStripSearch.svelte";
   import { useInlineRename } from "@/hooks/useInlineRename.svelte";
   import { useAddSlide } from "@/hooks/useAddSlide.svelte";
@@ -224,6 +229,7 @@
   /** Payload of the dragged item, snapshotted at DRAG_STARTED. */
   let dragSource: StripItem | null = null;
   const pointer = { x: 0, y: 0 };
+  let zoneEl = $state<HTMLElement | undefined>(undefined);
 
   $effect(() => {
     const base = baseItems;
@@ -315,7 +321,50 @@
       return; // ← dndItems is NOT updated → no visual reorder
     }
 
-    // ── Normal reorder mode (pointer near card edges) ──
+    // ── Pointer-based insertion (the pointer beats the clone's center) ──
+    // The lib's OVER_INDEX indices come from the floating clone's CENTER,
+    // which crosses a card's midpoint BEFORE the pointer is over that card
+    // (worse the further the grab point is from the card's center) —
+    // applying those verbatim made receivers hop to the far side of the
+    // cursor on every approach. Instead, insert the shadow only where the
+    // pointer itself has reached; "unchanged" declines the reorder, so the
+    // receiving card stays exactly where the user sees it.
+    if (
+      info.trigger === TRIGGERS.DRAGGED_OVER_INDEX ||
+      info.trigger === TRIGGERS.DRAGGED_ENTERED
+    ) {
+      const shadowIdx = dndItems.findIndex((i) => i.isDndShadowItem);
+      const zone = zoneEl;
+      const zoneRect = zone?.getBoundingClientRect();
+      // Shadow re-entering the zone, or the pointer is vertically off the
+      // strip → take the lib's order verbatim.
+      if (
+        shadowIdx === -1 ||
+        !zone ||
+        !zoneRect ||
+        pointer.y < zoneRect.top ||
+        pointer.y > zoneRect.bottom
+      ) {
+        dndItems = next;
+        return;
+      }
+      const centers: number[] = [];
+      for (let i = 0; i < zone.children.length; i++) {
+        const c = zone.children[i] as HTMLElement;
+        // offsetLeft/offsetWidth ignore FLIP transforms → stable mid-shuffle.
+        centers.push(c.offsetLeft + c.offsetWidth / 2);
+      }
+      const domIndex = pointerInsertIndex(pointer.x - zoneRect.left, centers);
+      const { insertAt, unchanged } = shadowInsertAt(domIndex, shadowIdx);
+      if (unchanged) return;
+      const shadow = dndItems[shadowIdx];
+      const rest = dndItems.filter((i) => !i.isDndShadowItem);
+      const reordered = [...rest.slice(0, insertAt), shadow, ...rest.slice(insertAt)];
+      if (reordered.some((it, i) => it !== dndItems[i])) dndItems = reordered;
+      return;
+    }
+
+    // ── Everything else (left the zone / dropped outside) applies verbatim ──
     dndItems = next;
   }
 
@@ -344,6 +393,9 @@
       cancelAnimationFrame(hoverRaf);
       hoverRaf = 0;
     }
+    // Refresh from the FINAL pointer position, so the drop lands on the
+    // card actually under the cursor at release (dnd-kit parity).
+    updateStackHover();
     const source = dragSource;
     const stackTarget = stackHoverId;
     draggingId = null;
@@ -634,7 +686,8 @@
       <!-- The zone must contain ONLY item children (the lib pairs children to
            items by index), so the add-slide button lives outside it. -->
       <div
-        class="flex min-h-0 shrink-0 items-center gap-2"
+        bind:this={zoneEl}
+        class="relative flex min-h-0 shrink-0 items-center gap-2"
         role="listbox"
         aria-label="Slides"
         use:dndzone={{

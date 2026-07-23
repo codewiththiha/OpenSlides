@@ -11,7 +11,8 @@
     "tauri": "tauri",
     "test:highlight": "node scripts/run-highlight-tests.mjs",
     "test:save-race": "node scripts/run-save-race-tests.mjs",
-    "test:app-flow": "node scripts/run-present-tests.mjs"
+    "test:app-flow": "node scripts/run-present-tests.mjs",
+    "test:stack-targeting": "node scripts/run-stack-targeting-tests.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.25.0",
