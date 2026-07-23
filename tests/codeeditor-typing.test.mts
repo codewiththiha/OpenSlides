@@ -13,8 +13,9 @@
  *
  * Svelte 5 port note: the mounted editor renders an UNCONTROLLED textarea
  * (value written once at mount; typing/save cycles never re-assign it from
- * code), which structurally removes the regression+teleport path the React
- * version had. These tests keep asserting that invariant end-to-end.
+ * code), which structurally removes the regression+teleport path the
+ * pre-migration controlled version had. These tests keep asserting that
+ * invariant end-to-end.
  */
 // MUST be the first import (installs document/window for the components).
 import "./helpers/jsdom-env.mts";

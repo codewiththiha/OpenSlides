@@ -1,16 +1,17 @@
 <script lang="ts">
   /**
    * SaveRaceHarness — models the Svelte CodeEditor's value wiring for the
-   * save-race suite (the React-era harness did the same for the controlled
-   * React textarea). Mounted by tests/editor-save-race.test.mts.
+   * save-race suite. Mounted by tests/editor-save-race.test.mts.
    *
-   * mode "queued":  current wiring — UNCONTROLLED textarea (the Svelte editor
-   *                 never writes `value` programmatically after mount), local
-   *                 code shadow + the real queued updateSlideCodeMutation hook.
-   * mode "prefix":  characterization of the pre-fix bug — CONTROLLED-ish
-   *                 textarea (framework re-assigns value on every computed
-   *                 change, like the old React component did) + an unqueued
-   *                 save path with the exact onSuccess the pre-fix hook had.
+   * mode "queued":  current wiring — UNCONTROLLED textarea (the editor never
+   *                 writes `value` programmatically after mount), local code
+   *                 shadow + the real queued updateSlideCodeMutation hook.
+   * mode "prefix":  deliberate characterization of the pre-fix bug — a
+   *                 CONTROLLED-ish textarea (the harness re-assigns value on
+   *                 every computed change, like the pre-migration controlled
+   *                 editor did) + an unqueued save path with the exact
+   *                 onSuccess the pre-fix hook had. Kept on purpose: the
+   *                 suite asserts the bug stays dead across both wirings.
    */
   import { createQuery } from "@tanstack/svelte-query";
   import {

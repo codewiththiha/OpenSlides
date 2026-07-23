@@ -8,6 +8,7 @@
   import { Highlighter as HighlightIcon, X } from "@lucide/svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { pop } from "$lib/ui/transitions/pop";
+  import { clampMenuPosition } from "$lib/lib/menu-position";
 
   let {
     visible,
@@ -17,23 +18,47 @@
   }: {
     /** Whether the menu is visible */
     visible: boolean;
-    /** Position where the menu should appear */
+    /** Pointer point (client coordinates) */
     position: { x: number; y: number };
     /** Callback when "Add Highlight" is clicked */
     onAddHighlight: () => void;
     /** Callback to close the menu */
     onClose: () => void;
   } = $props();
+
+  let menuEl = $state<HTMLDivElement | null>(null);
+  let resolved = $state({ x: -9999, y: -9999 });
+  let positioned = $state(false);
+
+  // Measure-then-show before paint (same as SlideContextMenu): keeps the
+  // menu inside the viewport without a flash at the raw click point.
+  $effect(() => {
+    if (!visible || !menuEl) return;
+    void position.x;
+    void position.y;
+    positioned = false;
+    const rect = menuEl.getBoundingClientRect();
+    resolved = clampMenuPosition({
+      x: position.x,
+      y: position.y,
+      width: rect.width,
+      height: rect.height,
+    });
+    positioned = true;
+  });
 </script>
 
 {#if visible}
   <div
+    bind:this={menuEl}
     use:clickOutside={{ onOutside: onClose, delayMs: 50 }}
     use:escapeKey={{ onEscape: onClose, delayMs: 50 }}
     class="fixed min-w-[180px] rounded-lg border border-border/80 bg-card/95 py-1 shadow-xl backdrop-blur-md"
     role="menu"
     aria-label="Highlight actions"
-    style="left: {position.x}px; top: {position.y}px; z-index: {Z_INDEX.contextMenu};"
+    style="left: {resolved.x}px; top: {resolved.y}px; z-index: {Z_INDEX.contextMenu}; opacity: {positioned
+      ? 1
+      : 0};"
     transition:pop={{}}
   >
     <button
