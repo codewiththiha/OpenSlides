@@ -72,8 +72,13 @@ export function useCodeEditorCaret(args: UseCodeEditorCaretArgs) {
 
   function saveCaret() {
     const el = args.textarea();
+    // A detached textarea means the editor branch was destroyed (e.g. the
+    // present overlay took over) — bail BEFORE reading args.slideId(), whose
+    // derived belongs to the dead branch (Svelte warns derived_inert and the
+    // stale id would write a caret for the wrong lifecycle).
+    if (!el || !el.isConnected) return;
     const slideId = args.slideId();
-    if (!el || !slideId) return;
+    if (!slideId) return;
     try {
       setCaretPosition(slideId, el.selectionStart, el.selectionEnd);
       args.editorSnapshot.current = {
