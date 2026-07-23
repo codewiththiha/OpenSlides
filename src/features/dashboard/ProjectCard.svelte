@@ -10,35 +10,23 @@
   import HoverActionButton from "$lib/ui/HoverActionButton.svelte";
   import InlineEditableText from "$lib/ui/InlineEditableText.svelte";
 
+  import { consumeProjectCardActions } from "./project-card-actions.svelte";
+
   let {
     project,
-    isRenaming,
-    renameValue,
-    onRenameValueChange,
-    onCommitRename,
-    onCancelRename,
-    onStartRename,
-    onOpen,
-    onDuplicate,
-    onExport,
-    onDelete,
-    duplicateBusy,
-    commitBusy,
+    static: isStatic = false,
   }: {
     project: ProjectSummary;
-    isRenaming: boolean;
-    renameValue: string;
-    onRenameValueChange: (value: string) => void;
-    onCommitRename: () => void;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onOpen: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onExport: (id: string) => void;
-    onDelete: (id: string, name: string) => void;
-    duplicateBusy: boolean;
-    commitBusy: boolean;
+    /** Drag-clone mode: hides rename UI and hover actions, no activation. */
+    static?: boolean;
   } = $props();
+
+  const cardActions = consumeProjectCardActions();
+
+  const isRenaming = $derived(
+    !isStatic && cardActions.renamingId === project.id,
+  );
+  const renameValue = $derived(isRenaming ? cardActions.renameValue : "");
 
   const cardTheme = createCodeCardTheme(() => project.theme);
 </script>
@@ -46,20 +34,20 @@
 <Card
   class="group relative cursor-pointer select-none overflow-hidden border-border/70 bg-card p-0 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   style="height: {PROJECT_CARD_HEIGHT}px"
-  role="button"
-  tabindex={0}
-  aria-label={project.name}
+  role={isStatic ? undefined : "button"}
+  tabindex={isStatic ? undefined : 0}
+  aria-label={isStatic ? undefined : project.name}
   onclick={() => {
-    if (!isRenaming) onOpen(project.id);
+    if (!isStatic && !isRenaming) cardActions.open(project.id);
   }}
   onkeydown={(e) => {
-    if (isRenaming) return;
+    if (isStatic || isRenaming) return;
     // Inner controls (rename input, hover buttons) handle their own keys;
     // only activate when the card itself is focused.
     if (e.target !== e.currentTarget) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onOpen(project.id);
+      cardActions.open(project.id);
     }
   }}
 >
@@ -78,11 +66,11 @@
       {#if isRenaming}
         <InlineEditableText
           value={renameValue}
-          onChange={onRenameValueChange}
-          onCommit={onCommitRename}
-          onCancel={onCancelRename}
+          onChange={cardActions.setRenameValue}
+          onCommit={cardActions.commitRename}
+          onCancel={cardActions.cancelRename}
           withButtons
-          {commitBusy}
+          commitBusy={cardActions.commitBusy}
           class="h-7 text-sm font-semibold"
         />
       {:else}
@@ -94,7 +82,7 @@
     </div>
   </div>
 
-  {#if !isRenaming}
+  {#if !isRenaming && !isStatic}
     <div class="absolute right-2 top-2 z-20">
       <HoverActions class="gap-0.5 rounded-md bg-black/10 p-0.5 backdrop-blur-sm">
         <HoverActionButton
@@ -102,7 +90,7 @@
           title="Rename"
           onclick={(e) => {
             e.stopPropagation();
-            onStartRename(project.id, project.name);
+            cardActions.startRename(project.id, project.name);
           }}
         >
           <Pencil class="h-3.5 w-3.5" />
@@ -112,9 +100,9 @@
           title="Duplicate presentation"
           onclick={(e) => {
             e.stopPropagation();
-            onDuplicate(project.id);
+            cardActions.duplicate(project.id);
           }}
-          disabled={duplicateBusy}
+          disabled={cardActions.duplicateBusy}
         >
           <Copy class="h-3.5 w-3.5" />
         </HoverActionButton>
@@ -123,7 +111,7 @@
           title="Export"
           onclick={(e) => {
             e.stopPropagation();
-            onExport(project.id);
+            cardActions.exportProject(project.id);
           }}
         >
           <Download class="h-3.5 w-3.5" />
@@ -134,7 +122,7 @@
           title="Delete presentation"
           onclick={(e) => {
             e.stopPropagation();
-            onDelete(project.id, project.name);
+            cardActions.remove(project.id, project.name);
           }}
         >
           <Trash2 class="h-3.5 w-3.5" />

@@ -27,18 +27,6 @@
     deckRect,
     isClosing,
     groupId,
-    isRenaming,
-    renameValue,
-    onRenameValueChange,
-    onCommitRename,
-    onCancelRename,
-    onStartRename,
-    onOpen,
-    onDuplicate,
-    onExport,
-    onDelete,
-    duplicateBusy,
-    commitBusy,
   }: {
     project: ProjectSummary;
     index: number;
@@ -48,18 +36,6 @@
     deckRect: DOMRect | null;
     isClosing: boolean;
     groupId?: string;
-    isRenaming: boolean;
-    renameValue: string;
-    onRenameValueChange: (value: string) => void;
-    onCommitRename: () => void;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onOpen: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onExport: (id: string) => void;
-    onDelete: (id: string, name: string) => void;
-    duplicateBusy: boolean;
-    commitBusy: boolean;
   } = $props();
 
   const fan = $derived(computeFanLayout(total, index));
@@ -151,21 +127,7 @@
 >
   <div in:riseFade={{ duration: 300, delay: delayMs, y: 18 }}>
     <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
-      <ProjectCard
-        {project}
-        {isRenaming}
-        {renameValue}
-        {onRenameValueChange}
-        {onCommitRename}
-        {onCancelRename}
-        {onStartRename}
-        {onOpen}
-        {onDuplicate}
-        {onExport}
-        {onDelete}
-        {duplicateBusy}
-        {commitBusy}
-      />
+      <ProjectCard {project} />
     </div>
   </div>
 </div>

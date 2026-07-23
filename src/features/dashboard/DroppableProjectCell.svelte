@@ -10,38 +10,17 @@
   import StackDeck from "$lib/ui/stack/StackDeck.svelte";
   import ProjectCard from "./ProjectCard.svelte";
   import { beginProjectDrag, projectDnd } from "@/features/dashboard/project-dnd.svelte";
+  import { consumeProjectCardActions } from "./project-card-actions.svelte";
 
   let {
     chunk,
-    isRenaming,
-    renameValue,
-    onRenameValueChange,
-    onCommitRename,
-    onCancelRename,
-    onStartRename,
-    onOpen,
-    onDuplicate,
-    onExport,
-    onDelete,
-    duplicateBusy,
-    commitBusy,
     onOpenSpread,
   }: {
     chunk: GroupChunk<ProjectSummary>;
-    isRenaming: (id: string) => boolean;
-    renameValue: string;
-    onRenameValueChange: (value: string) => void;
-    onCommitRename: () => void;
-    onCancelRename: () => void;
-    onStartRename: (id: string, name: string) => void;
-    onOpen: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onExport: (id: string) => void;
-    onDelete: (id: string, name: string) => void;
-    duplicateBusy: boolean;
-    commitBusy: boolean;
     onOpenSpread: (chunk: GroupChunk<ProjectSummary>, el: HTMLElement | null) => void;
   } = $props();
+
+  const cardActions = consumeProjectCardActions();
 
   const topProject = $derived(chunk.items[0]);
   const isStack = $derived(chunk.kind === "stack" && chunk.items.length > 1);
@@ -91,40 +70,12 @@
     <StackDeck
       count={chunk.items.length}
       onExpand={() => onOpenSpread(chunk, cellEl)}
-      onOpenTop={() => onOpen(topProject.id)}
+      onOpenTop={() => cardActions.open(topProject.id)}
       ariaLabel="Stack of {chunk.items.length} presentations, press Enter to expand"
     >
-      <ProjectCard
-        project={topProject}
-        isRenaming={isRenaming(topProject.id)}
-        renameValue={isRenaming(topProject.id) ? renameValue : ""}
-        {onRenameValueChange}
-        {onCommitRename}
-        {onCancelRename}
-        {onStartRename}
-        {onOpen}
-        {onDuplicate}
-        {onExport}
-        {onDelete}
-        {duplicateBusy}
-        {commitBusy}
-      />
+      <ProjectCard project={topProject} />
     </StackDeck>
   {:else}
-    <ProjectCard
-      project={topProject}
-      isRenaming={isRenaming(topProject.id)}
-      renameValue={isRenaming(topProject.id) ? renameValue : ""}
-      {onRenameValueChange}
-      {onCommitRename}
-      {onCancelRename}
-      {onStartRename}
-      {onOpen}
-      {onDuplicate}
-      {onExport}
-      {onDelete}
-      {duplicateBusy}
-      {commitBusy}
-    />
+    <ProjectCard project={topProject} />
   {/if}
 </div>
