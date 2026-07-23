@@ -95,8 +95,8 @@ export async function requestHtml(
 ): Promise<WorkerResponse> {
   if (
     typeof Worker === "undefined" ||
-    (typeof window !== "undefined" && (window as any).IS_REACT_ACT_ENVIRONMENT) ||
-    (typeof globalThis !== "undefined" && (globalThis as any).IS_REACT_ACT_ENVIRONMENT)
+    (typeof window !== "undefined" && (window as any).__OPENSLIDES_TEST_ENV__) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).__OPENSLIDES_TEST_ENV__)
   ) {
     if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
     const h = await getHighlighter(theme, language);

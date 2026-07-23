@@ -18,6 +18,6 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** The platform modifier for app shortcuts (⌘ on macOS, Ctrl elsewhere). */
-export function isModKey(e: KeyboardEvent | React.KeyboardEvent): boolean {
+export function isModKey(e: KeyboardEvent | { metaKey: boolean; ctrlKey: boolean }): boolean {
   return e.metaKey || e.ctrlKey;
 }

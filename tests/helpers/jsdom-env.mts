@@ -1,6 +1,6 @@
 /**
- * jsdom globals for the save-race suite. MUST be imported before any
- * react/react-dom import — ESM evaluates dependencies in import order.
+ * jsdom globals for the editor suites. MUST be imported before any
+ * svelte/component-code import — ESM evaluates dependencies in import order.
  */
 import { JSDOM } from "jsdom";
 
@@ -29,6 +29,15 @@ g.HTMLAnchorElement = dom.window.HTMLAnchorElement;
 g.HTMLLabelElement = dom.window.HTMLLabelElement;
 g.Element = dom.window.Element;
 g.Node = dom.window.Node;
+// Constructors Svelte's client runtime touches during init_operations and
+// template cloning (Text.prototype descriptors etc.).
+g.Text = dom.window.Text;
+g.Comment = dom.window.Comment;
+g.CharacterData = dom.window.CharacterData;
+g.DocumentFragment = dom.window.DocumentFragment;
+g.DocumentType = dom.window.DocumentType;
+g.SVGElement = dom.window.SVGElement;
+g.HTMLTemplateElement = dom.window.HTMLTemplateElement;
 g.Event = dom.window.Event;
 g.KeyboardEvent = dom.window.KeyboardEvent;
 g.MouseEvent = dom.window.MouseEvent;
@@ -46,14 +55,20 @@ g.DOMRect = class DOMRect {
     public height = 0,
   ) {}
 };
-g.requestAnimationFrame = (cb: FrameRequestCallback) =>
-  setTimeout(() => cb(Date.now()), 0);
+g.MutationObserver = dom.window.MutationObserver;
+const raf = (cb: FrameRequestCallback) => setTimeout(() => cb(Date.now()), 0);
+g.requestAnimationFrame = raf;
 g.cancelAnimationFrame = clearTimeout;
-g.IS_REACT_ACT_ENVIRONMENT = true;
+// App code uses the window-scoped timers explicitly.
+(dom.window as unknown as Record<string, unknown>).requestAnimationFrame = raf;
+(dom.window as unknown as Record<string, unknown>).cancelAnimationFrame = clearTimeout;
 
-// jsdom omits IE-era DOM APIs that react-dom still feature-probes (its
-// check `typeof elm.attachEvent === "function"` only guards the attach
-// path; the detach path calls it unconditionally).
+// Read by src/lib/shiki-worker-client.ts (inline getHighlighter fallback) and
+// src/hooks/useShikiDisplayState.svelte.ts (zero debounce) so the jsdom
+// suites get synchronous, deterministic highlighting without a Worker.
+g.__OPENSLIDES_TEST_ENV__ = true;
+
+// jsdom omits some IE-era DOM APIs that older frontend runtimes feature-probe.
 g.attachEvent = () => {};
 g.detachEvent = () => {};
 const proto = dom.window.HTMLElement.prototype as unknown as Record<

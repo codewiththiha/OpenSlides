@@ -1,0 +1,43 @@
+<script lang="ts">
+  /**
+   * Full-stage dim behind an active highlight.
+   *
+   * React/framer kept this mounted across steps (key="hl-dim") and tweened
+   * opacity whenever dimAmount changed. The `Tween` reproduces that exactly:
+   * one set() on mount (0 → dimAmount intro) and on every step change.
+   * Removal fades the element out from its current opacity (svelte `fade`
+   * reads it at outro start).
+   */
+  import { Tween } from "svelte/motion";
+  import { fade } from "svelte/transition";
+  import { EASE_DIM } from "./easings";
+
+  let {
+    dimAmount,
+    dimMs,
+    onOutroStart,
+    onOutroEnd,
+  }: {
+    dimAmount: number;
+    dimMs: number;
+    onOutroStart?: () => void;
+    onOutroEnd?: () => void;
+  } = $props();
+
+  const opacity = new Tween(0, { duration: dimMs, easing: EASE_DIM });
+
+  $effect(() => {
+    void opacity.set(dimAmount, {
+      duration: dimMs,
+      easing: EASE_DIM,
+    });
+  });
+</script>
+
+<div
+  class="pointer-events-none absolute inset-0 z-20"
+  style="background-color: rgba(0, 0, 0, 1); will-change: opacity; opacity: {opacity.current};"
+  out:fade|global={{ duration: dimMs, easing: EASE_DIM }}
+  onoutrostart={onOutroStart}
+  onoutroend={onOutroEnd}
+></div>

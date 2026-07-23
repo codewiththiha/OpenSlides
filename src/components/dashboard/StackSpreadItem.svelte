@@ -1,0 +1,158 @@
+<script lang="ts">
+  /**
+   * One fanned-out project card inside StackSpread.
+   *
+   * framer-motion drove left/top/scale/opacity/rotate with
+   * spring(stiffness 260, damping 20, mass 0.8) + a per-index delay.
+   * Svelte's Spring has unit mass, so k/d are divided by 0.8 (325/25) —
+   * the normalized ODE is identical, so the arc of the fan matches.
+   */
+  import { Spring } from "svelte/motion";
+  import { type ProjectSummary } from "@/types";
+  import { computeFanLayout } from "@/lib/stacking";
+  import ProjectCard from "./ProjectCard.svelte";
+  import { beginProjectDrag, projectDnd } from "@/lib/project-dnd.svelte";
+
+  const CARD_WIDTH = 220;
+  const CARD_HEIGHT = 180;
+  const SPRING_OPTS = { stiffness: 325, damping: 25 };
+
+  let {
+    project,
+    index,
+    total,
+    fanCenterX,
+    fanCenterY,
+    deckRect,
+    isClosing,
+    groupId,
+    isRenaming,
+    renameValue,
+    onRenameValueChange,
+    onCommitRename,
+    onCancelRename,
+    onStartRename,
+    onOpen,
+    onDuplicate,
+    onExport,
+    onDelete,
+    duplicateBusy,
+    commitBusy,
+  }: {
+    project: ProjectSummary;
+    index: number;
+    total: number;
+    fanCenterX: number;
+    fanCenterY: number;
+    deckRect: DOMRect | null;
+    isClosing: boolean;
+    groupId?: string;
+    isRenaming: boolean;
+    renameValue: string;
+    onRenameValueChange: (value: string) => void;
+    onCommitRename: () => void;
+    onCancelRename: () => void;
+    onStartRename: (id: string, name: string) => void;
+    onOpen: (id: string) => void;
+    onDuplicate: (id: string) => void;
+    onExport: (id: string) => void;
+    onDelete: (id: string, name: string) => void;
+    duplicateBusy: boolean;
+    commitBusy: boolean;
+  } = $props();
+
+  const fan = $derived(computeFanLayout(total, index));
+
+  const originLeft = $derived(
+    (deckRect?.left ?? fanCenterX - CARD_WIDTH / 2) +
+      (deckRect?.width ?? CARD_WIDTH) / 2 -
+      CARD_WIDTH / 2,
+  );
+  const originTop = $derived(
+    (deckRect?.top ?? fanCenterY - CARD_HEIGHT / 2) +
+      (deckRect?.height ?? CARD_HEIGHT) / 2 -
+      CARD_HEIGHT / 2,
+  );
+
+  const targetLeft = $derived(fanCenterX - CARD_WIDTH / 2 + fan.x);
+  const targetTop = $derived(fanCenterY - CARD_HEIGHT / 2 + fan.y);
+
+  const session = $derived(projectDnd.session);
+  const isDragging = $derived(
+    session?.payload.kind === "fan-item" &&
+      session.payload.project.id === project.id &&
+      session.active,
+  );
+
+  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 50);
+
+  const originState = $derived({
+    left: originLeft,
+    top: originTop,
+    scale: 0.5,
+    opacity: 0,
+    rotate: 0,
+  });
+
+  const pos = new Spring(
+    { left: originLeft, top: originTop, scale: 0.5, opacity: 0, rotate: 0 },
+    SPRING_OPTS,
+  );
+
+  let timer: number | undefined;
+
+  $effect(() => {
+    const target = isClosing
+      ? originState
+      : {
+          left: targetLeft,
+          top: targetTop,
+          scale: 1,
+          opacity: isDragging ? 0.3 : 1,
+          rotate: fan.rotate,
+        };
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      void pos.set(target);
+    }, delayMs);
+    return () => window.clearTimeout(timer);
+  });
+
+  let itemEl = $state<HTMLDivElement | null>(null);
+
+  function onPointerDown(e: PointerEvent) {
+    beginProjectDrag({ kind: "fan-item", project, groupId }, e, {
+      width: itemEl?.getBoundingClientRect().width ?? CARD_WIDTH,
+      originLeft: itemEl?.getBoundingClientRect().left ?? 0,
+      originTop: itemEl?.getBoundingClientRect().top ?? 0,
+    });
+  }
+</script>
+
+<div
+  bind:this={itemEl}
+  onpointerdown={onPointerDown}
+  class="absolute touch-none"
+  style="width: {CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
+    ? 60
+    : 30 + index}; left: {pos.current.left}px; top: {pos.current.top}px; transform: scale({pos
+    .current.scale}) rotate({pos.current.rotate}deg); opacity: {pos.current.opacity};"
+>
+  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+    <ProjectCard
+      {project}
+      {isRenaming}
+      {renameValue}
+      {onRenameValueChange}
+      {onCommitRename}
+      {onCancelRename}
+      {onStartRename}
+      {onOpen}
+      {onDuplicate}
+      {onExport}
+      {onDelete}
+      {duplicateBusy}
+      {commitBusy}
+    />
+  </div>
+</div>

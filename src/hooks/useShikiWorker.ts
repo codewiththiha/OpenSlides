@@ -1,21 +1,16 @@
+import {
+  useShikiDisplayHtml,
+  type ShikiDisplayHtmlArgs,
+} from "./useShikiDisplayState.svelte";
+
 /** Shared Shiki worker hook for the editor HTML overlay. */
-import { useShikiDisplayHtml } from "./useShikiDisplayState";
-
-interface Args {
-  code: string;
-  language: string;
-  theme: string;
-  resetKey?: string;
-}
-
-export function useShikiWorker({ code, language, theme, resetKey }: Args): string | null {
-  return useShikiDisplayHtml({
-    code,
-    language,
-    theme,
-    resetKey,
+export function useShikiWorker(
+  args: () => Pick<ShikiDisplayHtmlArgs, "code" | "language" | "theme" | "resetKey">,
+) {
+  return useShikiDisplayHtml(() => ({
+    ...args(),
     debounceMs: 80,
     priority: "high",
     policyName: "editor",
-  }).html;
+  }));
 }
