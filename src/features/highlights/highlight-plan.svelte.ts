@@ -4,7 +4,6 @@
  */
 import type { BundledLanguage, BundledTheme, Highlighter } from "shiki";
 import type { Highlight } from "$lib/types";
-import { themeBackground } from "$lib/types";
 import {
   buildPlan,
   plainTokenLines,
@@ -82,13 +81,12 @@ export function createHighlightPlan(args: UseHighlightPlanArgs) {
           ? await getTokenLines(code, highlighter, language, theme, signal)
           : null;
         if (signal.aborted) return;
-        const plan = buildPlan(
-          code,
-          tokenLines,
-          { startLine, startChar, endLine, endChar },
-          themeBackground(theme),
-          highlight.dimAmount ?? 75,
-        );
+        const plan = buildPlan(code, tokenLines, {
+          startLine,
+          startChar,
+          endLine,
+          endChar,
+        });
         if (!signal.aborted) entry = { id, plan };
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") return;

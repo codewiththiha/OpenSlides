@@ -2,20 +2,20 @@
   /**
    * HighlightLayer — 60fps optimized.
    *
-   * The three visual pieces are expressed with {#if}/{#key} blocks and
-   * per-element transitions:
+   * Two visual pieces, expressed with {#if}/{#key} blocks and per-element
+   * transitions:
    *  - dim overlay: mounted while a highlight is active OR `spotlightActive`
    *    holds it across a step gap (Tween fades 0 → dimAmount on mount/step
    *    change, svelte-fade outro on removal)
-   *  - eraser segments: keyed per (highlightId, line) — fade IN only; on
-   *    removal they vanish instantly, because the clone text's own fade
-   *    carries the outro (a lingering solid panel reads as a black slab
-   *    under the fading text)
    *  - clone layer: {#key highlight.id} — swap on steps
+   *
+   * There is deliberately NO eraser panel under the clone: painting an
+   * opaque box over the original text read as a black slab. Everything dims
+   * uniformly and the clone pops bright on top.
    *
    * Step changes are sequenced by createHighlightNav (outro fully, then
    * intro): the nav parks the index at -1 with `spotlightActive` still true,
-   * so only the eraser + clone unmount here while the dim stays put.
+   * so only the clone unmounts here while the dim stays put.
    *
    * `onExitComplete` mirrors AnimatePresence: a counter is armed by every
    * outrostart and released by its outroend; when it drains to zero the
@@ -27,7 +27,6 @@
   import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
   import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
   import HighlightDimOverlay from "@/features/highlights/HighlightDimOverlay.svelte";
-  import HighlightEraserSegments from "@/features/highlights/HighlightEraserSegments.svelte";
   import HighlightCloneLayer from "@/features/highlights/HighlightCloneLayer.svelte";
 
   let {
@@ -137,8 +136,6 @@
 
 {#if hl}
   {#if plan && measurement && hasSegments}
-    <HighlightEraserSegments highlightId={hl.id} {measurement} {plan} {dimMs} />
-
     {#if union}
       {#key hl.id}
         <HighlightCloneLayer

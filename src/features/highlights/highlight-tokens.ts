@@ -57,14 +57,12 @@ export interface HighlightPlanLine {
   endChar: number;
   /** Syntax-colored HTML for the clone (rendered AFTER slicing). */
   html: string;
-  /** Nothing selected on this line — skip erase/clone, keep the entry. */
+  /** Nothing selected on this line — skip the clone, keep the entry. */
   isEmpty: boolean;
 }
 
 export interface HighlightPlan {
   lines: HighlightPlanLine[];
-  /** Dimmed-card color the eraser boxes must paint. */
-  eraserColor: string;
   /** Joined plain text of the selection across all lines. */
   selectedText: string;
 }
@@ -193,33 +191,17 @@ export function renderTokensToSpans(tokens: HighlightTokenLine): string {
 }
 
 /* ----------------------------------------------------------------------- *
- * Color mixing & plan assembly (exact ports)
+ * Plan assembly (exact port)
  * ----------------------------------------------------------------------- */
 
-/** Dimmed-card color for the eraser boxes — mix the theme background
- *  toward black by dimPercent. 6-digit hex → `rgb(r, g, b)`; anything else
- *  passes through unchanged (same behavior as the deleted Rust mixer). */
-export function mixTowardBlack(bg: string, dimPercent: number): string {
-  const t = Math.min(Math.max(dimPercent, 0), 100) / 100;
-  const hex = bg.trim().replace(/^#/, "");
-  if (hex.length === 6 && /^[0-9a-fA-F]{6}$/.test(hex)) {
-    const channel = (i: number) =>
-      Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - t));
-    return `rgb(${channel(0)}, ${channel(2)}, ${channel(4)})`;
-  }
-  return bg;
-}
-
 /** Build the full render plan for one highlight: per-line clamped char
- *  ranges + slice-rendered clone HTML + plain text + eraser color.
+ *  ranges + slice-rendered clone HTML + plain text.
  *  `tokenLines === null` is the plain-fallback path (mirrors the old
  *  `html: ""` signal — the clone still shows, just uncolored). */
 export function buildPlan(
   code: string,
   tokenLines: HighlightTokenLine[] | null,
   range: SelectionRange,
-  themeBg: string,
-  dimPercent: number,
 ): HighlightPlan {
   const codeLines = code.split("\n");
   const spans = decompose(code, range);
@@ -255,7 +237,6 @@ export function buildPlan(
 
   return {
     lines,
-    eraserColor: mixTowardBlack(themeBg, dimPercent),
     selectedText: spans
       .map((s) => codeLines[s.lineIndex]!.slice(s.start, s.end))
       .join("\n"),

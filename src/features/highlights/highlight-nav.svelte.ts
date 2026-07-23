@@ -2,7 +2,7 @@
  * createHighlightNav — step-wise navigation state for "sub-slide" highlights.
  *
  * Presentation flow per slide:
- *   1. → reveals highlight #1 (intro: dim + erase + scale-up)
+ *   1. → reveals highlight #1 (intro: dim + scale-up)
  *   2. → plays #1's outro FULLY (dim held) and ONLY THEN #2's intro, repeat
  *   3. → after the LAST highlight, its outro plays fully and ONLY THEN
  *        does the slide advance

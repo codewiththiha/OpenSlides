@@ -29,9 +29,9 @@ How "highlight these lines/characters with a dim/spotlight effect" renders.
   ranges into per-line token slices,
 - `sliceTokenLine` — clips a tokenized line to a range,
 - `renderTokensToSpans` — emits span metadata with colors resolved from
-  the Shiki palette (dark themes mix toward black via `mixTowardBlack`).
+  the Shiki palette.
 
-Tests (`test:highlight`, 13 cases) import these directly.
+Tests (`test:highlight`, 11 cases) import these directly.
 
 ## CRUD and interaction
 
@@ -61,9 +61,10 @@ active highlight" step reveal; `HighlightStepIndicator` shows progress and
   `nav.spotlightActive` is threaded down so only the dim overlay survives
   the gap (`HighlightLayer` also caches the last highlight so a held dim
   keeps its custom amount/duration).
-- Eraser boxes are intro-only: on outro they vanish instantly since the
-  clone text's own fade carries the exit (a lingering solid panel reads as
-  a black slab under the fading text).
+- There is **no eraser panel**: everything dims uniformly and the clone
+  pops bright on top. (Painting an opaque box over the original text read
+  as a black slab, so the mechanism was deleted along with
+  `mixTowardBlack`/`plan.eraserColor`.)
 - The last highlight's outro plays fully before the slide advances (the
-  layer's exit-complete signal drives the advance, with the fail-safe timer
-  as backstop).
+  layer's exit-complete signal drives the advance, with the fail-safe
+  timer as backstop).
