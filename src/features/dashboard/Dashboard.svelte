@@ -8,10 +8,9 @@
   import ShortcutsHelp from "$lib/components/ShortcutsHelp.svelte";
   import CreateDeckTile from "@/features/dashboard/CreateDeckTile.svelte";
   import DashboardStates from "@/features/dashboard/DashboardStates.svelte";
-  import ProjectGridView from "@/features/dashboard/ProjectGridView.svelte";
+  import ProjectGrid from "@/features/dashboard/ProjectGrid.svelte";
   import ConfirmDialog from "$lib/ui/ConfirmDialog.svelte";
   import {
-    projectsQuery,
     createProjectMutation,
     duplicateProjectMutation,
     deleteProjectMutation,
@@ -35,10 +34,12 @@
     toggleTheme,
   } from "$lib/stores/ui-state.svelte";
   import { api } from "$lib/lib/tauri-api";
+  import { createDashboardState } from "./dashboard-state.svelte";
   import { notify } from "$lib/lib/toast";
 
-  const listQuery = projectsQuery();
-  const projects = $derived(listQuery.data ?? []);
+  const st = createDashboardState();
+  const listQuery = st.query;
+  const projects = $derived(st.projects);
   const createMutation = createProjectMutation();
   const duplicateMutation = duplicateProjectMutation();
   const deleteMutation = deleteProjectMutation();
@@ -46,10 +47,6 @@
   const importMutation = importProjectMutation();
   const renameMutation = renameProjectMutation();
 
-  let creating = $state(false);
-  let newName = $state("Untitled Presentation");
-  let selectedTheme = $state("dark-plus");
-  let deleteTarget = $state<{ id: string; name: string } | null>(null);
 
   // Native + document window title for the dashboard route.
   $effect(() => {
@@ -76,12 +73,12 @@
   const handleOpen = (id: string) => void push(`/editor/${id}`);
   const handleDuplicate = (id: string) => duplicateMutation.mutate(id);
   const handleExport = (id: string) => exportMutation.mutate(id);
-  const handleDelete = (id: string, name: string) => (deleteTarget = { id, name });
+  const handleDelete = (id: string, name: string) => (st.deleteTarget = { id, name });
 
   function handleConfirmDelete() {
-    if (deleteTarget) {
-      deleteMutation.mutate(deleteTarget.id);
-      deleteTarget = null;
+    if (st.deleteTarget) {
+      deleteMutation.mutate(st.deleteTarget.id);
+      st.deleteTarget = null;
     }
   }
 
@@ -95,20 +92,18 @@
   async function handleCreate() {
     try {
       const project = await createMutation.mutateAsync(
-        newName.trim() || "Untitled Presentation",
+        st.newName.trim() || "Untitled Presentation",
       );
-      if (selectedTheme && selectedTheme !== "dark-plus" && selectedTheme !== project.theme) {
+      if (st.selectedTheme && st.selectedTheme !== "dark-plus" && st.selectedTheme !== project.theme) {
         try {
-          await api.updateProjectTheme(project.id, selectedTheme);
+          await api.updateProjectTheme(project.id, st.selectedTheme);
         } catch {
           // The deck itself exists and is ready to edit even if its optional
           // theme update fails, so do not strand the user on the dashboard.
           notify.error("Presentation created, but the selected theme could not be applied");
         }
       }
-      creating = false;
-      newName = "Untitled Presentation";
-      selectedTheme = "dark-plus";
+      st.resetForm();
       void push(`/editor/${project.id}`);
     } catch {
       // The mutation hook presents the creation error.
@@ -125,7 +120,7 @@
   }
 
   const menuHandlers: AppMenuHandlers = {
-    "menu://new-project": () => (creating = true),
+    "menu://new-project": () => (st.creating = true),
     "menu://open-dashboard": () => void push("/"),
     "menu://command-palette": () => setIsCommandOpen(true),
     "menu://toggle-theme": () => toggleTheme(),
@@ -168,21 +163,21 @@
       >
         <Upload class="h-4 w-4" />Import
       </Button>
-      <Button onclick={() => (creating = true)} class="gap-2" size="sm">
+      <Button onclick={() => (st.creating = true)} class="gap-2" size="sm">
         <Plus class="h-4 w-4" />New Presentation
       </Button>
     {/snippet}
   </TitleBar>
 
-  {#if creating && !listQuery.isLoading && !listQuery.isError}
+  {#if st.creating && !listQuery.isLoading && !listQuery.isError}
     <div class="mx-auto max-w-7xl px-6 pt-8">
       <CreateDeckTile
-        isExpanded={creating || projects.length === 0}
-        onToggleExpand={(expanded) => (creating = expanded)}
-        name={newName}
-        onNameChange={(v) => (newName = v)}
-        {selectedTheme}
-        onThemeChange={(t) => (selectedTheme = t)}
+        isExpanded={st.creating || projects.length === 0}
+        onToggleExpand={(expanded) => (st.creating = expanded)}
+        name={st.newName}
+        onNameChange={(v) => (st.newName = v)}
+        selectedTheme={st.selectedTheme}
+        onThemeChange={(t) => (st.selectedTheme = t)}
         onCreate={() => void handleCreate()}
         isPending={createMutation.isPending}
         isStandalone={true}
@@ -195,12 +190,12 @@
     isError={listQuery.isError}
     error={(listQuery.error as Error | null) ?? null}
     projectCount={projects.length}
-    onCreate={() => (creating = true)}
+    onCreate={() => (st.creating = true)}
     onImport={() => void handleImport()}
-    showEmptyState={!creating}
+    showEmptyState={!st.creating}
   >
     {#if !listQuery.isLoading && !listQuery.isError && projects.length > 0}
-      <ProjectGridView
+      <ProjectGrid
         {projects}
         rename={{
           renamingId: rename.renamingId,
@@ -223,12 +218,12 @@
   <CommandPalette />
   <ShortcutsHelp />
   <ConfirmDialog
-    open={deleteTarget !== null}
-    title="Delete &quot;{deleteTarget?.name}&quot;?"
+    open={st.deleteTarget !== null}
+    title="Delete &quot;{st.deleteTarget?.name}&quot;?"
     description="This cannot be undone."
     confirmLabel="Delete"
     destructive
     onConfirm={handleConfirmDelete}
-    onCancel={() => (deleteTarget = null)}
+    onCancel={() => (st.deleteTarget = null)}
   />
 </div>
