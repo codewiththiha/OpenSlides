@@ -19,6 +19,10 @@ export function sveltePlugin() {
           filename: args.path,
           generate: "client",
           css: "injected",
+          // Match `npm run tauri dev` (vite serve): dev builds compile props
+          // as lazy getters, which is where outro-time param re-reads show
+          // up. Prod-compiled tests were blind to that crash class.
+          dev: true,
         });
         return {
           contents: js.code,
