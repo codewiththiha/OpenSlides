@@ -1,33 +1,23 @@
 /**
- * Slide-strip drag state (svelte-dnd-action).
+ * Slide-strip drag state (svelte-dnd-action) — the reactive controller.
+ * Pure decisions live next door: stack-hover-geometry.ts (hit zones with
+ * hysteresis), pointer-insertion.ts (pointer-based shadow placement),
+ * dnd-finalize.ts (drop commit decision).
  *
- * - Stack drops are detected with a pointer tracker: rect-math hit zones
- *   on data-stack-card wrappers (data-stack-target overlays are pure
- *   feedback) — "center means stack, edges mean reorder". While the
- *   pointer sits inside a stack zone, consider-events are NOT applied, so
- *   the receiver card can't slide out from under the cursor.
- * - Reorders that DO apply are placed by the POINTER
- *   (lib/stack-targeting), not by the dragging clone's center — otherwise
- *   the center crosses a card's midpoint while the pointer is still short
- *   of it and the receiver keeps hopping to the far side of the cursor.
- * - The lib-generated dragged clone follows the pointer; a dashed shadow
- *   placeholder marks the insertion slot.
+ * While the pointer sits inside a stack zone, consider-events are NOT
+ * applied, so the receiver card can't slide out from under the cursor.
  */
 import { untrack } from "svelte";
 import { TRIGGERS, SOURCES, type DndEvent } from "svelte-dnd-action";
-import { pointerInsertIndex, shadowInsertAt } from "$lib/lib/stack-targeting";
+import { pointerInsertIndex } from "$lib/lib/stack-targeting";
 import type { Slide } from "$lib/types";
-import type { StripItem } from "./slide-strip-state.svelte";
+import type { StripItem } from "../slide-strip-state.svelte";
+import { findStackHoverId } from "./stack-hover-geometry";
+import { pointerShadowReorder, shadowIndexOf } from "./pointer-insertion";
+import { decideFinalize } from "./dnd-finalize";
+import type { StackHoverElement } from "./dnd-types";
 
 const DRAGGED_CLONE_SELECTOR = "#dnd-action-dragged-el";
-
-/* Stack targeting geometry — fractions of a card rect.
-   ENTER = visible dashed zone; EXIT = larger "stay" region so pointer
-   jitter near the edge doesn't drop the target (hysteresis). */
-const STACK_ENTER_X = 0.16;
-const STACK_ENTER_Y = 0.12;
-const STACK_EXIT_X = 0.05;
-const STACK_EXIT_Y = 0.04;
 
 export function createSlideStripDnd(args: {
   baseItems: () => StripItem[];
@@ -66,39 +56,37 @@ export function createSlideStripDnd(args: {
     });
   });
 
+  /** Snapshot the stackable cards on the strip for the pure hit test. */
+  function stackHoverElements(): StackHoverElement[] {
+    const els = document.querySelectorAll<HTMLElement>("[data-stack-card]");
+    const out: StackHoverElement[] = [];
+    for (const el of els) {
+      // Ignore the lib-generated dragged clone (never a valid target).
+      if (el.closest(DRAGGED_CLONE_SELECTOR)) continue;
+      const id = el.getAttribute("data-stack-card");
+      if (!id) continue;
+      out.push({
+        id,
+        section: el.dataset.stackSection?.trim() || null,
+        rect: el.getBoundingClientRect(),
+      });
+    }
+    return out;
+  }
+
   let hoverRaf = 0;
   function updateStackHover() {
     if (!draggingId || !dragSource) {
       stackHoverId = null;
       return;
     }
-    const draggedSection = dragSource.slides[0]?.sectionId?.trim() || null;
-    const draggedIds = new Set(dragSource.slides.map((s) => s.id));
-    const els = document.querySelectorAll<HTMLElement>("[data-stack-card]");
-    let found: string | null = null;
-    for (const el of els) {
-      // Ignore the lib-generated dragged clone and the dragged source itself.
-      if (el.closest(DRAGGED_CLONE_SELECTOR)) continue;
-      const targetId = el.getAttribute("data-stack-card");
-      if (!targetId || draggedIds.has(targetId)) continue;
-      // Stacking onto a sibling of the same section is meaningless.
-      const section = el.dataset.stackSection?.trim();
-      if (draggedSection && section && section === draggedSection) continue;
-      const r = el.getBoundingClientRect();
-      // Hysteresis: the currently-hovered card keeps its larger "stay" region.
-      const ix = stackHoverId === targetId ? STACK_EXIT_X : STACK_ENTER_X;
-      const iy = stackHoverId === targetId ? STACK_EXIT_Y : STACK_ENTER_Y;
-      if (
-        pointer.x >= r.left + r.width * ix &&
-        pointer.x <= r.right - r.width * ix &&
-        pointer.y >= r.top + r.height * iy &&
-        pointer.y <= r.bottom - r.height * iy
-      ) {
-        found = targetId;
-        break;
-      }
-    }
-    stackHoverId = found;
+    stackHoverId = findStackHoverId({
+      pointer,
+      draggingIds: new Set(dragSource.slides.map((s) => s.id)),
+      draggedSection: dragSource.slides[0]?.sectionId?.trim() || null,
+      currentHoverId: stackHoverId,
+      elements: stackHoverElements(),
+    });
   }
 
   function onPointerMove(e: PointerEvent) {
@@ -139,18 +127,11 @@ export function createSlideStripDnd(args: {
     }
 
     // ── Pointer-based insertion (the pointer beats the clone's center) ──
-    // The lib's OVER_INDEX indices come from the floating clone's CENTER,
-    // which crosses a card's midpoint BEFORE the pointer is over that card
-    // (worse the further the grab point is from the card's center) —
-    // applying those verbatim made receivers hop to the far side of the
-    // cursor on every approach. Instead, insert the shadow only where the
-    // pointer itself has reached; "unchanged" declines the reorder, so the
-    // receiving card stays exactly where the user sees it.
     if (
       info.trigger === TRIGGERS.DRAGGED_OVER_INDEX ||
       info.trigger === TRIGGERS.DRAGGED_ENTERED
     ) {
-      const shadowIdx = dndItems.findIndex((i) => i.isDndShadowItem);
+      const shadowIdx = shadowIndexOf(dndItems);
       const zone = zoneEl;
       const zoneRect = zone?.getBoundingClientRect();
       // Shadow re-entering the zone, or the pointer is vertically off the
@@ -172,21 +153,13 @@ export function createSlideStripDnd(args: {
         centers.push(c.offsetLeft + c.offsetWidth / 2);
       }
       const domIndex = pointerInsertIndex(pointer.x - zoneRect.left, centers);
-      const { insertAt, unchanged } = shadowInsertAt(domIndex, shadowIdx);
-      if (unchanged) return;
-      const shadow = dndItems[shadowIdx];
-      const rest = dndItems.filter((i) => !i.isDndShadowItem);
-      const reordered = [...rest.slice(0, insertAt), shadow, ...rest.slice(insertAt)];
-      if (reordered.some((it, i) => it !== dndItems[i])) dndItems = reordered;
+      const reordered = pointerShadowReorder(dndItems, domIndex);
+      if (reordered) dndItems = reordered;
       return;
     }
 
     // ── Everything else (left the zone / dropped outside) applies verbatim ──
     dndItems = next;
-  }
-
-  function arraysEqual(a: string[], b: string[]) {
-    return a.length === b.length && a.every((v, i) => b[i] === v);
   }
 
   function handleFinalize(e: CustomEvent<DndEvent<StripItem>>) {
@@ -205,46 +178,47 @@ export function createSlideStripDnd(args: {
     dragSource = null;
     stackHoverId = null;
 
-    const clean = next.filter((i) => !i.isDndShadowItem);
     const base = args.baseItems();
-
-    // While filtering, dragging is disabled — restore visuals and bail.
-    if (args.filtering() || !source) {
-      dndItems = base;
-      return;
-    }
-
-    // Center drop → stack the dragged whole onto the target slide.
-    if (stackTarget) {
-      dndItems = base; // revert the reorder preview
-      const sourceIds = args.resolveSourceIds(source.slides[0].id);
-      if (sourceIds.length > 0 && !sourceIds.includes(stackTarget)) {
-        args.onStack(sourceIds, stackTarget);
-      }
-      return;
-    }
-
-    const nextIds = clean.flatMap((i) => i.slides.map((s) => s.id));
-    const prevIds = base.flatMap((i) => i.slides.map((s) => s.id));
-
-    if (arraysEqual(nextIds, prevIds)) {
-      dndItems = base;
-      return;
-    }
-
-    // Optimistic reorder + rollback on mutation error.
-    const prevOrdered = args.ordered();
-    dndItems = clean;
-    args.setOrdered(
-      nextIds
-        .map((id) => prevOrdered.find((s) => s.id === id))
-        .filter((s): s is Slide => Boolean(s)),
-    );
-    args.onReorder(nextIds, {
-      onError: () => {
-        args.setOrdered(prevOrdered);
-      },
+    const decision = decideFinalize({
+      items: next,
+      baseItems: base,
+      filtering: args.filtering(),
+      hasSource: Boolean(source),
+      stackTargetId: stackTarget,
     });
+
+    switch (decision.kind) {
+      case "restore":
+      case "noop":
+        dndItems = base;
+        return;
+
+      case "stack": {
+        dndItems = base; // revert the reorder preview
+        const sourceIds = args.resolveSourceIds(source!.slides[0].id);
+        if (sourceIds.length > 0 && !sourceIds.includes(decision.targetId)) {
+          args.onStack(sourceIds, decision.targetId);
+        }
+        return;
+      }
+
+      case "reorder": {
+        // Optimistic reorder + rollback on mutation error.
+        const prevOrdered = args.ordered();
+        dndItems = next.filter((i) => !i.isDndShadowItem);
+        args.setOrdered(
+          decision.nextIds
+            .map((id) => prevOrdered.find((s) => s.id === id))
+            .filter((s): s is Slide => Boolean(s)),
+        );
+        args.onReorder(decision.nextIds, {
+          onError: () => {
+            args.setOrdered(prevOrdered);
+          },
+        });
+        return;
+      }
+    }
   }
 
   return {

@@ -27,7 +27,7 @@
   import { SvelteSet } from "svelte/reactivity";
   import { resolveProjectLanguage, type Project, type Slide } from "$lib/types";
   import { createSlideStripState, type StripItem } from "./slide-strip-state.svelte";
-  import { createSlideStripDnd } from "./slide-dnd.svelte";
+  import { createSlideStripDnd } from "./dnd/slide-dnd.svelte";
   import { createSlideStripSearch } from "@/features/slides/slide-search.svelte";
   import { createRenameState } from "$lib/lib/rename-state.svelte";
   import { createAddSlide } from "@/features/slides/add-slide.svelte";
