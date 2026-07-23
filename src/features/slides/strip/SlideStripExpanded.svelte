@@ -8,6 +8,7 @@
    * pointer tracker (rect math) — data-stack-target elements are pure
    * feedback, so they never intercept pointer events.
    */
+  import { untrack } from "svelte";
   import { Plus } from "@lucide/svelte";
   import { setCurrentSlideId, ui } from "$lib/stores/ui-state.svelte";
   import { cn } from "$lib/lib/utils";
@@ -20,6 +21,7 @@
   import SlideSelectionToolbar from "@/features/slides/SlideSelectionToolbar.svelte";
   import ConfirmDialog from "$lib/ui/ConfirmDialog.svelte";
   import SlideStripDndZone from "./SlideStripDndZone.svelte";
+  import { provideSlideCardActions } from "../slide-card-actions.svelte";
   import type { createSlideStripState, StripItem } from "../slide-strip-state.svelte";
   import type { createSlideStripDnd } from "../dnd/slide-dnd.svelte";
   import type { createSlideStripSelection } from "./SlideStripSelectionController.svelte";
@@ -62,6 +64,32 @@
   } = $props();
 
   const dragDisabled = $derived(searchQuery.trim().length > 0 || rename.renamingId !== null);
+
+  // Cards read rename/action wiring from context (§2.1) — only per-card
+  // data (slide, tab stop, multi-select state) stays in props. Provided
+  // once (untrack); the closures late-bind the current prop values.
+  provideSlideCardActions(
+    untrack(() => ({
+      get renamingId() {
+        return rename.renamingId;
+      },
+      get renameValue() {
+        return rename.value;
+      },
+      setRenameValue: (v: string) => (rename.value = v),
+      commitRename: () => void rename.commit(),
+      cancelRename: () => rename.cancel(),
+      startRename: (id: string, current: string) => rename.start(id, current),
+      remove: (id: string) => onRemove(id),
+      duplicate: (id: string) => onDuplicate(id),
+      registerCardRef: (id: string, node: HTMLDivElement | null) =>
+        strip.registerCardRef(id, node),
+      toggleMultiSelect: (id: string, position?: { x: number; y: number }) =>
+        selection.toggleSlideSelection(id, position),
+      openContextMenu: (event: MouseEvent, slide: Slide, title: string) =>
+        menuCtl.open(event, slide, title),
+    })),
+  );
 </script>
 
 {#snippet stackTargetOverlay(targetId: string, ownerItemId: string)}
@@ -82,23 +110,12 @@
   <SlideCard
     {slide}
     index={strip.originalIndex(slide.id)}
-    isRenaming={rename.renamingId === slide.id}
-    renameValue={rename.renamingId === slide.id ? rename.value : ""}
     highlightProgress={activeHighlightIndex}
-    onRenameValueChange={(v) => (rename.value = v)}
-    onCommitRename={() => void rename.commit()}
-    onCancelRename={rename.cancel}
-    {onRemove}
-    onRename={rename.start}
-    {onDuplicate}
-    registerCardRef={strip.registerCardRef}
     cardRefs={strip.cardRefs}
     navigationIds={strip.navIds}
     isTabStop={slide.id === strip.tabStopId}
     isMultiSelectMode={selection.isMultiSelectMode}
     isMultiSelected={selection.selectedSlideIds.has(slide.id)}
-    onToggleMultiSelect={selection.toggleSlideSelection}
-    onOpenContextMenu={menuCtl.open}
     {theme}
     {language}
     {searchQuery}

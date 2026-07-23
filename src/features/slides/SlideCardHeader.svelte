@@ -2,25 +2,21 @@
   import DragHandle from "$lib/ui/DragHandle.svelte";
   import InlineEditableText from "$lib/ui/InlineEditableText.svelte";
 
+  import { consumeSlideCardActions } from "./slide-card-actions.svelte";
+
   let {
     isRenaming,
     renameValue,
     title,
-    onRenameValueChange,
-    onCommitRename,
-    onCancelRename,
-    onRename,
     slideId,
   }: {
     isRenaming: boolean;
     renameValue: string;
     title: string;
-    onRenameValueChange?: (v: string) => void;
-    onCommitRename?: () => void;
-    onCancelRename?: () => void;
-    onRename?: (id: string, current: string) => void;
     slideId: string;
   } = $props();
+
+  const cardActions = consumeSlideCardActions();
 </script>
 
 <div class="flex min-w-0 items-center justify-between gap-1">
@@ -29,9 +25,9 @@
     {#if isRenaming}
       <InlineEditableText
         value={renameValue}
-        onChange={(v) => onRenameValueChange?.(v)}
-        onCommit={() => onCommitRename?.()}
-        onCancel={() => onCancelRename?.()}
+        onChange={cardActions.setRenameValue}
+        onCommit={cardActions.commitRename}
+        onCancel={cardActions.cancelRename}
         class="h-5 min-w-0 flex-1 rounded px-1 text-xs font-medium"
       />
     {:else}
@@ -43,15 +39,14 @@
         role="button"
         tabindex="0"
         onkeydown={(e) => {
-          if (!onRename || (e.key !== "Enter" && e.key !== " ")) return;
+          if (e.key !== "Enter" && e.key !== " ") return;
           e.preventDefault();
           e.stopPropagation();
-          onRename(slideId, title);
+          cardActions.startRename(slideId, title);
         }}
         ondblclick={(e) => {
-          if (!onRename) return;
           e.stopPropagation();
-          onRename(slideId, title);
+          cardActions.startRename(slideId, title);
         }}
       >
         {title}

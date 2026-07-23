@@ -18,26 +18,17 @@
   import SlideCardHoverPreview from "./SlideCardHoverPreview.svelte";
   import { createSlideCardHoverPreview } from "./slide-card-preview.svelte";
 
+  import { consumeSlideCardActions } from "./slide-card-actions.svelte";
+
   let {
     slide,
     index,
-    isRenaming = false,
-    renameValue = "",
     highlightProgress = -1,
-    onRenameValueChange,
-    onCommitRename,
-    onCancelRename,
-    onRemove,
-    onRename,
-    onDuplicate,
-    registerCardRef,
     cardRefs,
     navigationIds = [],
     isTabStop = false,
     isMultiSelectMode = false,
     isMultiSelected = false,
-    onToggleMultiSelect,
-    onOpenContextMenu,
     theme,
     language,
     searchQuery = "",
@@ -45,28 +36,22 @@
   }: {
     slide: Slide;
     index: number;
-    isRenaming?: boolean;
-    renameValue?: string;
     highlightProgress?: number;
-    onRenameValueChange?: (v: string) => void;
-    onCommitRename?: () => void;
-    onCancelRename?: () => void;
-    onRemove?: (id: string) => void;
-    onRename?: (id: string, current: string) => void;
-    onDuplicate?: (id: string) => void;
-    registerCardRef?: (id: string, node: HTMLDivElement | null) => void;
     cardRefs?: Map<string, HTMLDivElement>;
     navigationIds?: string[];
     isTabStop?: boolean;
     isMultiSelectMode?: boolean;
     isMultiSelected?: boolean;
-    onToggleMultiSelect?: (id: string, position?: { x: number; y: number }) => void;
-    onOpenContextMenu?: (event: MouseEvent, slide: Slide, title: string) => void;
     theme: string;
     language: string;
     searchQuery?: string;
     enableHoverPreview?: boolean;
   } = $props();
+
+  const cardActions = consumeSlideCardActions();
+
+  const isRenaming = $derived(cardActions.renamingId === slide.id);
+  const renameValue = $derived(isRenaming ? cardActions.renameValue : "");
 
   // Fine-grained $derived keeps list updates cheap: this card only updates
   // when ITS slide id / localCode key flips, not on every keystroke.
@@ -107,10 +92,10 @@
 
   /** Registers this card's root in the panel-wide ref map (roving focus). */
   function registerCardNode(node: HTMLElement) {
-    registerCardRef?.(slide.id, node as HTMLDivElement);
+    cardActions.registerCardRef(slide.id, node as HTMLDivElement);
     return {
       destroy() {
-        registerCardRef?.(slide.id, null);
+        cardActions.registerCardRef(slide.id, null);
       },
     };
   }
@@ -121,7 +106,7 @@
     if (isMultiSelectMode && (e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
       e.stopPropagation();
-      onToggleMultiSelect?.(slide.id);
+      cardActions.toggleMultiSelect(slide.id);
       return;
     }
 
@@ -153,14 +138,14 @@
     if (e.key === "Delete" || e.key === "Backspace") {
       e.preventDefault();
       e.stopPropagation();
-      onRemove?.(slide.id);
+      cardActions.remove(slide.id);
       return;
     }
 
     if (e.key === "F2") {
       e.preventDefault();
       e.stopPropagation();
-      onRename?.(slide.id, title);
+      cardActions.startRename(slide.id, title);
     }
   }
 </script>
@@ -186,7 +171,7 @@
   onclick={(event) => {
     if (isRenaming) return;
     if (isMultiSelectMode) {
-      onToggleMultiSelect?.(slide.id, { x: event.clientX, y: event.clientY });
+      cardActions.toggleMultiSelect(slide.id, { x: event.clientX, y: event.clientY });
       return;
     }
     setCurrentSlideId(slide.id);
@@ -194,7 +179,7 @@
   oncontextmenu={(e) => {
     e.preventDefault();
     e.stopPropagation();
-    onOpenContextMenu?.(e, slide, title);
+    cardActions.openContextMenu(e, slide, title);
   }}
 >
   <CodeThumbnail
@@ -227,21 +212,12 @@
     style="background: {cardTheme.topGradient};"
   >
     <div class="pointer-events-auto pr-14 text-white mix-blend-difference">
-      <SlideCardHeader
-        {isRenaming}
-        {renameValue}
-        {title}
-        onRenameValueChange={(v) => onRenameValueChange?.(v)}
-        onCommitRename={() => onCommitRename?.()}
-        onCancelRename={() => onCancelRename?.()}
-        {onRename}
-        slideId={slide.id}
-      />
+      <SlideCardHeader {isRenaming} {renameValue} {title} slideId={slide.id} />
     </div>
   </div>
 
   <div class="absolute right-2 top-1.5 z-20">
-    <SlideCardActions {isRenaming} {title} slideId={slide.id} {onRename} {onDuplicate} {onRemove} />
+    <SlideCardActions {isRenaming} {title} slideId={slide.id} />
   </div>
 
   {#if searchQuery}
