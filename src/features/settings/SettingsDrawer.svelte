@@ -3,8 +3,8 @@
    * Right-side settings drawer for global project options.
    * Preview line numbers (slide view) are separate from editor gutter numbers.
    * fontSize / lineHeight / editorFontSize / global durations update the
-   * preview instantly via previewProject overrides (Zustand → runes), while
-   * DB save happens only on commit.
+   * preview instantly via previewProject overrides, while DB save happens
+   * only on commit.
    */
   import { untrack } from "svelte";
   import { X } from "@lucide/svelte";

@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * The deck fan overlay — portal'd to body like the React createPortal.
-   * framer-motion springs (stiffness/damping are per-config below), the
-   * 260ms close-then-unmount choreography, and dnd-kit fan-item dragging
-   * are preserved via svelte/motion + the shared pointer-drag manager.
+   * The deck fan overlay — portal'd to body. Springs (stiffness/damping
+   * per-config below), a 260ms close-then-unmount choreography, and
+   * fan-item dragging run on svelte/motion + the shared pointer-drag
+   * manager.
    */
   import { untrack } from "svelte";
   import { Spring, Tween } from "svelte/motion";
@@ -111,7 +111,7 @@
   const spreadWidth = $derived(cardWidth + (total - 1) * 85 + 80);
   const spreadHeight = $derived(cardHeight + Math.abs((total - 1) / 2) * 12 + 80);
 
-  /* Motion values (framer-motion spring/tween equivalents) */
+  /* Motion values */
   const backdrop = new Tween(0, { duration: 240, easing: EASE_DIM });
   const wrap = new Spring({ opacity: 0, scale: 0.85 }, { stiffness: 300, damping: 25 });
   const controls = new Spring({ opacity: 0, scale: 0.5 }, { stiffness: 350, damping: 22 });

@@ -1,15 +1,13 @@
 /**
- * UI state (Svelte 5 runes) — replaces the Zustand store (5 slices + persist).
+ * UI state (Svelte 5 runes).
  *
- * In React every `useUiStore(s => s.currentSlideId)` created a subscription,
- * and selectors/useShallow/ui-selectors.ts (~5 slice hooks) existed to keep
- * subscription topology under control. Here, reading `ui.currentSlideId` in a
- * component creates a fine-grained dependency on that one property — the
- * entire selector layer is unnecessary.
+ * Fine-grained dependencies keep updates surgical: reading
+ * `ui.currentSlideId` in a component tracks that one property, so no
+ * selector layer is needed anywhere.
  *
- * Panel layout prefs persist across restarts via localStorage (same
- * zustand-persist wire format: { state, version }), preview overrides stay
- * transient for instant slider feedback.
+ * Panel layout prefs persist across restarts via localStorage
+ * ({ state, version } wire format); preview overrides stay transient for
+ * instant slider feedback.
  */
 import { SvelteMap } from "svelte/reactivity";
 import type { Highlight } from "$lib/types";
@@ -44,7 +42,7 @@ interface PersistedState {
   showSlideHoverPreview: boolean;
 }
 
-/** Synchronous hydration (zustand persist hydrates sync for localStorage). */
+/** Synchronous hydration — persisted state must exist before first render. */
 function loadPersisted(): Partial<PersistedState> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -55,7 +53,7 @@ function loadPersisted(): Partial<PersistedState> {
     };
     const state = { ...(parsed.state ?? {}) };
     // Keep the compact slides rail as the baseline regardless of an older
-    // saved layout (same migration as zustand persist version < 2).
+    // saved layout (migrate any persisted version below STORAGE_VERSION).
     if ((parsed.version ?? 0) < STORAGE_VERSION) {
       state.slidesPanelSize = DEFAULT_SLIDES_SIZE;
     }

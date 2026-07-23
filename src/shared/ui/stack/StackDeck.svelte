@@ -3,9 +3,9 @@
    * StackDeck — a card with ghost layers + count badge that behaves like a
    * pile (single click fans, double click opens the top item).
    *
-   * Svelte port of the React forwardRef component. Capture-phase click
-   * guards use native `onclickcapture`/`ondblclickcapture` attributes; any
-   * extra props are spread onto the root div like React's `{...rest}`.
+   * Capture-phase click guards use native `onclickcapture` /
+   * `ondblclickcapture` attributes; any extra props are spread onto the
+   * root div.
    */
   import { cn } from "$lib/lib/utils";
   import type { Snippet } from "svelte";

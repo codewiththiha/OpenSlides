@@ -11,12 +11,12 @@ declare module "@tanstack/query-core" {
 }
 
 /**
- * App-wide TanStack Query client (Svelte port — config identical to the
- * React version).
+ * App-wide TanStack Query client.
  *
  * Cross-cutting mutation side effects live here instead of being repeated in
- * every command hook. If the dashboard ever misses an update, fix this policy
- * or the mutation metadata rather than hunting for ad-hoc invalidations.
+ * every mutation factory. If the dashboard ever misses an update, fix this
+ * policy or the mutation metadata rather than hunting for ad-hoc
+ * invalidations.
  */
 export const queryClient = new QueryClient({
   mutationCache: new MutationCache({

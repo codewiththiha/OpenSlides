@@ -3,10 +3,9 @@
    * Editor route — thin router wrapper.
    *
    * svelte-spa-router passes matched route params as a `params` prop. Keying
-   * the inner orchestrator on `projectId` rebuilds all project-scoped hooks
-   * (project query, slide mutations, add-slide) on project switch — the
-   * Svelte equivalent of React Router re-rendering the component with new
-   * params (hooks there closed over the new id on each render).
+   * the inner orchestrator on `projectId` rebuilds all project-scoped state
+   * (project query, slide mutations, add-slide) on project switch instead of
+   * re-running it against the stale id.
    */
   import EditorInner from "@/features/editor/EditorInner.svelte";
 

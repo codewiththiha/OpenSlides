@@ -62,8 +62,9 @@ export function projectMutation<TData, TVariables, TContext = unknown>(
 /**
  * Shared mutation policy for slide-affecting commands.
  *
- * Individual hooks still decide how to update the open project cache, but they
- * no longer need to remember dashboard invalidation or optional detail refetch.
+ * Individual mutation factories still decide how to update the open project
+ * cache, but they no longer need to remember dashboard invalidation or
+ * optional detail refetch.
  */
 export function slideMutation<TData, TVariables, TContext = unknown>(
   projectId: string,

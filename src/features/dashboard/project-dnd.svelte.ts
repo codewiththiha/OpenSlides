@@ -1,13 +1,11 @@
 /**
- * Lightweight pointer-based drag manager for the project dashboard.
- *
- * Replaces @dnd-kit's DndContext/useDraggable/useDroppable combo, which was
- * only used here for stacking (no reorder on the dashboard):
- *  - 8px activation threshold (PointerSensor activationConstraint)
- *  - rect-intersection hit testing against [data-chunk-id] cells — the same
- *    geometry dnd-kit's default collision detection used, which works through
- *    the fixed StackSpread backdrop (elementFromPoint would not)
- *  - the moving overlay clone is rendered by ProjectGridView (DragOverlay)
+ * Lightweight pointer-based drag manager for the project dashboard —
+ * stacking only (there is no dashboard reorder):
+ *  - 8px activation threshold before a drag session starts
+ *  - rect-intersection hit testing against [data-chunk-id] cells, which
+ *    works through the fixed StackSpread backdrop (elementFromPoint would
+ *    not)
+ *  - the moving overlay clone is rendered by ProjectGrid
  */
 import type { GroupChunk } from "$lib/lib/grouping";
 import type { ProjectSummary } from "$lib/types";
@@ -50,7 +48,7 @@ export function setProjectDropHandler(fn: ProjectDropHandler | null) {
 
 const CHUNK_SELECTOR = "[data-chunk-id]";
 
-/** dnd-kit default collision: the cell whose rect contains the pointer. */
+/** Hit test: the cell whose rect contains the pointer. */
 function hitChunk(x: number, y: number): string | null {
   const els = document.querySelectorAll<HTMLElement>(CHUNK_SELECTOR);
   for (const el of els) {

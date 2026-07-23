@@ -8,14 +8,14 @@ import "../index.css";
 
 // Default to dark UI chrome (persisted UI state may override below)
 document.documentElement.classList.add("dark");
-// Prevent Grammarly/LanguageTool/Microsoft Editor from hooking the document;
+// Prevent Grammarly/LanguageTool/Microsoft Editor from intercepting the document;
 // the editor textarea carries the actual spellcheck/autocorrect controls.
 document.documentElement.setAttribute("data-gramm", "false");
 document.documentElement.setAttribute("data-gramm_editor", "false");
 document.documentElement.setAttribute("data-enable-grammarly", "false");
 
-// Hydrate the persisted theme before first paint (was zustand persist; now
-// the same localStorage wire format is read by ui-state.svelte.ts).
+// Hydrate the persisted theme before first paint (same localStorage wire
+// format that ui-state.svelte.ts reads and writes).
 try {
   const raw = localStorage.getItem("openslides-ui");
   if (raw) {

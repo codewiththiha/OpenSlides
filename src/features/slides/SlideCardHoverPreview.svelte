@@ -1,5 +1,5 @@
 <script lang="ts">
-  /** Fixed-position hover preview, portaled to body (react-dom createPortal). */
+  /** Fixed-position hover preview, portaled to body. */
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { portal } from "$lib/actions/portal";

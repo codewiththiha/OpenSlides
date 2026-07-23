@@ -69,10 +69,10 @@
   const isCollapsed = $derived(collapsed ?? ui.isBottomPanelCollapsed);
 
   // Stable per mount (the panel lives under the project-keyed EditorInner) —
-  // untrack() marks the one-time id capture shared by the hooks below.
+  // untrack() marks the one-time id capture shared by the factories below.
   const projectId = untrack(() => project.id);
 
-  const addSlideHook = createAddSlide(projectId, () => project);
+  const addSlideMut = createAddSlide(projectId, () => project);
   const duplicateSlide = createSlideDuplicator(projectId);
   const reorderSlides = createSlideReorderer(projectId);
   const { stackSlides, unstackSlides } = createSlideStackActions(projectId);
@@ -395,8 +395,8 @@
     {/each}
     <button
       type="button"
-      onclick={() => void addSlideHook.addSlide()}
-      disabled={addSlideHook.isPending}
+      onclick={() => void addSlideMut.addSlide()}
+      disabled={addSlideMut.isPending}
       class="flex h-full min-w-11 shrink-0 items-center justify-center px-3 text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary disabled:opacity-50"
       title="Add slide"
     >
@@ -490,8 +490,8 @@
       </div>
       <button
         type="button"
-        onclick={() => void addSlideHook.addSlide()}
-        disabled={addSlideHook.isPending}
+        onclick={() => void addSlideMut.addSlide()}
+        disabled={addSlideMut.isPending}
         class="grid h-[132px] w-[152px] shrink-0 place-items-center self-center rounded-md border border-dashed border-border/80 bg-card/30 text-muted-foreground transition-all hover:border-primary/60 hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-50"
         title="Add slide"
       >

@@ -1,7 +1,7 @@
 /**
- * Exact cubic-bezier easing curves from the framer-motion setup
- * (framer's default `ease` and `backOut`), implemented as a UnitBezier
- * solver so highlight animations are sample-identical to the React version.
+ * Cubic-bezier easing curves for highlight animations (default `ease` and
+ * `backOut`), implemented as a UnitBezier solver so timings stay
+ * sample-identical across runs.
  */
 
 export type EasingFn = (t: number) => number;

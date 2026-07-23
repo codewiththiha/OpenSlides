@@ -39,8 +39,8 @@
     };
   }
 
-  // Measure-then-show: keeps the menu inside the viewport without a flash
-  // at the raw click point (React's useLayoutEffect pass).
+  // Measure-then-show before paint: keeps the menu inside the viewport
+  // without a flash at the raw click point.
   $effect(() => {
     if (!open || !menuEl) return;
     void position.x;

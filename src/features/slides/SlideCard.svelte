@@ -67,9 +67,8 @@
     enableHoverPreview?: boolean;
   } = $props();
 
-  // React needed a memo comparator + per-atom boolean selectors to avoid
-  // re-rendering 20 cards per keystroke. Fine-grained $derived does the same:
-  // this card only updates when ITS slide id / localCode key flips.
+  // Fine-grained $derived keeps list updates cheap: this card only updates
+  // when ITS slide id / localCode key flips, not on every keystroke.
   const isSelected = $derived(ui.currentSlideId === slide.id);
   const thumbnailCode = $derived(localCode[slide.id] ?? slide.code);
   const preview = $derived(thumbnailCode.split("\n")[0]?.slice(0, 28) || "Empty");
