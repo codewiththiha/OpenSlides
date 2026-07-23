@@ -1,6 +1,5 @@
 <script lang="ts">
   /** Project dashboard orchestrator. */
-  import { push } from "svelte-spa-router";
   import { Command as CommandIcon, Plus, Upload } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
   import TitleBar from "$lib/components/TitleBar.svelte";
@@ -10,44 +9,27 @@
   import DashboardStates from "@/features/dashboard/DashboardStates.svelte";
   import ProjectGrid from "@/features/dashboard/ProjectGrid.svelte";
   import ConfirmDialog from "$lib/ui/ConfirmDialog.svelte";
-  import {
-    createProjectMutation,
-    duplicateProjectMutation,
-    deleteProjectMutation,
-    exportProjectMutation,
-    importProjectMutation,
-    renameProjectMutation,
-  } from "$lib/queries";
   import { createRenameState } from "$lib/lib/rename-state.svelte";
   import { isModKey, isTypingTarget } from "$lib/lib/keyboard";
   import { modKeyLabel } from "$lib/lib/platform";
   import { setWindowTitle } from "$lib/lib/window-title";
   import {
-    subscribeToAppMenu,
-    type AppMenuHandlers,
-  } from "$lib/lib/app-menu.svelte";
-  import {
     ui,
     applyUiTheme,
     setIsCommandOpen,
     setIsShortcutsOpen,
-    toggleTheme,
   } from "$lib/stores/ui-state.svelte";
-  import { api } from "$lib/lib/tauri-api";
   import { createDashboardState } from "./dashboard-state.svelte";
+  import {
+    createDashboardActions,
+    installDashboardMenu,
+  } from "./dashboard-actions";
   import { provideProjectCardActions } from "./project-card-actions.svelte";
-  import { notify } from "$lib/lib/toast";
 
   const st = createDashboardState();
   const listQuery = st.query;
   const projects = $derived(st.projects);
-  const createMutation = createProjectMutation();
-  const duplicateMutation = duplicateProjectMutation();
-  const deleteMutation = deleteProjectMutation();
-  const exportMutation = exportProjectMutation();
-  const importMutation = importProjectMutation();
-  const renameMutation = renameProjectMutation();
-
+  const actions = createDashboardActions(st);
 
   // Native + document window title for the dashboard route.
   $effect(() => {
@@ -69,20 +51,8 @@
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const handleOpen = (id: string) => void push(`/editor/${id}`);
-  const handleDuplicate = (id: string) => duplicateMutation.mutate(id);
-  const handleExport = (id: string) => exportMutation.mutate(id);
-  const handleDelete = (id: string, name: string) => (st.deleteTarget = { id, name });
-
-  function handleConfirmDelete() {
-    if (st.deleteTarget) {
-      deleteMutation.mutate(st.deleteTarget.id);
-      st.deleteTarget = null;
-    }
-  }
-
   const rename = createRenameState(async (id: string, name: string) => {
-    await renameMutation.mutateAsync({
+    await actions.renameMutation.mutateAsync({
       projectId: id,
       name: name || "Untitled Presentation",
     });
@@ -98,64 +68,22 @@
       return rename.value;
     },
     get duplicateBusy() {
-      return duplicateMutation.isPending;
+      return actions.duplicateMutation.isPending;
     },
     get commitBusy() {
-      return renameMutation.isPending;
+      return actions.renameMutation.isPending;
     },
     setRenameValue: (v: string) => (rename.value = v),
     commitRename: rename.commit,
     cancelRename: rename.cancel,
     startRename: rename.start,
-    open: handleOpen,
-    duplicate: handleDuplicate,
-    exportProject: handleExport,
-    remove: handleDelete,
+    open: actions.open,
+    duplicate: actions.duplicate,
+    exportProject: actions.exportProject,
+    remove: actions.requestDelete,
   });
 
-  async function handleCreate() {
-    try {
-      const project = await createMutation.mutateAsync(
-        st.newName.trim() || "Untitled Presentation",
-      );
-      if (st.selectedTheme && st.selectedTheme !== "dark-plus" && st.selectedTheme !== project.theme) {
-        try {
-          await api.updateProjectTheme(project.id, st.selectedTheme);
-        } catch {
-          // The deck itself exists and is ready to edit even if its optional
-          // theme update fails, so do not strand the user on the dashboard.
-          notify.error("Presentation created, but the selected theme could not be applied");
-        }
-      }
-      st.resetForm();
-      void push(`/editor/${project.id}`);
-    } catch {
-      // The mutation presents the creation error.
-    }
-  }
-
-  async function handleImport() {
-    try {
-      const project = await importMutation.mutateAsync();
-      void push(`/editor/${project.id}`);
-    } catch {
-      /* the mutation owns the error toast */
-    }
-  }
-
-  const menuHandlers: AppMenuHandlers = {
-    "menu://new-project": () => (st.creating = true),
-    "menu://open-dashboard": () => void push("/"),
-    "menu://command-palette": () => setIsCommandOpen(true),
-    "menu://toggle-theme": () => toggleTheme(),
-    "menu://shortcuts-app": () => setIsShortcutsOpen(true),
-    "menu://shortcuts-help": () => setIsShortcutsOpen(true),
-    "menu://export": () => {
-      const first = projects[0];
-      if (first) exportMutation.mutate(first.id);
-    },
-  };
-  subscribeToAppMenu(() => menuHandlers);
+  installDashboardMenu(st, actions);
 
   const mod = modKeyLabel();
 </script>
@@ -182,8 +110,8 @@
         variant="outline"
         size="sm"
         class="gap-1.5"
-        onclick={() => void handleImport()}
-        disabled={importMutation.isPending}
+        onclick={() => void actions.importProject()}
+        disabled={actions.importMutation.isPending}
       >
         <Upload class="h-4 w-4" />Import
       </Button>
@@ -202,8 +130,8 @@
         onNameChange={(v) => (st.newName = v)}
         selectedTheme={st.selectedTheme}
         onThemeChange={(t) => (st.selectedTheme = t)}
-        onCreate={() => void handleCreate()}
-        isPending={createMutation.isPending}
+        onCreate={() => void actions.create()}
+        isPending={actions.createMutation.isPending}
         isStandalone={true}
       />
     </div>
@@ -215,7 +143,7 @@
     error={(listQuery.error as Error | null) ?? null}
     projectCount={projects.length}
     onCreate={() => (st.creating = true)}
-    onImport={() => void handleImport()}
+    onImport={() => void actions.importProject()}
     showEmptyState={!st.creating}
   >
     {#if !listQuery.isLoading && !listQuery.isError && projects.length > 0}
@@ -231,7 +159,7 @@
     description="This cannot be undone."
     confirmLabel="Delete"
     destructive
-    onConfirm={handleConfirmDelete}
+    onConfirm={actions.confirmDelete}
     onCancel={() => (st.deleteTarget = null)}
   />
 </div>
