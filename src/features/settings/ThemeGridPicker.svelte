@@ -14,6 +14,7 @@
 };`;
 
   type ThemeFilter = "all" | "dark" | "light";
+  type ThemeItem = (typeof THEMES)[number];
 
   const FILTERS: {
     value: ThemeFilter;
@@ -40,6 +41,7 @@
 
   let themeFilter = $state<ThemeFilter>("all");
   let focusIndex = $state(0);
+  let currentPage = $state(0);
   let gridEl: HTMLDivElement | undefined = $state();
 
   const selected = $derived(
@@ -47,6 +49,11 @@
   );
   const sample = $derived(
     sampleCode.trim() ? sampleCode : DEFAULT_THEME_SAMPLE,
+  );
+  const reduceMotion = $derived(
+    typeof window !== "undefined" &&
+      "matchMedia" in window &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   const activeFilterIndex = $derived(
     Math.max(
@@ -61,6 +68,14 @@
       return true;
     }),
   );
+  const themePages = $derived.by((): ThemeItem[][] => {
+    const pages: ThemeItem[][] = [];
+    for (let i = 0; i < visibleThemes.length; i += 4) {
+      pages.push(visibleThemes.slice(i, i + 4));
+    }
+    return pages;
+  });
+  const pageCount = $derived(themePages.length);
 
   const hero = shikiDisplayHtml(() => ({
     code: sample,
@@ -76,17 +91,34 @@
     const selectedIndex = visibleThemes.findIndex(
       (theme) => theme.value === value,
     );
-    if (selectedIndex >= 0) {
-      focusIndex = selectedIndex;
-      return;
-    }
-    if (focusIndex >= visibleThemes.length) {
-      focusIndex = Math.max(0, visibleThemes.length - 1);
-    }
+    const nextIndex = Math.min(
+      selectedIndex >= 0 ? selectedIndex : 0,
+      Math.max(visibleThemes.length - 1, 0),
+    );
+    focusIndex = nextIndex;
+    scrollThemePage(Math.floor(nextIndex / 4), "auto");
   });
 
+  function scrollThemePage(
+    pageIndex: number,
+    behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth",
+  ) {
+    const el = gridEl;
+    if (!el || pageCount === 0) return;
+    const nextPage = Math.min(Math.max(pageIndex, 0), pageCount - 1);
+    const top = nextPage * el.clientHeight;
+    currentPage = nextPage;
+    if (typeof el.scrollTo === "function") {
+      el.scrollTo({ top, behavior });
+    } else {
+      el.scrollTop = top;
+    }
+  }
+
   function focusTile(index: number) {
-    focusIndex = Math.min(Math.max(index, 0), visibleThemes.length - 1);
+    const nextIndex = Math.min(Math.max(index, 0), visibleThemes.length - 1);
+    focusIndex = nextIndex;
+    scrollThemePage(Math.floor(nextIndex / 4));
     void tick().then(() => {
       gridEl
         ?.querySelector<HTMLButtonElement>(`[data-theme-index="${focusIndex}"]`)
@@ -97,6 +129,40 @@
   function selectFocusedTheme() {
     const theme = visibleThemes[focusIndex];
     if (theme) onChange(theme.value);
+  }
+
+  function updateCurrentPageFromScroll() {
+    const el = gridEl;
+    if (!el) return;
+    currentPage = Math.min(
+      Math.max(Math.round(el.scrollTop / Math.max(el.clientHeight, 1)), 0),
+      Math.max(pageCount - 1, 0),
+    );
+  }
+
+  function handleThemeGridWheel(event: WheelEvent) {
+    const el = gridEl;
+    if (
+      !el ||
+      pageCount <= 1 ||
+      Math.abs(event.deltaY) <= Math.abs(event.deltaX)
+    ) {
+      return;
+    }
+
+    const direction = event.deltaY > 0 ? 1 : -1;
+    const atFirstPage = currentPage <= 0 && el.scrollTop <= 1;
+    const atLastPage =
+      currentPage >= pageCount - 1 &&
+      el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+
+    // Let the drawer itself scroll once the paged theme area is exhausted.
+    if ((direction < 0 && atFirstPage) || (direction > 0 && atLastPage)) {
+      return;
+    }
+
+    event.preventDefault();
+    scrollThemePage(currentPage + direction);
   }
 
   function handleGridKeydown(event: KeyboardEvent) {
@@ -205,27 +271,48 @@
     {/each}
   </div>
 
-  <div
-    bind:this={gridEl}
-    role="radiogroup"
-    aria-label="Syntax theme"
-    tabindex="-1"
-    class="grid grid-cols-2 gap-2.5"
-    onkeydown={handleGridKeydown}
-  >
-    {#each visibleThemes as theme, index (theme.value)}
-      <ThemeTile
-        value={theme.value}
-        label={theme.label}
-        background={theme.background}
-        selected={value === theme.value}
-        {sample}
-        dataIndex={index}
-        tabIndex={focusIndex === index ? 0 : -1}
-        onSelect={() => onChange(theme.value)}
-        onPreview={() => onPreviewTheme(theme.value)}
-        onPreviewEnd={onClearPreviewTheme}
-      />
-    {/each}
+  <div class="space-y-2">
+    <div
+      class="flex items-center justify-between text-[10px] text-muted-foreground"
+    >
+      <span>Theme pages</span>
+      <span
+        >{Math.min(currentPage + 1, Math.max(pageCount, 1))}/{Math.max(
+          pageCount,
+          1,
+        )}</span
+      >
+    </div>
+
+    <div
+      bind:this={gridEl}
+      role="radiogroup"
+      aria-label="Syntax theme"
+      tabindex="-1"
+      class="h-[300px] snap-y snap-mandatory [scrollbar-gutter:stable] overflow-y-auto scroll-smooth pr-1 motion-reduce:scroll-auto"
+      onkeydown={handleGridKeydown}
+      onwheel={handleThemeGridWheel}
+      onscroll={updateCurrentPageFromScroll}
+    >
+      {#each themePages as page, pageIndex (pageIndex)}
+        <div class="grid h-[300px] snap-start snap-always grid-cols-2 gap-2.5">
+          {#each page as theme, offset (theme.value)}
+            {@const index = pageIndex * 4 + offset}
+            <ThemeTile
+              value={theme.value}
+              label={theme.label}
+              background={theme.background}
+              selected={value === theme.value}
+              {sample}
+              dataIndex={index}
+              tabIndex={focusIndex === index ? 0 : -1}
+              onSelect={() => onChange(theme.value)}
+              onPreview={() => onPreviewTheme(theme.value)}
+              onPreviewEnd={onClearPreviewTheme}
+            />
+          {/each}
+        </div>
+      {/each}
+    </div>
   </div>
 </div>

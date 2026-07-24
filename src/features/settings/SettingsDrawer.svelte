@@ -306,8 +306,7 @@
 
 <div
   class={cn(
-    "fixed top-0 right-0 flex h-full flex-col overflow-hidden border-l-2 border-l-primary/20 bg-card shadow-2xl will-change-transform motion-safe:transition-all motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.2,0.9,0.25,1)] motion-reduce:transition-none",
-    previewingThemeLabel ? "w-[320px]" : "w-[420px]",
+    "fixed top-0 right-0 flex h-full w-[420px] flex-col overflow-hidden border-l-2 border-l-primary/20 bg-card shadow-2xl will-change-transform motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.2,0.9,0.25,1)] motion-reduce:transition-none",
     open ? "translate-x-0" : "translate-x-full",
   )}
   style="z-index: {Z_INDEX.drawer};"
