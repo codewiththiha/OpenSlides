@@ -20,10 +20,7 @@
     effGlobalDimAmount: number;
     effGlobalSizeUpAmount: number;
     effHighlightDimColor: "black" | "theme";
-    onPreview: (
-      key: GlobalAnimationKey,
-      value: number | string,
-    ) => void;
+    onPreview: (key: GlobalAnimationKey, value: number | string) => void;
     onCommit: (partial: Record<string, unknown>) => void;
   } = $props();
 </script>
@@ -106,26 +103,28 @@
     />
 
     <div>
-      <div class="text-xs text-muted-foreground mb-1">Dim color</div>
+      <div class="mb-1 text-xs text-muted-foreground">Dim color</div>
       <div class="flex gap-2">
         <button
-          class="flex-1 rounded border px-2 py-1 text-xs transition-colors {effHighlightDimColor === 'black'
-            ? 'bg-primary text-primary-foreground border-primary'
+          class="flex-1 rounded border px-2 py-1 text-xs transition-colors {effHighlightDimColor ===
+          'black'
+            ? 'border-primary bg-primary text-primary-foreground'
             : 'border-border hover:bg-muted'}"
           onclick={() => onCommit({ highlightDimColor: "black" })}
         >
           Black
         </button>
         <button
-          class="flex-1 rounded border px-2 py-1 text-xs transition-colors {effHighlightDimColor === 'theme'
-            ? 'bg-primary text-primary-foreground border-primary'
+          class="flex-1 rounded border px-2 py-1 text-xs transition-colors {effHighlightDimColor ===
+          'theme'
+            ? 'border-primary bg-primary text-primary-foreground'
             : 'border-border hover:bg-muted'}"
           onclick={() => onCommit({ highlightDimColor: "theme" })}
         >
           Theme BG
         </button>
       </div>
-      <p class="text-[10px] text-muted-foreground mt-1">
+      <p class="mt-1 text-[10px] text-muted-foreground">
         "Theme BG" uses the current code theme's background color.
       </p>
     </div>

@@ -20,7 +20,7 @@
   const id = $derived(highlight.id);
 </script>
 
-<div class="space-y-2 {disabled ? 'opacity-50 pointer-events-none' : ''}">
+<div class="space-y-2 {disabled ? 'pointer-events-none opacity-50' : ''}">
   <SliderField
     label="Dim amount"
     labelClassName="text-[9px]"
@@ -29,7 +29,7 @@
     max={100}
     step={5}
     format={(v) => `${v}%`}
-    disabled={disabled}
+    {disabled}
     onPreview={(v) => setPreviewHighlightSetting(id, { dimAmount: v })}
     onCommit={(v) => onUpdate(id, { dimAmount: v })}
   />
@@ -37,7 +37,7 @@
     label="Enlarge selection"
     labelClassName="text-[9px]"
     checked={eff.sizeUpEnabled}
-    disabled={disabled}
+    {disabled}
     onChange={(v) => onUpdate(id, { sizeUpEnabled: v })}
   />
   {#if eff.sizeUpEnabled}
@@ -49,7 +49,7 @@
       max={250}
       step={5}
       format={(v) => `${v}%`}
-      disabled={disabled}
+      {disabled}
       onPreview={(v) => setPreviewHighlightSetting(id, { sizeUpAmount: v })}
       onCommit={(v) => onUpdate(id, { sizeUpAmount: v })}
     />

@@ -44,7 +44,9 @@
 <div
   class="pointer-events-none absolute inset-0 z-20"
   style="
-    background-color: {dimColor === 'black' ? 'rgba(0, 0, 0, 1)' : 'var(--code-bg, rgba(0,0,0,1))'};
+    background-color: {dimColor === 'black'
+    ? 'rgba(0, 0, 0, 1)'
+    : 'var(--code-bg, rgba(0,0,0,1))'};
     will-change: opacity;
     opacity: {opacity.current};
   "

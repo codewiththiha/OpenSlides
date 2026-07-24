@@ -158,10 +158,10 @@
   );
 
   const dimAmount = $derived(
-    ((globalDimAmount ?? dimSource?.dimAmount ?? 75) / 100)
+    (globalDimAmount ?? dimSource?.dimAmount ?? 75) / 100,
   );
   const sizeUpAmount = $derived(
-    globalSizeUpAmount ?? hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT
+    globalSizeUpAmount ?? hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT,
   );
   const scaleTarget = $derived(
     hl?.sizeUpEnabled && sizeUpAmount > 100

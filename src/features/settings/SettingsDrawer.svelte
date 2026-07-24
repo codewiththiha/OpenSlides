@@ -16,7 +16,10 @@
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
   } from "$lib/stores/ui-state.svelte";
-  import type { GlobalAnimationKey, PreviewProjectSettings } from "$lib/stores/types";
+  import type {
+    GlobalAnimationKey,
+    PreviewProjectSettings,
+  } from "$lib/stores/types";
   import { previewProjectSettings } from "@/features/settings/preview-settings";
   import { cn } from "$lib/lib/utils";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
@@ -65,7 +68,8 @@
     previewProject.globalSizeUpAmount ?? s.globalSizeUpAmount ?? 100,
   );
   const effHighlightDimColor = $derived(
-    (previewProject.highlightDimColor ?? s.highlightDimColor ?? "black") as "black" | "theme",
+    (previewProject.highlightDimColor ?? s.highlightDimColor ?? "black") as
+      "black" | "theme",
   );
 
   function patch(partial: Parameters<typeof updateSettings.mutate>[0]) {
@@ -126,9 +130,9 @@
         settings={s}
         effTransition={effGlobalTransition}
         effStagger={effGlobalStagger}
-        effGlobalDimAmount={effGlobalDimAmount}
-        effGlobalSizeUpAmount={effGlobalSizeUpAmount}
-        effHighlightDimColor={effHighlightDimColor}
+        {effGlobalDimAmount}
+        {effGlobalSizeUpAmount}
+        {effHighlightDimColor}
         onPreview={(key, value) => {
           const typedKey = key as keyof PreviewProjectSettings;
           setPreviewProjectSetting(
