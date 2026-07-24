@@ -33,6 +33,7 @@ export function createHighlightMeasurement(args: UseHighlightMeasurementArgs) {
     let settleRaf = 0;
     let ro: ResizeObserver | null = null;
     let mo: MutationObserver | null = null;
+    let onTransitionEnd: ((e: Event) => void) | null = null;
 
     const measure = () => {
       if (disposed) return;
@@ -75,6 +76,33 @@ export function createHighlightMeasurement(args: UseHighlightMeasurementArgs) {
         });
       }
 
+      // The stage-root RO above misses settle events that move the code block
+      // within a fixed-size stage: width changes of the block itself and the
+      // end of shiki-magic-move's enter transform. Without these, the clone can
+      // stay parked at a transient post-re-key rect until the next highlight or
+      // slide forces a clean measurement.
+      ro.observe(codeRoot);
+      if (!onTransitionEnd) {
+        onTransitionEnd = (e: Event) => {
+          const te = e as TransitionEvent;
+          if (te.propertyName !== "transform") return;
+          const target = te.target as Element | null;
+          if (
+            !target ||
+            typeof target.className !== "string" ||
+            !target.className.includes("shiki-magic-move")
+          ) {
+            return;
+          }
+          if (disposed || settleRaf) return;
+          settleRaf = requestAnimationFrame(() => {
+            settleRaf = 0;
+            if (!disposed) measure();
+          });
+        };
+        codeRoot.addEventListener("transitionend", onTransitionEnd);
+      }
+
       if (!plan) {
         measurement = null;
         return;
@@ -115,6 +143,10 @@ export function createHighlightMeasurement(args: UseHighlightMeasurementArgs) {
       ro = null;
       mo?.disconnect();
       mo = null;
+      const cr = args.codeContainer();
+      if (cr && onTransitionEnd)
+        cr.removeEventListener("transitionend", onTransitionEnd);
+      onTransitionEnd = null;
     };
   });
 
