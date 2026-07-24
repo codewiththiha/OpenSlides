@@ -46,14 +46,22 @@ OpenSlides release builds include Linux packages in `.deb` and `.rpm` formats.
 
 - **Debian / Ubuntu / Linux Mint / Pop!\_OS**
 
+Install the required runtime libraries first, then install the package:
+
 ```bash
+sudo apt update
+sudo apt install -y libwebkit2gtk-4.1-0 libgtk-3-0 libscrypt0 libayatana-appindicator3-1 librsvg2-common
 sudo apt install ./OpenSlides_<version>_amd64.deb
 ```
 
-- **Fedora / RHEL / Rocky / AlmaLinux / openSUSE**
+- **Fedora / RHEL / Rocky / AlmaLinux / other DNF-based distributions**
+
+Install the required runtime libraries first, then install the package:
 
 ```bash
-sudo rpm -i OpenSlides-<version>-1.x86_64.rpm
+sudo dnf check-update
+sudo dnf install -y webkit2gtk4.1 gtk3 libappindicator-gtk3 librsvg2
+sudo dnf install -y ./OpenSlides-<version>-1.x86_64.rpm
 ```
 
 If your distribution prefers a different workflow, read the package manager guidance in your distro docs first. AppImage is intentionally not documented yet.
