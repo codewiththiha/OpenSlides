@@ -55,18 +55,18 @@
   const DEFAULT_SETTINGS_PATCH = {
     showLineNumbers: true,
     useBlackCodeBackground: false,
-    showHighlightStepIndicator: true,
+    showHighlightStepIndicator: false,
     fontSize: 16,
     lineHeight: 1.5,
     editorFontSize: 14,
-    useGlobalTransition: false,
-    globalTransitionDuration: 750,
-    useGlobalStagger: false,
+    useGlobalTransition: true,
+    globalTransitionDuration: 800,
+    useGlobalStagger: true,
     globalStagger: 5,
-    useGlobalHighlight: false,
-    globalDimAmount: 75,
-    globalSizeUpAmount: 100,
-    highlightDimColor: "black",
+    useGlobalHighlight: true,
+    globalDimAmount: 80,
+    globalSizeUpAmount: 105,
+    highlightDimColor: "theme",
     codeAlign: "left",
   } satisfies SettingsPatch;
 
@@ -128,13 +128,13 @@
     previewProject.globalStagger ?? s.globalStagger,
   );
   const effGlobalDimAmount = $derived(
-    previewProject.globalDimAmount ?? s.globalDimAmount ?? 75,
+    previewProject.globalDimAmount ?? s.globalDimAmount ?? 80,
   );
   const effGlobalSizeUpAmount = $derived(
-    previewProject.globalSizeUpAmount ?? s.globalSizeUpAmount ?? 100,
+    previewProject.globalSizeUpAmount ?? s.globalSizeUpAmount ?? 105,
   );
   const effHighlightDimColor = $derived(
-    (previewProject.highlightDimColor ?? s.highlightDimColor ?? "black") as
+    (previewProject.highlightDimColor ?? s.highlightDimColor ?? "theme") as
       "black" | "theme",
   );
   const globalMotionActive = $derived(
@@ -182,7 +182,7 @@
     updateTheme.mutate(DEFAULT_THEME);
     patch(DEFAULT_SETTINGS_PATCH);
     setEditorShowLineNumbers(true);
-    setShowSlideHoverPreview(true);
+    setShowSlideHoverPreview(false);
     resetConfirmOpen = false;
   }
 

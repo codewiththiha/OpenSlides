@@ -152,7 +152,7 @@ pub async fn import_project_from_json(
         show_highlight_step_indicator: value
             .get("showHighlightStepIndicator")
             .and_then(|v| v.as_bool())
-            .unwrap_or(true),
+            .unwrap_or(false),
         font_size: value.get("fontSize").and_then(|v| v.as_i64()).unwrap_or(16),
         line_height: value
             .get("lineHeight")
@@ -165,15 +165,15 @@ pub async fn import_project_from_json(
         use_global_transition: value
             .get("useGlobalTransition")
             .and_then(|v| v.as_bool())
-            .unwrap_or(false),
+            .unwrap_or(true),
         global_transition_duration: value
             .get("globalTransitionDuration")
             .and_then(|v| v.as_i64())
-            .unwrap_or(750),
+            .unwrap_or(800),
         use_global_stagger: value
             .get("useGlobalStagger")
             .and_then(|v| v.as_bool())
-            .unwrap_or(false),
+            .unwrap_or(true),
         global_stagger: value
             .get("globalStagger")
             .and_then(|v| v.as_i64())
@@ -181,20 +181,20 @@ pub async fn import_project_from_json(
         use_global_highlight: value
             .get("useGlobalHighlight")
             .and_then(|v| v.as_bool())
-            .unwrap_or(false),
+            .unwrap_or(true),
         global_dim_amount: value
             .get("globalDimAmount")
             .and_then(|v| v.as_i64())
-            .unwrap_or(75),
+            .unwrap_or(80),
         global_size_up_amount: value
             .get("globalSizeUpAmount")
             .and_then(|v| v.as_i64())
-            .unwrap_or(100),
+            .unwrap_or(105),
         highlight_dim_color: value
             .get("highlightDimColor")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-            .unwrap_or_else(|| "black".to_string()),
+            .unwrap_or_else(|| "theme".to_string()),
         current_slide_id: None,
         language: language.clone(),
         code_align,

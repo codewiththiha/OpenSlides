@@ -148,7 +148,6 @@ export function createEditorKeyboard(args: () => UseEditorKeyboardArgs) {
         !isTypingTarget(e.target) &&
         !isModKey(e) &&
         !e.altKey &&
-        !isSettingsOpen &&
         !isCommandOpen &&
         !isShortcutsOpen &&
         !isGoToSlideOpen

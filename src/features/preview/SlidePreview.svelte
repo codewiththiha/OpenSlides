@@ -69,17 +69,17 @@
   // Global highlight overrides (only active when useGlobalHighlight)
   const useGlobalHighlight = $derived(s.useGlobalHighlight);
   const globalDimAmount = $derived(
-    useGlobalHighlight ? (effective.settings.globalDimAmount ?? 75) : undefined,
+    useGlobalHighlight ? (effective.settings.globalDimAmount ?? 80) : undefined,
   );
   const globalSizeUpAmount = $derived(
     useGlobalHighlight
-      ? (effective.settings.globalSizeUpAmount ?? 100)
+      ? (effective.settings.globalSizeUpAmount ?? 105)
       : undefined,
   );
   const globalDimColor = $derived(
     (useGlobalHighlight
-      ? (effective.settings.highlightDimColor ?? "black")
-      : "black") as "black" | "theme",
+      ? (effective.settings.highlightDimColor ?? "theme")
+      : "theme") as "black" | "theme",
   );
 
   const bg = $derived(

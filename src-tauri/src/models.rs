@@ -125,7 +125,7 @@ fn default_show_line_numbers() -> bool {
     true
 }
 fn default_show_highlight_step_indicator() -> bool {
-    true
+    false
 }
 fn default_font_size() -> i64 {
     16
@@ -137,14 +137,20 @@ fn default_editor_font_size() -> i64 {
     14
 }
 fn default_transition() -> i64 {
-    750
+    800
 }
 fn default_stagger() -> i64 {
     5
 }
-fn default_global_dim_amount() -> i64 { 75 }
-fn default_global_size_up_amount() -> i64 { 100 }
-fn default_highlight_dim_color() -> String { "black".into() }
+fn default_global_dim_amount() -> i64 {
+    80
+}
+fn default_global_size_up_amount() -> i64 {
+    105
+}
+fn default_highlight_dim_color() -> String {
+    "theme".into()
+}
 fn default_language() -> String {
     "typescript".into()
 }
@@ -157,15 +163,15 @@ impl Default for ProjectSettings {
         Self {
             show_line_numbers: true,
             use_black_code_background: false,
-            show_highlight_step_indicator: true,
+            show_highlight_step_indicator: false,
             font_size: 16,
             line_height: 1.5,
             editor_font_size: 14,
-            use_global_transition: false,
-            global_transition_duration: 750,
-            use_global_stagger: false,
+            use_global_transition: true,
+            global_transition_duration: default_transition(),
+            use_global_stagger: true,
             global_stagger: 5,
-            use_global_highlight: false,
+            use_global_highlight: true,
             global_dim_amount: default_global_dim_amount(),
             global_size_up_amount: default_global_size_up_amount(),
             highlight_dim_color: default_highlight_dim_color(),
