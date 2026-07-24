@@ -27,6 +27,7 @@ import {
   resetFullApiMocks,
   seedProjects,
 } from "./mocks/tauri-api-full.mock.mts";
+import { toastCalls } from "./mocks/toast.mock.mts";
 
 const errors: unknown[] = [];
 process.on("uncaughtException", (e) => errors.push(e));
@@ -59,7 +60,7 @@ function makeHighlight(id: string, line: number): Highlight {
   };
 }
 
-function makeProject(id: string, name: string): Project {
+function makeProject(id: string, name: string, slideCount = 2): Project {
   return {
     id,
     name,
@@ -79,26 +80,18 @@ function makeProject(id: string, name: string): Project {
       language: "javascript",
       codeAlign: "left",
     },
-    slides: [
-      {
-        id: `${id}-s1`,
-        code: "let a = 1;\nlet b = 2;",
-        language: "javascript",
-        duration: 3000,
-        transitionDuration: 300,
-        stagger: 0,
-        highlights: [makeHighlight(`${id}-h1`, 0)],
-      },
-      {
-        id: `${id}-s2`,
-        code: "console.log('two');",
-        language: "javascript",
-        duration: 3000,
-        transitionDuration: 300,
-        stagger: 0,
-        highlights: [],
-      },
-    ],
+    slides: Array.from({ length: slideCount }, (_, index) => ({
+      id: `${id}-s${index + 1}`,
+      code:
+        index === 0
+          ? "let a = 1;\nlet b = 2;"
+          : `console.log('slide ${index + 1}');`,
+      language: "javascript",
+      duration: 3000,
+      transitionDuration: 300,
+      stagger: 0,
+      highlights: index === 0 ? [makeHighlight(`${id}-h1`, 0)] : [],
+    })),
     createdAt: 0,
     updatedAt: 0,
   };
@@ -142,6 +135,18 @@ async function waitFor(
 function click(el: Element): void {
   el.dispatchEvent(
     new window.MouseEvent("click", { bubbles: true, cancelable: true }),
+  );
+}
+
+function contextMenu(el: Element, x = 40, y = 40): void {
+  el.dispatchEvent(
+    new window.MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+      clientX: x,
+      clientY: y,
+    }),
   );
 }
 
@@ -219,6 +224,124 @@ test("dashboard card click opens the editor; Present enters and advances the pre
     4000,
   );
   assertNoAppErrors("presentation advance");
+
+  await unmount(app);
+  target.remove();
+});
+
+test("multi-select stays in sync after per-card delete and bulk delete offers undo", async () => {
+  resetFullApiMocks();
+  toastCalls.length = 0;
+  seedProjects([makeProject("p1", "Bulk Delete Deck", 5)]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+  window.location.hash = "#/editor/p1";
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(App, { target });
+
+  await waitFor(
+    () => target.querySelectorAll("[data-slide-id]").length === 5,
+    "five slide cards",
+  );
+  assertNoAppErrors("multi-select editor mount");
+
+  const cards = () => [
+    ...target.querySelectorAll<HTMLElement>("[data-slide-id]"),
+  ];
+  contextMenu(cards()[0]!);
+  await waitFor(
+    () =>
+      [...target.querySelectorAll("button")].some(
+        (button) => button.textContent?.trim() === "Select multiple",
+      ),
+    "slide context menu",
+  );
+  const selectMultiple = [...target.querySelectorAll("button")].find(
+    (button) => button.textContent?.trim() === "Select multiple",
+  );
+  assert.ok(selectMultiple, "found Select multiple action");
+  click(selectMultiple!);
+  await settle();
+
+  click(cards()[1]!);
+  click(cards()[2]!);
+  click(cards()[3]!);
+  await settle();
+
+  await waitFor(
+    () => target.querySelector("[title='4 slides selected']") !== null,
+    "selection count = 4",
+  );
+
+  const selectedCard = cards()[1]!;
+  const deleteButton = selectedCard.querySelector(
+    "button[title='Delete slide']",
+  ) as HTMLButtonElement | null;
+  assert.ok(deleteButton, "selected slide exposes per-card delete");
+  click(deleteButton!);
+
+  await waitFor(
+    () => target.querySelectorAll("[data-slide-id]").length === 4,
+    "per-card delete removes one selected slide",
+  );
+  await waitFor(
+    () => target.querySelector("[title='3 slides selected']") !== null,
+    "selection count pruned to 3",
+  );
+  assertNoAppErrors("selection prune after per-card delete");
+
+  const bulkDeleteButton = target.querySelector(
+    "button[title='Delete selected']",
+  ) as HTMLButtonElement | null;
+  assert.ok(bulkDeleteButton, "bulk delete button present");
+  assert.equal(bulkDeleteButton?.disabled, false, "bulk delete stays enabled");
+
+  toastCalls.length = 0;
+  click(bulkDeleteButton!);
+  await waitFor(
+    () => target.textContent?.includes("Delete 3 selected slides?") === true,
+    "bulk delete confirm dialog",
+  );
+  const confirmDelete = [...target.querySelectorAll("button")].find(
+    (button) => button.textContent?.trim() === "Delete",
+  );
+  assert.ok(confirmDelete, "confirm delete button exists");
+  click(confirmDelete!);
+
+  await waitFor(
+    () => target.querySelectorAll("[data-slide-id]").length === 1,
+    "bulk delete leaves one slide",
+  );
+  await waitFor(
+    () => toastCalls.some((call) => call.kind === "message"),
+    "bulk delete toast",
+  );
+
+  const undoToast = toastCalls.findLast((call) => call.kind === "message");
+  assert.equal(undoToast?.msg, "3 slides deleted");
+  assert.equal(undoToast?.action?.label, "Undo");
+  undoToast?.action?.onClick();
+
+  await waitFor(
+    () =>
+      target.querySelectorAll("[data-slide-id]").length === 4 ||
+      toastCalls.some((call) => call.kind === "error"),
+    "bulk undo restores deleted slides",
+  );
+  const undoError = toastCalls.find((call) => call.kind === "error");
+  assert.equal(undoError, undefined, undoError?.msg ?? "unexpected undo error");
+  await waitFor(
+    () =>
+      toastCalls.some(
+        (call) => call.kind === "success" && call.msg === "3 slides restored",
+      ),
+    "bulk undo success toast",
+  );
+  assertNoAppErrors("bulk delete undo");
 
   await unmount(app);
   target.remove();
