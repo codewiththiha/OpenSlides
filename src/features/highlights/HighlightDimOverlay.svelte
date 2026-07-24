@@ -15,11 +15,13 @@
   let {
     dimAmount,
     dimMs,
+    dimColor = "black",
     onOutroStart,
     onOutroEnd,
   }: {
     dimAmount: number;
     dimMs: number;
+    dimColor?: "black" | "theme";
     onOutroStart?: () => void;
     onOutroEnd?: () => void;
   } = $props();
@@ -41,7 +43,11 @@
 
 <div
   class="pointer-events-none absolute inset-0 z-20"
-  style="background-color: rgba(0, 0, 0, 1); will-change: opacity; opacity: {opacity.current};"
+  style="
+    background-color: {dimColor === 'black' ? 'rgba(0, 0, 0, 1)' : 'var(--code-bg, rgba(0,0,0,1))'};
+    will-change: opacity;
+    opacity: {opacity.current};
+  "
   out:fade|global={{ duration: dimMs, easing: EASE_DIM }}
   onoutrostart={onOutroStart}
   onoutroend={onOutroEnd}

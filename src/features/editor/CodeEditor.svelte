@@ -127,6 +127,7 @@
   });
 
   const currentHighlights = $derived(slide?.highlights ?? []);
+
   const crud = createCodeEditorHighlighting({
     projectId,
     slideId: () => slideId,

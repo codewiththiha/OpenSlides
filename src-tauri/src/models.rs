@@ -100,6 +100,16 @@ pub struct ProjectSettings {
     pub use_global_stagger: bool,
     #[serde(default = "default_stagger")]
     pub global_stagger: i64,
+    /// Global highlight controls (dim + pop size)
+    #[serde(default)]
+    pub use_global_highlight: bool,
+    #[serde(default = "default_global_dim_amount")]
+    pub global_dim_amount: i64,
+    #[serde(default = "default_global_size_up_amount")]
+    pub global_size_up_amount: i64,
+    /// "black" | "theme"
+    #[serde(default = "default_highlight_dim_color")]
+    pub highlight_dim_color: String,
     #[serde(default)]
     pub current_slide_id: Option<String>,
     /// Project-wide language (source of truth; no longer per-slide).
@@ -132,6 +142,9 @@ fn default_transition() -> i64 {
 fn default_stagger() -> i64 {
     5
 }
+fn default_global_dim_amount() -> i64 { 75 }
+fn default_global_size_up_amount() -> i64 { 100 }
+fn default_highlight_dim_color() -> String { "black".into() }
 fn default_language() -> String {
     "typescript".into()
 }
@@ -152,6 +165,10 @@ impl Default for ProjectSettings {
             global_transition_duration: 750,
             use_global_stagger: false,
             global_stagger: 5,
+            use_global_highlight: false,
+            global_dim_amount: default_global_dim_amount(),
+            global_size_up_amount: default_global_size_up_amount(),
+            highlight_dim_color: default_highlight_dim_color(),
             current_slide_id: None,
             language: default_language(),
             code_align: default_code_align(),

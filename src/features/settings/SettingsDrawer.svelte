@@ -57,6 +57,15 @@
   const effGlobalStagger = $derived(
     previewProject.globalStagger ?? s.globalStagger,
   );
+  const effGlobalDimAmount = $derived(
+    previewProject.globalDimAmount ?? s.globalDimAmount ?? 75,
+  );
+  const effGlobalSizeUpAmount = $derived(
+    previewProject.globalSizeUpAmount ?? s.globalSizeUpAmount ?? 100,
+  );
+  const effHighlightDimColor = $derived(
+    (previewProject.highlightDimColor ?? s.highlightDimColor ?? "black") as "black" | "theme",
+  );
 
   function patch(partial: Parameters<typeof updateSettings.mutate>[0]) {
     updateSettings.mutate(partial);
@@ -116,7 +125,10 @@
         settings={s}
         effTransition={effGlobalTransition}
         effStagger={effGlobalStagger}
-        onPreview={setPreviewProjectSetting}
+        effGlobalDimAmount={effGlobalDimAmount}
+        effGlobalSizeUpAmount={effGlobalSizeUpAmount}
+        effHighlightDimColor={effHighlightDimColor}
+        onPreview={(key, value) => setPreviewProjectSetting(key as any, value as any)}
         onCommit={patch}
       />
     </SettingsSection>

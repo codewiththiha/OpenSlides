@@ -56,6 +56,9 @@
     fontSize,
     lineHeight,
     onExitComplete,
+    globalDimAmount,
+    globalSizeUpAmount,
+    globalDimColor = "black",
   }: {
     container: () => HTMLElement | null;
     codeContainer: () => HTMLElement | null;
@@ -67,6 +70,9 @@
     fontSize: () => number;
     lineHeight: () => number;
     onExitComplete?: () => void;
+    globalDimAmount?: number;
+    globalSizeUpAmount?: number;
+    globalDimColor?: "black" | "theme";
   } = $props();
 
   const planCtl = createHighlightPlan({
@@ -150,8 +156,13 @@
   const dimMs = $derived(
     dimSource?.useCustomTransition ? dimSource.dimTransition : DEFAULT_DIM_MS,
   );
-  const dimAmount = $derived((dimSource?.dimAmount ?? 75) / 100);
-  const sizeUpAmount = $derived(hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT);
+
+  const dimAmount = $derived(
+    ((globalDimAmount ?? dimSource?.dimAmount ?? 75) / 100)
+  );
+  const sizeUpAmount = $derived(
+    globalSizeUpAmount ?? hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT
+  );
   const scaleTarget = $derived(
     hl?.sizeUpEnabled && sizeUpAmount > 100
       ? Math.min(Math.max(sizeUpAmount, 100), 300) / 100
@@ -218,6 +229,7 @@
   <HighlightDimOverlay
     {dimAmount}
     {dimMs}
+    dimColor={globalDimColor}
     onOutroStart={handleOutroStart}
     onOutroEnd={handleOutroEnd}
   />

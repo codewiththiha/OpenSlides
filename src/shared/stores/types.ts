@@ -8,6 +8,11 @@ export type PreviewProjectSettings = {
   editorFontSize?: number;
   globalTransitionDuration?: number;
   globalStagger?: number;
+  /** Global highlight controls */
+  useGlobalHighlight?: boolean;
+  globalDimAmount?: number;
+  globalSizeUpAmount?: number;
+  highlightDimColor?: "black" | "theme";
 };
 
 export type PreviewSlideSettings = {

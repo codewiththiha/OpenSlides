@@ -19,6 +19,12 @@ export function createEffectiveSettings(
       settings.globalTransitionDuration;
     const globalStagger =
       previewProject.globalStagger ?? settings.globalStagger;
+    const globalDimAmount =
+      previewProject.globalDimAmount ?? settings.globalDimAmount;
+    const globalSizeUpAmount =
+      previewProject.globalSizeUpAmount ?? settings.globalSizeUpAmount;
+    const highlightDimColor =
+      previewProject.highlightDimColor ?? settings.highlightDimColor;
     return {
       fontSize: previewProject.fontSize ?? settings.fontSize,
       lineHeight: previewProject.lineHeight ?? settings.lineHeight,
@@ -26,8 +32,12 @@ export function createEffectiveSettings(
       showLineNumbers: settings.showLineNumbers,
       useGlobalTransition: settings.useGlobalTransition,
       useGlobalStagger: settings.useGlobalStagger,
+      useGlobalHighlight: settings.useGlobalHighlight,
       globalTransitionDuration,
       globalStagger,
+      globalDimAmount,
+      globalSizeUpAmount,
+      highlightDimColor,
       transitionDuration: settings.useGlobalTransition
         ? globalTransitionDuration
         : (previewSlide?.transitionDuration ??

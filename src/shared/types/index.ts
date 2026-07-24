@@ -94,6 +94,12 @@ export interface ProjectSettings {
   globalTransitionDuration: number;
   useGlobalStagger: boolean;
   globalStagger: number;
+  /** Global highlight pop-up size + dim controls (like stagger/transition) */
+  useGlobalHighlight: boolean;
+  globalDimAmount: number;
+  globalSizeUpAmount: number;
+  /** Dim background color for highlights: "black" or "theme" (theme's code background) */
+  highlightDimColor: "black" | "theme";
   currentSlideId: string | null;
   /** Project-wide language (source of truth). */
   language: string;
@@ -109,7 +115,7 @@ export interface ProjectSettings {
 export const HIGHLIGHT_DEFAULTS = {
   dimAmount: 75,
   sizeUpEnabled: true,
-  sizeUpAmount: 125,
+  sizeUpAmount: 100,
   useCustomTransition: false,
   dimTransition: 500,
   sizeUpTransition: 600,

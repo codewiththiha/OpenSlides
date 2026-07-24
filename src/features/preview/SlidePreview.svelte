@@ -66,6 +66,24 @@
   const fontSize = $derived(effective.settings.fontSize);
   const lineHeight = $derived(effective.settings.lineHeight);
 
+  // Global highlight overrides (only active when useGlobalHighlight)
+  const useGlobalHighlight = $derived(s.useGlobalHighlight);
+  const globalDimAmount = $derived(
+    useGlobalHighlight
+      ? (effective.settings.globalDimAmount ?? 75)
+      : undefined
+  );
+  const globalSizeUpAmount = $derived(
+    useGlobalHighlight
+      ? (effective.settings.globalSizeUpAmount ?? 100)
+      : undefined
+  );
+  const globalDimColor = $derived(
+    (useGlobalHighlight
+      ? (effective.settings.highlightDimColor ?? "black")
+      : "black") as "black" | "theme"
+  );
+
   const bg = $derived(
     (previewBlackCodeBackground ?? s.useBlackCodeBackground)
       ? "#000000"
@@ -131,6 +149,9 @@
       fontSize={() => previewFontSize}
       lineHeight={() => lineHeight}
       onExitComplete={onHighlightExitComplete}
+      globalDimAmount={globalDimAmount}
+      globalSizeUpAmount={globalSizeUpAmount}
+      globalDimColor={globalDimColor}
     />
   </PreviewStage>
 {/if}

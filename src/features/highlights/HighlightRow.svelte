@@ -27,6 +27,7 @@
     onPreview,
     onDelete,
     onUpdate,
+    disabled = false,
   }: {
     highlight: Highlight;
     index: number;
@@ -40,6 +41,7 @@
     onPreview: (index: number) => void;
     onDelete: (id: string) => void;
     onUpdate: (id: string, patch: Partial<Highlight>) => void;
+    disabled?: boolean;
   } = $props();
 
   const text = $derived(
@@ -127,7 +129,7 @@
   </div>
   {#if isExpanded}
     <div class="px-2 pb-2" transition:expand={{}}>
-      <HighlightSettingsForm {highlight} {onUpdate} />
+      <HighlightSettingsForm {highlight} {onUpdate} {disabled} />
     </div>
   {/if}
 </div>

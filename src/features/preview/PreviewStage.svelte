@@ -20,7 +20,7 @@
 <div
   bind:this={ref}
   class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl shadow-2xl transition-colors duration-500"
-  style="background-color: {bg}"
+  style="background-color: {bg}; --code-bg: {bg};"
 >
   <div
     class={cn(
