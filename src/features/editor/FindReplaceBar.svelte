@@ -1,10 +1,18 @@
 <script lang="ts">
-  import { autofocus } from "$lib/actions/autofocus";
   import { ChevronDown, ChevronUp, Search, X } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
   import type { FindReplaceApi } from "@/features/editor/find-replace.svelte";
 
   let { fr, onClose }: { fr: FindReplaceApi; onClose: () => void } = $props();
+  let findInputEl = $state<HTMLInputElement | null>(null);
+
+  // Focus + select-all on mount so the previous term is immediately visible
+  // and ready to be replaced by typing.
+  $effect(() => {
+    if (!findInputEl) return;
+    findInputEl.focus();
+    findInputEl.select();
+  });
 
   function onFindKeyDown(e: KeyboardEvent) {
     if (e.key === "Enter") {
@@ -22,7 +30,7 @@
   <div class="flex items-center gap-1">
     <Search class="h-3 w-3 text-muted-foreground" />
     <input
-      use:autofocus
+      bind:this={findInputEl}
       class="h-6 w-32 rounded border border-input bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring sm:w-48"
       placeholder="Find"
       aria-label="Find"

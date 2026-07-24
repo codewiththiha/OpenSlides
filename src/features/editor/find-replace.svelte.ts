@@ -35,7 +35,7 @@ export function createFindReplace(args: Args) {
     const match = matches[index];
     const code = args.code();
     if (!el || !match) return;
-    el.focus();
+    // Keep focus in the find input so the user can continue typing.
     el.selectionStart = match.start;
     el.selectionEnd = match.end;
     args.saveCaret();
@@ -82,11 +82,11 @@ export function createFindReplace(args: Args) {
   }
 
   $effect(() => {
-    // reset to first match when the match set / query changes
+    // Reset to the first match when the match set / query changes, but do not
+    // auto-select it here — that would steal focus from the find input.
     matches.length;
     searchTerm;
     currentMatchIndex = 0;
-    if (open && matches.length) requestAnimationFrame(() => selectMatch(0));
   });
 
   function openFind(prefill?: string) {
