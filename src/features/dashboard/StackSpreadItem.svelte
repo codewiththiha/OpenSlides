@@ -2,10 +2,14 @@
   /**
    * One fanned-out project card inside StackSpread.
    *
-   * The card springs from the source deck rect into its fan slot with a
-   * slower, underdamped motion: starts lower + smaller + transparent,
-   * then lifts, fades, and bounces into place. A wider per-index delay
-   * creates a more deliberate cascade across the fan.
+   * Two-layer animation:
+   *  - OUTER: a critically-damped Spring drives left / top / rotate
+   *    (the card's position in the fan). Smooth, no bounce.
+   *  - INNER: CSS keyframes drive translateY / scale / opacity
+   *    (the pop-from-below entrance with an explicit bounce).
+   *
+   * Close reverses both: the spring returns position to the deck origin
+   * while a CSS exit animation sinks + fades the card.
    */
   import { untrack } from "svelte";
   import { Spring } from "svelte/motion";
@@ -18,7 +22,12 @@
   } from "@/features/dashboard/project-dnd.svelte";
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
-  const SPRING_OPTS = { stiffness: 180, damping: 14 };
+  /**
+   * Position spring — critically damped.
+   * Smooth glide to the fan slot, with bounce delegated entirely to the
+   * CSS keyframes on the inner layer so it stays visible and deterministic.
+   */
+  const POSITION_SPRING = { stiffness: 100, damping: 20 };
 
   let {
     project,
@@ -63,49 +72,37 @@
       session.active,
   );
 
-  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 70);
+  /**
+   * Wider stagger: center fires first, neighbors follow with a deliberate
+   * cascade.
+   */
+  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 80);
 
-  const originState = $derived({
-    left: originLeft,
-    top: originTop,
-    scale: 0.6,
-    opacity: 0,
-    rotate: 0,
-    offsetY: 60,
-  });
-
-  // The spring only starts at the deck rect — the effect below drives it
-  // into the fan target (and back on close) via pos.set(). untrack() marks
-  // the initial read of the deriveds as deliberate.
+  /**
+   * Position spring — drives ONLY left / top / rotate.
+   * Starts at the deck origin; the effect retargets it to the fan slot.
+   */
   const pos = new Spring(
     untrack(() => ({
       left: originLeft,
       top: originTop,
-      scale: 0.6,
-      opacity: 0,
       rotate: 0,
-      offsetY: 60,
     })),
-    SPRING_OPTS,
+    POSITION_SPRING,
   );
 
   let timer: number | undefined;
 
   $effect(() => {
     const target = isClosing
-      ? originState
-      : {
-          left: targetLeft,
-          top: targetTop,
-          scale: 1,
-          opacity: isDragging ? 0.3 : 1,
-          rotate: fan.rotate,
-          offsetY: 0,
-        };
+      ? { left: originLeft, top: originTop, rotate: 0 }
+      : { left: targetLeft, top: targetTop, rotate: fan.rotate };
+
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
       void pos.set(target);
     }, delayMs);
+
     return () => window.clearTimeout(timer);
   });
 
@@ -120,6 +117,10 @@
   }
 </script>
 
+<!--
+  OUTER: position layer.
+  Spring drives left/top/rotate.
+-->
 <div
   bind:this={itemEl}
   onpointerdown={onPointerDown}
@@ -127,18 +128,90 @@
   class="absolute touch-none"
   style="
     width: {PROJECT_CARD_WIDTH}px;
-    transform-origin: center 180%;
     z-index: {isDragging ? 60 : 30 + index};
     left: {pos.current.left}px;
     top: {pos.current.top}px;
-    transform:
-      translateY({pos.current.offsetY}px)
-      scale({pos.current.scale})
-      rotate({pos.current.rotate}deg);
-    opacity: {pos.current.opacity};
+    transform: rotate({pos.current.rotate}deg);
   "
 >
-  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
-    <ProjectCard {project} />
+  <!--
+    INNER: pop layer.
+    CSS keyframes handle translateY + scale + opacity.
+    The open animation is staggered; the close animation starts immediately.
+  -->
+  <div
+    class="card-pop"
+    class:card-pop--closing={isClosing}
+    class:card-pop--dragging={isDragging}
+    style="animation-delay: {isClosing ? 0 : delayMs}ms;"
+  >
+    <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+      <ProjectCard {project} />
+    </div>
   </div>
 </div>
+
+<style>
+  .card-pop {
+    transform-origin: center 180%;
+    will-change: transform, opacity;
+  }
+
+  .card-pop:not(.card-pop--closing) {
+    animation: card-pop-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .card-pop--closing {
+    animation: card-pop-out 340ms cubic-bezier(0.55, 0, 1, 0.45) both;
+  }
+
+  .card-pop--dragging {
+    opacity: 0.3 !important;
+  }
+
+  @keyframes card-pop-in {
+    0% {
+      opacity: 0.3;
+      transform: translateY(70px) scale(0.82);
+    }
+
+    40% {
+      opacity: 0.85;
+      transform: translateY(-14px) scale(1.04);
+    }
+
+    62% {
+      opacity: 0.96;
+      transform: translateY(6px) scale(0.985);
+    }
+
+    80% {
+      opacity: 0.99;
+      transform: translateY(-3px) scale(1.005);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes card-pop-out {
+    0% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateY(45px) scale(0.88);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-pop:not(.card-pop--closing),
+    .card-pop--closing {
+      animation-duration: 1ms;
+    }
+  }
+</style>

@@ -2,14 +2,13 @@ import { EASE_DIM } from "$lib/lib/easings";
 
 /**
  * Slide up + fade combined; supports a per-item delay for staggered intros.
- * Tuned for a slower pop-from-below when used without a spring-driven intro.
  */
 export function riseFade(
   _node: Element,
   {
-    duration = 500,
+    duration = 300,
     delay = 0,
-    y = 60,
+    y = 18,
     easing = EASE_DIM,
   }: {
     duration?: number;

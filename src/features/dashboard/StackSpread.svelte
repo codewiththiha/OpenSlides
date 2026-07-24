@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * The deck fan overlay — portal'd to body. Springs (stiffness/damping
-   * per-config below), a slower 420ms close-then-unmount choreography,
-   * and fan-item dragging run on svelte/motion + the shared pointer-drag
-   * manager.
+   * The deck fan overlay — portal'd to body. The fan cards own their
+   * bounce/fade via CSS keyframes; this shell animates the backdrop,
+   * highlight ring, and control cluster with slower supporting motion and
+   * a 480ms close-then-unmount choreography.
    */
   import { untrack } from "svelte";
   import { Spring, Tween } from "svelte/motion";
@@ -77,7 +77,7 @@
     isClosing = true;
     closeTimer = window.setTimeout(() => {
       onClose();
-    }, 420);
+    }, 480);
   }
 
   $effect(() => {
@@ -125,18 +125,18 @@
   const spreadHeight = $derived(fanSize.height);
 
   /* Motion values */
-  const backdrop = new Tween(0, { duration: 400, easing: EASE_DIM });
+  const backdrop = new Tween(0, { duration: 420, easing: EASE_DIM });
   const wrap = new Spring(
     { opacity: 0, scale: 0.85 },
-    { stiffness: 200, damping: 18 },
+    { stiffness: 160, damping: 16 },
   );
   const controls = new Spring(
     { opacity: 0, scale: 0.5 },
-    { stiffness: 220, damping: 16 },
+    { stiffness: 180, damping: 15 },
   );
 
   $effect(() => {
-    void backdrop.set(isClosing ? 0 : 1, { duration: 400, easing: EASE_DIM });
+    void backdrop.set(isClosing ? 0 : 1, { duration: 420, easing: EASE_DIM });
   });
 
   $effect(() => {
@@ -153,7 +153,7 @@
           closed ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 },
         );
       },
-      closed ? 0 : 300,
+      closed ? 0 : 350,
     );
     return () => window.clearTimeout(timer);
   });
