@@ -43,7 +43,18 @@
     () => slideId,
   );
   const slide = $derived(currentSlide.activeSlide);
-  const code = $derived(effectiveSlideCode(slide));
+  const rawCode = $derived(effectiveSlideCode(slide));
+
+  // Query cache writes replace the surrounding project / slide objects even
+  // when the effective preview text is unchanged (for example when a debounced
+  // save completes while the editor still holds the same local override).
+  // Hold on to a stable string so Shiki Magic Move only sees a code prop change
+  // when the actual text content changed.
+  let stableCode = $state("");
+  $effect.pre(() => {
+    const next = rawCode;
+    if (next !== stableCode) stableCode = next;
+  });
 
   let containerEl = $state<HTMLDivElement | null>(null);
   let codeContainerEl = $state<HTMLDivElement | null>(null);
@@ -113,7 +124,7 @@
   <PreviewFallback
     isMerustmarFail={language === "merustmar" && shiki.shikiLoadFailed}
     theme={shiki.displayTheme}
-    {code}
+    code={stableCode}
     fontSize={previewFontSize}
     {lineHeight}
     {stagePad}
@@ -131,7 +142,7 @@
       theme={shiki.displayTheme}
       language={shiki.displayLanguage}
       highlighter={shiki.displayHighlighter}
-      {code}
+      code={stableCode}
       transition={effective.settings.transitionDuration}
       stagger={effective.settings.stagger}
       showLineNumbers={s.showLineNumbers}
@@ -139,7 +150,7 @@
     <HighlightLayer
       container={() => containerEl}
       codeContainer={() => codeContainerEl}
-      code={() => code}
+      code={() => stableCode}
       highlight={() => activeHighlight}
       highlighter={() => shiki.displayHighlighter}
       theme={() => shiki.displayTheme}

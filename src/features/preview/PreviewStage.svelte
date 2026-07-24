@@ -42,6 +42,23 @@
         font-size: var(--font-size) !important;
         text-align: left !important;
       }
+
+      /* Isolate the code stage so external layout/style recalcs do not
+         interfere with in-flight FLIP token transforms. */
+      .shiki-magic-move-container {
+        contain: layout style;
+      }
+
+      /* Keep Shiki Magic Move's class-driven transitions authoritative even
+         if a token span temporarily picks up an inline opacity transition. */
+      .shiki-magic-move-container .shiki-magic-move-move {
+        transition: all var(--smm-duration, 0.5s) var(--smm-easing, ease) !important;
+      }
+
+      .shiki-magic-move-container .shiki-magic-move-enter,
+      .shiki-magic-move-container .shiki-magic-move-leave {
+        transition: opacity var(--smm-duration, 0.5s) var(--smm-easing, ease) !important;
+      }
     </style>
     {@render children?.()}
   </div>

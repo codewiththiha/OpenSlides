@@ -28,6 +28,14 @@
     stagger: number;
     showLineNumbers: boolean;
   } = $props();
+
+  // Keep the Shiki options object reference stable across parent re-renders;
+  // only real timing/line-number changes should force a re-init.
+  const options = $derived({
+    duration: transition,
+    stagger,
+    lineNumbers: showLineNumbers,
+  });
 </script>
 
 <div
@@ -41,7 +49,7 @@
       {theme}
       {highlighter}
       {code}
-      options={{ duration: transition, stagger, lineNumbers: showLineNumbers }}
+      {options}
       class="shiki-magic-move-container font-mono font-medium tracking-wide"
     />
   {/key}

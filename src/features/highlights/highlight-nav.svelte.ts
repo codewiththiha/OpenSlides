@@ -26,6 +26,9 @@ const DEFAULT_SIZE_MS = 600;
 const FAILSAFE_BUFFER_MS = 250;
 /** Never block nav input longer than this, whatever the settings say. */
 const FAILSAFE_CAP_MS = 3200;
+/** Let slide morphs settle most of the way before another one can start. */
+const MORPH_SETTLE_RATIO = 0.6;
+const MIN_MORPH_SETTLE_MS = 100;
 
 type PendingNav = { advance: boolean; dir: 1 | -1 };
 
@@ -52,9 +55,45 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
   let highlightIndex = $state(-1);
   let pending: PendingNav | null = null;
   let failSafe: number = 0;
+  /** Guards back-to-back slide morphs so token DOM has time to settle. */
+  let morphInFlight = false;
+  let morphTimer: number = 0;
+  let queuedMorphNav: 1 | -1 | null = null;
 
   function setIdx(v: number | ((prev: number) => number)) {
     highlightIndex = typeof v === "function" ? v(highlightIndex) : v;
+  }
+
+  function completeMorphWindow() {
+    morphInFlight = false;
+    const dir = queuedMorphNav;
+    queuedMorphNav = null;
+    if (dir === 1) {
+      const list = args.slides();
+      const i = args.currentIndex();
+      const target = list[i + 1];
+      if (!target) return;
+      args.setCurrentSlideId(target.id);
+      markMorphStart(target.transitionDuration ?? 800);
+      return;
+    }
+    if (dir === -1) {
+      const list = args.slides();
+      const i = args.currentIndex();
+      const target = list[i - 1];
+      if (!target) return;
+      args.setCurrentSlideId(target.id);
+      markMorphStart(target.transitionDuration ?? 800);
+    }
+  }
+
+  function markMorphStart(durationMs: number) {
+    morphInFlight = true;
+    window.clearTimeout(morphTimer);
+    morphTimer = window.setTimeout(
+      completeMorphWindow,
+      Math.max(MIN_MORPH_SETTLE_MS, durationMs * MORPH_SETTLE_RATIO),
+    );
   }
 
   /**
@@ -73,7 +112,9 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
       const list = args.slides();
       const i = args.currentIndex();
       const target = p.dir === 1 ? list[i + 1] : list[i - 1];
-      if (target) args.setCurrentSlideId(target.id);
+      if (!target) return;
+      args.setCurrentSlideId(target.id);
+      markMorphStart(target.transitionDuration ?? 800);
     }
   }
 
@@ -84,7 +125,10 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
   }
 
   // Cleanup on unmount (leaving the editor must not fire a stale advance).
-  $effect(() => () => window.clearTimeout(failSafe));
+  $effect(() => () => {
+    window.clearTimeout(failSafe);
+    window.clearTimeout(morphTimer);
+  });
 
   // Reset when the slide changes from anywhere (nav, strip click, autoplay).
   // Our own outro→advance flow sets index -1 before the slide flips, so this
@@ -94,6 +138,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
     window.clearTimeout(failSafe);
     highlightIndex = -1;
     pending = null;
+    queuedMorphNav = null;
   });
 
   /**
@@ -128,7 +173,13 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
         armFailSafe(slide.highlights[idx]);
         setIdx(-1);
       } else {
-        args.setCurrentSlideId(list[i + 1]!.id);
+        const target = list[i + 1]!;
+        if (morphInFlight) {
+          queuedMorphNav = 1;
+          return true;
+        }
+        args.setCurrentSlideId(target.id);
+        markMorphStart(target.transitionDuration ?? 800);
       }
       return true;
     }
@@ -166,7 +217,13 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
     }
     if (i > 0) {
       // Land clean on the previous slide — highlights reveal forward only.
-      args.setCurrentSlideId(list[i - 1]!.id);
+      const target = list[i - 1]!;
+      if (morphInFlight) {
+        queuedMorphNav = -1;
+        return true;
+      }
+      args.setCurrentSlideId(target.id);
+      markMorphStart(target.transitionDuration ?? 800);
       return true;
     }
     return false;
