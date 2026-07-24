@@ -16,10 +16,7 @@
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
   } from "$lib/stores/ui-state.svelte";
-  import type {
-    GlobalAnimationKey,
-    PreviewProjectSettings,
-  } from "$lib/stores/types";
+  import type { PreviewProjectSettings } from "$lib/stores/types";
   import { previewProjectSettings } from "@/features/settings/preview-settings";
   import { cn } from "$lib/lib/utils";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
