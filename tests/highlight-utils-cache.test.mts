@@ -8,7 +8,7 @@ import "./helpers/jsdom-env.mts";
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { measureCharWidth } from "../src/features/highlights/highlight-utils";
+import { measureCharWidth } from "../src/shared/lib/char-width-cache";
 
 test("measureCharWidth: one DOM probe per (fontFamily, fontSize) key", () => {
   const container = document.createElement("div");

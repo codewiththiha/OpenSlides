@@ -56,12 +56,6 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     if (el && el.selectionStart === el.selectionEnd) visible = false;
   }
 
-  // No-op kept only for type compatibility during transition.
-  // Real mouse-up handling for context menu is done via document listener.
-  function onMouseUp(_e: MouseEvent) {
-    args.saveCaret();
-  }
-
   // === Document-level listener for reliable menu on drag-select ===
   // This fixes "menu doesn't appear when releasing mouse outside textarea".
   $effect(() => {
@@ -233,7 +227,6 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     closeContextMenu,
     onContextMenu,
     onSelect,
-    onMouseUp,
     onKeyUp,
     addPendingHighlight,
     updateHighlight,

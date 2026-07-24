@@ -1,6 +1,6 @@
 import { THEMES, type ThemeMeta, type ThemeName } from "./theme-meta";
 
-export { THEMES, type ThemeMeta } from "./theme-meta";
+export { THEMES } from "./theme-meta";
 
 export const THEME_OPTIONS = THEMES.map(({ value, label }) => ({
   value,

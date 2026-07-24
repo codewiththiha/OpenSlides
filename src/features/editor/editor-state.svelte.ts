@@ -80,9 +80,6 @@ export function createEditorState(args: {
     get slides() {
       return slides;
     },
-    get title() {
-      return title;
-    },
     get editorExpanded() {
       return editorExpanded;
     },
