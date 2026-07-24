@@ -18,6 +18,18 @@ export default defineConfig(async () => ({
   worker: {
     format: "es",
   },
+  build: {
+    target: "esnext", // Modern browsers / Tauri webview only
+    minify: "terser",
+    sourcemap: false,
+    cssCodeSplit: true,
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+  },
   clearScreen: false,
   server: {
     port: 1420,
