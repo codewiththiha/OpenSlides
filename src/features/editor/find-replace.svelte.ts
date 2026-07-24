@@ -81,12 +81,17 @@ export function createFindReplace(args: Args) {
     args.applyCode(next);
   }
 
+  let wasOpen = false;
+
   $effect(() => {
-    // Reset to the first match when the match set / query changes, but do not
-    // auto-select it here — that would steal focus from the find input.
+    const isOpen = open;
     matches.length;
     searchTerm;
     currentMatchIndex = 0;
+    if (isOpen && !wasOpen && matches.length) {
+      requestAnimationFrame(() => selectMatch(0));
+    }
+    wasOpen = isOpen;
   });
 
   function openFind(prefill?: string) {
