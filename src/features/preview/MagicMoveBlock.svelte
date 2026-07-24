@@ -35,7 +35,7 @@
   class={cn(centerBlock ? "w-max max-w-full" : "w-full")}
   style="--line-height: {lineHeight}; --font-size: {fontSize.toFixed(1)}px;"
 >
-  {#key language}
+  {#key `${theme}-${language}`}
     <ShikiMagicMove
       lang={language}
       {theme}

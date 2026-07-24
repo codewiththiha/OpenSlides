@@ -62,14 +62,14 @@
 <div
   class="pointer-events-none absolute z-20 font-mono font-medium tracking-wide"
   style="left: {union.x}px; top: {union.y}px; width: {union.width}px; height: {union.height}px; font-size: {fontSize}px; line-height: {lineHeight}; will-change: opacity;"
-  transition:fade={{ duration: fadeMs, easing: EASE_DIM }}
+  transition:fade|global={{ duration: fadeMs, easing: EASE_DIM }}
   onoutrostart={onOutroStart}
   onoutroend={onOutroEnd}
 >
   <div
     class="h-full w-full"
     style="transform-origin: center center; transform: scale({scaleTarget}); will-change: transform;"
-    transition:grow={{
+    transition:grow|global={{
       duration: growMs,
       easing: EASE_SCALE,
       from: 1,

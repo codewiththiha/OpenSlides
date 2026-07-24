@@ -52,7 +52,7 @@
     will-change: opacity;
     opacity: {opacity.current};
   "
-  out:fade={{ duration: fadeMs, easing: EASE_DIM }}
+  out:fade|global={{ duration: fadeMs, easing: EASE_DIM }}
   onoutrostart={onOutroStart}
   onoutroend={onOutroEnd}
 ></div>
