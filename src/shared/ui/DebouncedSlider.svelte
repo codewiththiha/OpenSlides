@@ -23,6 +23,7 @@
     class: className,
     ...rest
   }: {
+    id?: string;
     value: number[];
     min?: number;
     max?: number;
@@ -36,6 +37,8 @@
     onChange?: (value: number) => void;
     onCommit?: (value: number) => void;
     class?: string;
+    "aria-labelledby"?: string;
+    "aria-label"?: string;
   } = $props();
 
   // Initial value only — the effect above re-syncs `local` with every

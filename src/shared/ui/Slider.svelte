@@ -14,6 +14,7 @@
     ref = $bindable(null),
     ...rest
   }: {
+    id?: string;
     value?: number[];
     min?: number;
     max?: number;
@@ -23,6 +24,8 @@
     onValueCommit?: (value: number[]) => void;
     class?: string;
     ref?: HTMLSpanElement | null;
+    "aria-labelledby"?: string;
+    "aria-label"?: string;
   } = $props();
 </script>
 
@@ -54,7 +57,7 @@
     {#each thumbs as thumb (thumb)}
       <Slider.Thumb
         index={thumb}
-        class="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        class="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
       />
     {/each}
   {/snippet}

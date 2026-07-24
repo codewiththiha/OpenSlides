@@ -8,19 +8,25 @@
   let {
     value,
     label,
+    background,
     selected,
     onSelect,
     onPreview,
     onPreviewEnd,
     sample,
+    dataIndex,
+    tabIndex = 0,
   }: {
     value: ThemeName;
     label: string;
+    background: string;
     selected: boolean;
     onSelect: () => void;
     onPreview: () => void;
     onPreviewEnd: () => void;
     sample: string;
+    dataIndex: number;
+    tabIndex?: number;
   } = $props();
 
   const tile = shikiDisplayHtml(() => ({
@@ -36,38 +42,51 @@
 
 <button
   type="button"
+  role="radio"
   onclick={onSelect}
   onmouseenter={onPreview}
   onmouseleave={onPreviewEnd}
   onfocus={onPreview}
   onblur={onPreviewEnd}
   class={cn(
-    "group relative overflow-hidden rounded-lg border text-left transition-all duration-150",
+    "group relative overflow-hidden rounded-lg text-left focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none motion-safe:transition-all motion-safe:duration-200 motion-reduce:transition-none",
     selected
-      ? "border-primary ring-2 ring-primary/35"
-      : "border-border/70 hover:-translate-y-0.5 hover:border-primary/50",
+      ? "scale-[1.02] border-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]"
+      : "border border-border/70 hover:scale-[1.03] hover:border-primary/50 hover:shadow-md",
   )}
+  style={selected ? `border-color: ${background};` : undefined}
   title="Use {label}"
-  aria-pressed={selected}
+  aria-checked={selected}
+  tabindex={tabIndex}
+  data-theme-index={dataIndex}
 >
   <CodeThumbnail
     html={tile.html}
     theme={value}
-    fontSize={5.5}
-    lineHeight={1.35}
-    class="h-[72px] w-full p-2"
-    codeClassName="!absolute left-1/2 top-1/2 !inline-block -translate-x-1/2 -translate-y-1/2"
+    fontSize={8.25}
+    lineHeight={1.38}
+    class="h-[110px] w-full p-3 opacity-[0.85] transition-opacity group-hover:opacity-100"
+    codeClassName="!absolute left-1/2 top-1/2 !inline-block max-w-[90%] -translate-x-1/2 -translate-y-1/2"
   >
     {#snippet fallback()}
-      <span class="block text-center font-mono text-[9px] text-muted-foreground"
-        >···</span
+      <span
+        class="block text-center font-mono text-[10px] text-muted-foreground"
       >
+        ···
+      </span>
     {/snippet}
   </CodeThumbnail>
-  <div class="flex items-center justify-between bg-card px-2 py-1.5">
-    <span class="truncate text-[10px] font-medium">{label}</span>
-    {#if selected}
-      <Check class="h-3.5 w-3.5 shrink-0 text-primary" />
-    {/if}
+
+  {#if selected}
+    <span
+      class="absolute top-2 right-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-background/85 text-primary shadow-lg backdrop-blur-sm"
+      aria-hidden="true"
+    >
+      <Check class="h-3.5 w-3.5" />
+    </span>
+  {/if}
+
+  <div class="bg-card/95 px-2.5 py-2 backdrop-blur-sm">
+    <span class="block truncate text-[11px] font-medium">{label}</span>
   </div>
 </button>

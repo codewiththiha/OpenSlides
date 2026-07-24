@@ -21,9 +21,11 @@
   let {
     settings,
     onPatch,
+    onReset,
   }: {
     settings: ProjectSettings;
     onPatch: (patch: SettingsPatch) => void;
+    onReset: () => void;
   } = $props();
 
   const previewProject = $derived(previewProjectSettings());
@@ -37,7 +39,11 @@
   );
 </script>
 
-<SettingsSection title="Line numbers">
+<SettingsSection
+  title="Line numbers"
+  description="Visibility toggles plus type scale for previews and editing."
+  {onReset}
+>
   <ToggleField
     label="Slide preview"
     description="Shown during preview / presentation"
@@ -71,45 +77,61 @@
     onChange={setShowSlideHoverPreview}
   />
 
-  <div class="pt-2">
-    <SliderField
-      label="Preview font size"
-      labelClassName="text-xs text-muted-foreground"
-      value={effFontSize}
-      min={12}
-      max={32}
-      step={2}
-      format={(v) => `${v}px`}
-      onPreview={(v) => setPreviewProjectSetting("fontSize", v)}
-      onCommit={(v) => onPatch({ fontSize: v })}
-    />
-  </div>
+  <div class="rounded-lg border border-border/40 bg-background/35 p-3">
+    <div class="mb-4 flex items-center justify-between gap-3">
+      <div>
+        <div
+          class="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase"
+        >
+          Typography
+        </div>
+        <div class="mt-0.5 text-[10px] text-muted-foreground/70">
+          Drag to preview, release to save.
+        </div>
+      </div>
+      <span
+        class="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[9px] font-medium text-muted-foreground"
+      >
+        Live
+      </span>
+    </div>
 
-  <div>
-    <SliderField
-      label="Line height"
-      labelClassName="text-xs text-muted-foreground"
-      value={effLineHeight}
-      min={1.1}
-      max={2.2}
-      step={0.05}
-      format={(v) => v.toFixed(2)}
-      onPreview={(v) => setPreviewProjectSetting("lineHeight", v)}
-      onCommit={(v) => onPatch({ lineHeight: v })}
-    />
-  </div>
+    <div class="space-y-4">
+      <SliderField
+        label="Preview font size"
+        labelClassName="text-xs text-muted-foreground"
+        value={effFontSize}
+        min={12}
+        max={32}
+        step={2}
+        format={(v) => `${v}px`}
+        onPreview={(v) => setPreviewProjectSetting("fontSize", v)}
+        onCommit={(v) => onPatch({ fontSize: v })}
+      />
 
-  <div>
-    <SliderField
-      label="Editor font size"
-      labelClassName="text-xs text-muted-foreground"
-      value={effEditorFontSize}
-      min={11}
-      max={22}
-      step={1}
-      format={(v) => `${v}px`}
-      onPreview={(v) => setPreviewProjectSetting("editorFontSize", v)}
-      onCommit={(v) => onPatch({ editorFontSize: v })}
-    />
+      <SliderField
+        label="Line height"
+        labelClassName="text-xs text-muted-foreground"
+        value={effLineHeight}
+        min={1.1}
+        max={2.2}
+        step={0.05}
+        format={(v) => v.toFixed(2)}
+        onPreview={(v) => setPreviewProjectSetting("lineHeight", v)}
+        onCommit={(v) => onPatch({ lineHeight: v })}
+      />
+
+      <SliderField
+        label="Editor font size"
+        labelClassName="text-xs text-muted-foreground"
+        value={effEditorFontSize}
+        min={11}
+        max={22}
+        step={1}
+        format={(v) => `${v}px`}
+        onPreview={(v) => setPreviewProjectSetting("editorFontSize", v)}
+        onCommit={(v) => onPatch({ editorFontSize: v })}
+      />
+    </div>
   </div>
 </SettingsSection>

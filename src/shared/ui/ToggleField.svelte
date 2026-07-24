@@ -1,3 +1,7 @@
+<script lang="ts" module>
+  let nextToggleId = 0;
+</script>
+
 <script lang="ts">
   import Label from "./Label.svelte";
   import Switch from "./Switch.svelte";
@@ -18,14 +22,43 @@
     disabled?: boolean;
     labelClassName?: string;
   } = $props();
+
+  const switchId = `toggle-field-${nextToggleId++}`;
+  const labelId = `${switchId}-label`;
+  const descriptionId = `${switchId}-description`;
 </script>
 
 <div class="flex items-center justify-between gap-3">
   <div class="min-w-0">
-    <Label class={cn("text-sm", labelClassName)}>{label}</Label>
+    <Label
+      id={labelId}
+      for={switchId}
+      class={cn(
+        "cursor-pointer text-sm transition-colors",
+        checked ? "text-foreground" : "text-muted-foreground",
+        labelClassName,
+      )}
+    >
+      {label}
+    </Label>
     {#if description}
-      <p class="text-[11px] text-muted-foreground">{description}</p>
+      <p
+        id={descriptionId}
+        class={cn(
+          "mt-0.5 text-[11px] leading-snug transition-colors",
+          checked ? "text-muted-foreground" : "text-muted-foreground/50",
+        )}
+      >
+        {description}
+      </p>
     {/if}
   </div>
-  <Switch {checked} onCheckedChange={onChange} {disabled} />
+  <Switch
+    id={switchId}
+    {checked}
+    onCheckedChange={onChange}
+    {disabled}
+    aria-labelledby={labelId}
+    aria-describedby={description ? descriptionId : undefined}
+  />
 </div>
