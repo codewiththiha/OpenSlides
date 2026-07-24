@@ -10,26 +10,17 @@
     onCommitTheme,
     onPreviewTheme,
     onClearPreviewTheme,
-    onReset,
-    sampleCode = "",
   }: {
     currentTheme: string;
     onCommitTheme: (theme: ThemeName) => void;
     onPreviewTheme: (theme: ThemeName) => void;
     onClearPreviewTheme: () => void;
-    onReset: () => void;
-    sampleCode?: string;
   } = $props();
 </script>
 
-<SettingsSection
-  title="Theme"
-  description="Choose a syntax theme from its live code preview. Hover or focus a tile to preview it on the slide."
-  {onReset}
->
+<SettingsSection title="Theme">
   <ThemeGridPicker
     value={currentTheme}
-    {sampleCode}
     {onPreviewTheme}
     {onClearPreviewTheme}
     onChange={(theme) => {

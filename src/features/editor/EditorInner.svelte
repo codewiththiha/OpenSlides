@@ -142,7 +142,7 @@
   </div>
 {:else}
   <div class="flex h-full flex-col bg-background">
-    {#if !ui.isZenMode && !ui.isPresenting}
+    {#if !ui.isZenMode && !ui.isPresenting && !ui.isSettingsOpen}
       <EditorToolbar
         {project}
         {activeSlide}
@@ -184,6 +184,7 @@
         onSelectHighlight={nav.goToHighlight}
         editorExpanded={st.editorExpanded}
         onToggleEditorExpanded={(v) => (st.editorExpanded = v)}
+        settingsFocus={ui.isSettingsOpen}
       />
     {/if}
 

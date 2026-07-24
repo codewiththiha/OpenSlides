@@ -1,318 +1,70 @@
 <script lang="ts">
-  /** Visual Shiki theme gallery with live slide preview. */
-  import { tick } from "svelte";
-  import { Moon, Palette, Sun } from "@lucide/svelte";
-  import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
-  import ThemeTile from "./ThemeTile.svelte";
+  import { Check } from "@lucide/svelte";
   import { THEMES } from "$lib/lib/themes";
-  import { fallbackForeground, type ThemeName } from "$lib/types";
-  import { shikiDisplayHtml } from "$lib/shiki/shiki-display.svelte";
+  import type { ThemeName } from "$lib/types";
   import { cn } from "$lib/lib/utils";
-
-  const DEFAULT_THEME_SAMPLE = `const makeSlide = (idea: string) => {
-  return \`Present: \${idea}\`;
-};`;
-
-  type ThemeFilter = "all" | "dark" | "light";
-  type ThemeItem = (typeof THEMES)[number];
-
-  const FILTERS: {
-    value: ThemeFilter;
-    label: string;
-  }[] = [
-    { value: "all", label: "All" },
-    { value: "dark", label: "Dark" },
-    { value: "light", label: "Light" },
-  ];
 
   let {
     value,
     onChange,
     onPreviewTheme,
     onClearPreviewTheme,
-    sampleCode = DEFAULT_THEME_SAMPLE,
   }: {
     value: string;
     onChange: (theme: ThemeName) => void;
     onPreviewTheme: (theme: ThemeName) => void;
     onClearPreviewTheme: () => void;
-    sampleCode?: string;
   } = $props();
-
-  let themeFilter = $state<ThemeFilter>("all");
-  let focusIndex = $state(0);
-  let currentPage = $state(0);
-  let gridEl: HTMLDivElement | undefined = $state();
-
-  const selected = $derived(
-    THEMES.find((theme) => theme.value === value) ?? THEMES[0],
-  );
-  const sample = $derived(
-    sampleCode.trim() ? sampleCode : DEFAULT_THEME_SAMPLE,
-  );
-  const reduceMotion = $derived(
-    typeof window !== "undefined" &&
-      "matchMedia" in window &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
-  const activeFilterIndex = $derived(
-    Math.max(
-      0,
-      FILTERS.findIndex((filter) => filter.value === themeFilter),
-    ),
-  );
-  const visibleThemes = $derived(
-    THEMES.filter((theme) => {
-      if (themeFilter === "dark") return !theme.light;
-      if (themeFilter === "light") return theme.light;
-      return true;
-    }),
-  );
-  const themePages = $derived.by((): ThemeItem[][] => {
-    const pages: ThemeItem[][] = [];
-    for (let i = 0; i < visibleThemes.length; i += 4) {
-      pages.push(visibleThemes.slice(i, i + 4));
-    }
-    return pages;
-  });
-  const pageCount = $derived(themePages.length);
-
-  const hero = shikiDisplayHtml(() => ({
-    code: sample,
-    language: "typescript",
-    theme: selected.value,
-    resetKey: `theme-hero-${selected.value}`,
-    priority: "low",
-    debounceMs: 40,
-    policyName: "previewTile",
-  }));
-
-  $effect(() => {
-    const selectedIndex = visibleThemes.findIndex(
-      (theme) => theme.value === value,
-    );
-    const nextIndex = Math.min(
-      selectedIndex >= 0 ? selectedIndex : 0,
-      Math.max(visibleThemes.length - 1, 0),
-    );
-    focusIndex = nextIndex;
-    scrollThemePage(Math.floor(nextIndex / 4), "auto");
-  });
-
-  function scrollThemePage(
-    pageIndex: number,
-    behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth",
-  ) {
-    const el = gridEl;
-    if (!el || pageCount === 0) return;
-    const nextPage = Math.min(Math.max(pageIndex, 0), pageCount - 1);
-    const top = nextPage * el.clientHeight;
-    currentPage = nextPage;
-    if (typeof el.scrollTo === "function") {
-      el.scrollTo({ top, behavior });
-    } else {
-      el.scrollTop = top;
-    }
-  }
-
-  function focusTile(index: number) {
-    const nextIndex = Math.min(Math.max(index, 0), visibleThemes.length - 1);
-    focusIndex = nextIndex;
-    scrollThemePage(Math.floor(nextIndex / 4));
-    void tick().then(() => {
-      gridEl
-        ?.querySelector<HTMLButtonElement>(`[data-theme-index="${focusIndex}"]`)
-        ?.focus();
-    });
-  }
-
-  function selectFocusedTheme() {
-    const theme = visibleThemes[focusIndex];
-    if (theme) onChange(theme.value);
-  }
-
-  function updateCurrentPageFromScroll() {
-    const el = gridEl;
-    if (!el) return;
-    currentPage = Math.min(
-      Math.max(Math.round(el.scrollTop / Math.max(el.clientHeight, 1)), 0),
-      Math.max(pageCount - 1, 0),
-    );
-  }
-
-  function handleThemeGridWheel(event: WheelEvent) {
-    const el = gridEl;
-    if (
-      !el ||
-      pageCount <= 1 ||
-      Math.abs(event.deltaY) <= Math.abs(event.deltaX)
-    ) {
-      return;
-    }
-
-    const direction = event.deltaY > 0 ? 1 : -1;
-    const atFirstPage = currentPage <= 0 && el.scrollTop <= 1;
-    const atLastPage =
-      currentPage >= pageCount - 1 &&
-      el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-
-    // Let the drawer itself scroll once the paged theme area is exhausted.
-    if ((direction < 0 && atFirstPage) || (direction > 0 && atLastPage)) {
-      return;
-    }
-
-    event.preventDefault();
-    scrollThemePage(currentPage + direction);
-  }
-
-  function handleGridKeydown(event: KeyboardEvent) {
-    if (visibleThemes.length === 0) return;
-
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      focusTile(focusIndex + 1);
-      return;
-    }
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusTile(focusIndex - 1);
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      focusTile(focusIndex + 2);
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      focusTile(focusIndex - 2);
-      return;
-    }
-    if (event.key === "Home") {
-      event.preventDefault();
-      focusTile(0);
-      return;
-    }
-    if (event.key === "End") {
-      event.preventDefault();
-      focusTile(visibleThemes.length - 1);
-      return;
-    }
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      selectFocusedTheme();
-    }
-  }
 </script>
 
-<div class="space-y-4">
-  <div
-    class="relative min-h-14 overflow-hidden rounded-xl border border-border/50 p-3 shadow-inner"
-    style="background-color: {selected.background}; color: {fallbackForeground(
-      selected.value,
-    )};"
-  >
-    <div class="relative z-10 min-w-0 pr-28">
-      <div class="text-[10px] font-semibold tracking-wide uppercase opacity-70">
-        Current theme
-      </div>
-      <div class="mt-1 truncate text-sm font-semibold">{selected.label}</div>
-    </div>
-    <CodeThumbnail
-      html={hero.html}
-      theme={selected.value}
-      fontSize={5.25}
-      lineHeight={1.35}
-      class="absolute inset-y-1 right-2 w-28 rounded-lg border border-white/10 p-1 opacity-75"
-      codeClassName="!absolute left-2 top-1/2 !inline-block -translate-y-1/2"
+<div class="grid grid-cols-4 gap-3" role="radiogroup" aria-label="Syntax theme">
+  {#each THEMES as theme (theme.value)}
+    {@const selected = value === theme.value}
+    {@const codeLineClass = theme.light ? "bg-black/25" : "bg-white/30"}
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      class="group min-w-0 text-left focus-visible:outline-none"
+      title="Use {theme.label}"
+      onclick={() => {
+        onClearPreviewTheme();
+        onChange(theme.value);
+      }}
+      onmouseenter={() => onPreviewTheme(theme.value)}
+      onmouseleave={onClearPreviewTheme}
+      onfocus={() => onPreviewTheme(theme.value)}
+      onblur={onClearPreviewTheme}
     >
-      {#snippet fallback()}
-        <span class="font-mono text-[9px] opacity-70">···</span>
-      {/snippet}
-    </CodeThumbnail>
-  </div>
-
-  <div
-    role="tablist"
-    aria-label="Filter themes"
-    class="relative grid h-9 grid-cols-3 rounded-full bg-muted p-1"
-  >
-    <span
-      class="absolute top-1 bottom-1 left-1 rounded-full bg-background shadow-sm motion-safe:transition-transform motion-safe:duration-200 motion-reduce:transition-none"
-      style="width: calc((100% - 0.5rem) / 3); transform: translateX({activeFilterIndex *
-        100}%);"
-      aria-hidden="true"
-    ></span>
-    {#each FILTERS as filter (filter.value)}
-      {@const active = themeFilter === filter.value}
-      <button
-        type="button"
-        role="tab"
-        aria-selected={active}
-        class={cn(
-          "relative z-10 inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none",
-          active
-            ? "text-foreground"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-        onclick={() => {
-          themeFilter = filter.value;
-        }}
-      >
-        {#if filter.value === "all"}
-          <Palette class="h-3.5 w-3.5" />
-        {:else if filter.value === "dark"}
-          <Moon class="h-3.5 w-3.5" />
-        {:else}
-          <Sun class="h-3.5 w-3.5" />
-        {/if}
-        {filter.label}
-      </button>
-    {/each}
-  </div>
-
-  <div class="space-y-2">
-    <div
-      class="flex items-center justify-between text-[10px] text-muted-foreground"
-    >
-      <span>Theme pages</span>
       <span
-        >{Math.min(currentPage + 1, Math.max(pageCount, 1))}/{Math.max(
-          pageCount,
-          1,
-        )}</span
+        class={cn(
+          "relative block h-14 w-full overflow-hidden rounded-xl border-2 border-transparent shadow-sm transition-all group-hover:scale-[1.04] group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-primary/50 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-card",
+          selected && "border-primary",
+        )}
+        style="background-color: {theme.background};"
+        aria-hidden="true"
       >
-    </div>
-
-    <div
-      bind:this={gridEl}
-      role="radiogroup"
-      aria-label="Syntax theme"
-      tabindex="-1"
-      class="h-[300px] snap-y snap-mandatory [scrollbar-gutter:stable] overflow-y-auto scroll-smooth pr-1 motion-reduce:scroll-auto"
-      onkeydown={handleGridKeydown}
-      onwheel={handleThemeGridWheel}
-      onscroll={updateCurrentPageFromScroll}
-    >
-      {#each themePages as page, pageIndex (pageIndex)}
-        <div class="grid h-[300px] snap-start snap-always grid-cols-2 gap-2.5">
-          {#each page as theme, offset (theme.value)}
-            {@const index = pageIndex * 4 + offset}
-            <ThemeTile
-              value={theme.value}
-              label={theme.label}
-              background={theme.background}
-              selected={value === theme.value}
-              {sample}
-              dataIndex={index}
-              tabIndex={focusIndex === index ? 0 : -1}
-              onSelect={() => onChange(theme.value)}
-              onPreview={() => onPreviewTheme(theme.value)}
-              onPreviewEnd={onClearPreviewTheme}
-            />
-          {/each}
-        </div>
-      {/each}
-    </div>
-  </div>
+        <span class="absolute right-2 bottom-2 left-2 space-y-1">
+          <span class={cn("block h-0.5 w-4/5 rounded-full", codeLineClass)}
+          ></span>
+          <span class={cn("block h-0.5 w-3/5 rounded-full", codeLineClass)}
+          ></span>
+          <span class={cn("block h-0.5 w-[70%] rounded-full", codeLineClass)}
+          ></span>
+        </span>
+        {#if selected}
+          <span
+            class="absolute top-1.5 right-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-primary shadow-sm"
+          >
+            <Check class="h-3.5 w-3.5" />
+          </span>
+        {/if}
+      </span>
+      <span
+        class="mt-1.5 block truncate text-center text-[10px] text-muted-foreground"
+      >
+        {theme.label}
+      </span>
+    </button>
+  {/each}
 </div>

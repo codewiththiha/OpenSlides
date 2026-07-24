@@ -9,14 +9,12 @@
 
   let {
     label,
-    description,
     checked,
     onChange,
     disabled,
     labelClassName,
   }: {
     label: string;
-    description?: string;
     checked: boolean;
     onChange: (value: boolean) => void;
     disabled?: boolean;
@@ -25,40 +23,25 @@
 
   const switchId = `toggle-field-${nextToggleId++}`;
   const labelId = `${switchId}-label`;
-  const descriptionId = `${switchId}-description`;
 </script>
 
 <div class="flex items-center justify-between gap-3">
-  <div class="min-w-0">
-    <Label
-      id={labelId}
-      for={switchId}
-      class={cn(
-        "cursor-pointer text-sm transition-colors",
-        checked ? "text-foreground" : "text-muted-foreground",
-        labelClassName,
-      )}
-    >
-      {label}
-    </Label>
-    {#if description}
-      <p
-        id={descriptionId}
-        class={cn(
-          "mt-0.5 text-[11px] leading-snug transition-colors",
-          checked ? "text-muted-foreground" : "text-muted-foreground/50",
-        )}
-      >
-        {description}
-      </p>
-    {/if}
-  </div>
+  <Label
+    id={labelId}
+    for={switchId}
+    class={cn(
+      "min-w-0 cursor-pointer truncate text-sm transition-colors",
+      checked ? "text-foreground" : "text-muted-foreground",
+      labelClassName,
+    )}
+  >
+    {label}
+  </Label>
   <Switch
     id={switchId}
     {checked}
     onCheckedChange={onChange}
     {disabled}
     aria-labelledby={labelId}
-    aria-describedby={description ? descriptionId : undefined}
   />
 </div>

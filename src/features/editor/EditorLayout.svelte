@@ -41,6 +41,7 @@
     onSelectHighlight,
     editorExpanded,
     onToggleEditorExpanded,
+    settingsFocus = false,
   }: {
     project: Project;
     activeSlide?: Slide;
@@ -50,6 +51,7 @@
     onSelectHighlight: (index: number) => boolean;
     editorExpanded: boolean;
     onToggleEditorExpanded: (v: boolean) => void;
+    settingsFocus?: boolean;
   } = $props();
 
   let codePane = $state<PaneHandle | null>(null);
@@ -111,98 +113,112 @@
 {/if}
 
 <div class={cn("flex min-h-0 flex-1 flex-col", isZenMode && "pt-0")}>
-  <PaneGroup direction="vertical" class="min-h-0 flex-1">
-    <Pane defaultSize={isZenMode ? 100 : 78} minSize={35} class="min-h-0">
-      <PaneGroup direction="horizontal" class="h-full min-h-0">
+  {#if settingsFocus}
+    <div
+      class="min-h-0 flex-1 pr-[420px] transition-[padding] duration-200 ease-out"
+    >
+      <PreviewPane
+        {project}
+        {activeSlide}
+        {effectiveHighlight}
+        {onHighlightExitComplete}
+        {onSelectHighlight}
+      />
+    </div>
+  {:else}
+    <PaneGroup direction="vertical" class="min-h-0 flex-1">
+      <Pane defaultSize={isZenMode ? 100 : 78} minSize={35} class="min-h-0">
+        <PaneGroup direction="horizontal" class="h-full min-h-0">
+          <Pane
+            defaultSize={isCodePanelCollapsed
+              ? 100 - CODE_COLLAPSED_SIZE
+              : 100 - ui.codePanelSize}
+            minSize={30}
+            class="min-w-0"
+          >
+            <PreviewPane
+              {project}
+              {activeSlide}
+              {effectiveHighlight}
+              {onHighlightExitComplete}
+              {onSelectHighlight}
+            />
+          </Pane>
+
+          {#if !isZenMode}
+            <PaneResizer
+              class={cn(
+                "w-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-active:bg-primary/60",
+                isCodePanelCollapsed && "w-1.5 hover:bg-primary/60",
+              )}
+            />
+
+            <Pane
+              bind:this={codePane}
+              defaultSize={isCodePanelCollapsed
+                ? CODE_COLLAPSED_SIZE
+                : ui.codePanelSize}
+              minSize={18}
+              maxSize={70}
+              collapsible
+              collapsedSize={CODE_COLLAPSED_SIZE}
+              class="min-w-0"
+              onResize={onCodePanelResize}
+              onCollapse={() => setIsCodePanelCollapsed(true)}
+              onExpand={() => setIsCodePanelCollapsed(false)}
+            >
+              {#if isCodePanelCollapsed}
+                <CollapsedPanelButton
+                  orientation="vertical"
+                  icon={Code2}
+                  label="Code"
+                  onClick={expandCodePanel}
+                  title="Expand code editor (or drag the handle)"
+                />
+              {:else}
+                {#key `editor-${project.id}`}
+                  <RenderBoundary>
+                    <CodeEditor
+                      {project}
+                      onToggleExpand={() => onToggleEditorExpanded(true)}
+                      onCollapse={collapseCodePanel}
+                    />
+                  </RenderBoundary>
+                {/key}
+              {/if}
+            </Pane>
+          {/if}
+        </PaneGroup>
+      </Pane>
+
+      {#if !isZenMode}
+        <PaneResizer
+          class={cn(
+            "h-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-active:bg-primary/60",
+            isBottomPanelCollapsed && "h-1.5",
+          )}
+        />
         <Pane
-          defaultSize={isCodePanelCollapsed
-            ? 100 - CODE_COLLAPSED_SIZE
-            : 100 - ui.codePanelSize}
-          minSize={30}
-          class="min-w-0"
+          bind:this={slidesPane}
+          defaultSize={isBottomPanelCollapsed
+            ? SLIDES_COLLAPSED_SIZE
+            : slidesExpandedSize}
+          minSize={SLIDES_MIN_EXPANDED_SIZE}
+          maxSize={28}
+          collapsible
+          collapsedSize={SLIDES_COLLAPSED_SIZE}
+          class="min-h-0"
+          onResize={onSlidesPanelResize}
+          onCollapse={() => setIsBottomPanelCollapsed(true)}
+          onExpand={() => setIsBottomPanelCollapsed(false)}
         >
-          <PreviewPane
+          <BottomSlidesPanel
             {project}
-            {activeSlide}
-            {effectiveHighlight}
-            {onHighlightExitComplete}
-            {onSelectHighlight}
+            collapsed={isBottomPanelCollapsed}
+            {activeHighlightIndex}
           />
         </Pane>
-
-        {#if !isZenMode}
-          <PaneResizer
-            class={cn(
-              "w-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-active:bg-primary/60",
-              isCodePanelCollapsed && "w-1.5 hover:bg-primary/60",
-            )}
-          />
-
-          <Pane
-            bind:this={codePane}
-            defaultSize={isCodePanelCollapsed
-              ? CODE_COLLAPSED_SIZE
-              : ui.codePanelSize}
-            minSize={18}
-            maxSize={70}
-            collapsible
-            collapsedSize={CODE_COLLAPSED_SIZE}
-            class="min-w-0"
-            onResize={onCodePanelResize}
-            onCollapse={() => setIsCodePanelCollapsed(true)}
-            onExpand={() => setIsCodePanelCollapsed(false)}
-          >
-            {#if isCodePanelCollapsed}
-              <CollapsedPanelButton
-                orientation="vertical"
-                icon={Code2}
-                label="Code"
-                onClick={expandCodePanel}
-                title="Expand code editor (or drag the handle)"
-              />
-            {:else}
-              {#key `editor-${project.id}`}
-                <RenderBoundary>
-                  <CodeEditor
-                    {project}
-                    onToggleExpand={() => onToggleEditorExpanded(true)}
-                    onCollapse={collapseCodePanel}
-                  />
-                </RenderBoundary>
-              {/key}
-            {/if}
-          </Pane>
-        {/if}
-      </PaneGroup>
-    </Pane>
-
-    {#if !isZenMode}
-      <PaneResizer
-        class={cn(
-          "h-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-active:bg-primary/60",
-          isBottomPanelCollapsed && "h-1.5",
-        )}
-      />
-      <Pane
-        bind:this={slidesPane}
-        defaultSize={isBottomPanelCollapsed
-          ? SLIDES_COLLAPSED_SIZE
-          : slidesExpandedSize}
-        minSize={SLIDES_MIN_EXPANDED_SIZE}
-        maxSize={28}
-        collapsible
-        collapsedSize={SLIDES_COLLAPSED_SIZE}
-        class="min-h-0"
-        onResize={onSlidesPanelResize}
-        onCollapse={() => setIsBottomPanelCollapsed(true)}
-        onExpand={() => setIsBottomPanelCollapsed(false)}
-      >
-        <BottomSlidesPanel
-          {project}
-          collapsed={isBottomPanelCollapsed}
-          {activeHighlightIndex}
-        />
-      </Pane>
-    {/if}
-  </PaneGroup>
+      {/if}
+    </PaneGroup>
+  {/if}
 </div>

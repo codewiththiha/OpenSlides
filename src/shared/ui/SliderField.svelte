@@ -40,8 +40,6 @@
 
   let liveValue = $state(untrack(() => value));
   let isInteracting = $state(false);
-  let commitFlash = $state(false);
-  let flashTimer: ReturnType<typeof setTimeout> | undefined;
 
   const reduceMotion = $derived(
     typeof window !== "undefined" &&
@@ -53,25 +51,11 @@
     liveValue = value;
   });
 
-  $effect(() => {
-    return () => {
-      if (flashTimer) clearTimeout(flashTimer);
-    };
-  });
-
   const displayValue = $derived(format ? format(liveValue) : String(liveValue));
   const text = $derived(`${label} (${displayValue})`);
   const thumbPercent = $derived(
     Math.min(100, Math.max(0, ((liveValue - min) / (max - min)) * 100)),
   );
-
-  function flashCommitBadge() {
-    commitFlash = true;
-    if (flashTimer) clearTimeout(flashTimer);
-    flashTimer = setTimeout(() => {
-      commitFlash = false;
-    }, 300);
-  }
 </script>
 
 <div class={cn("min-w-0 space-y-2", disabled && "opacity-45", className)}>
@@ -88,10 +72,7 @@
       {label}
     </Label>
     <span
-      class={cn(
-        "shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium transition-colors",
-        commitFlash ? "text-primary" : "text-muted-foreground",
-      )}
+      class="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
       aria-hidden="true"
     >
       {displayValue}
@@ -128,7 +109,6 @@
         if (v !== undefined) {
           liveValue = v;
           isInteracting = false;
-          flashCommitBadge();
           onCommit(v);
         }
       }}
