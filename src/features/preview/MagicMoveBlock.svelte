@@ -43,7 +43,14 @@
   class={cn(centerBlock ? "w-max max-w-full" : "w-full")}
   style="--line-height: {lineHeight}; --font-size: {fontSize.toFixed(1)}px;"
 >
-  {#key `${theme}-${language}`}
+  <!--
+    Enabling/disabling line numbers changes Shiki Magic Move's DOM schema by
+    inserting/removing the gutter. A live morph across that structural change
+    can mis-pair tokens, so treat it as a layout-mode switch and remount the
+    block in the new schema (same practical effect as a page reload, but only
+    for this subtree).
+  -->
+  {#key `${theme}-${language}-${showLineNumbers}`}
     <ShikiMagicMove
       lang={language}
       {theme}

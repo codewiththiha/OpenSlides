@@ -150,6 +150,25 @@ function contextMenu(el: Element, x = 40, y = 40): void {
   );
 }
 
+function buttonByTitle(
+  root: ParentNode,
+  title: string,
+): HTMLButtonElement | null {
+  return root.querySelector(`button[title='${title}']`);
+}
+
+function switchForLabel(
+  root: ParentNode,
+  label: string,
+): HTMLButtonElement | null {
+  const field = [...root.querySelectorAll("label")].find(
+    (el) => el.textContent?.trim() === label,
+  );
+  return field?.parentElement?.querySelector(
+    "button",
+  ) as HTMLButtonElement | null;
+}
+
 test("dashboard card click opens the editor; Present enters and advances the presentation", async () => {
   resetFullApiMocks();
   seedProjects([
@@ -224,6 +243,89 @@ test("dashboard card click opens the editor; Present enters and advances the pre
     4000,
   );
   assertNoAppErrors("presentation advance");
+
+  await unmount(app);
+  target.remove();
+});
+
+test("toggling slide line numbers remounts the magic-move block into the new DOM schema", async () => {
+  resetFullApiMocks();
+  const project = makeProject("p1", "Line Numbers Deck");
+  project.settings.showLineNumbers = false;
+  project.slides[0]!.code = "const a = 1;\nconst b = 2;\nconst c = 3;";
+  seedProjects([project]);
+  queryClient.clear();
+  clearAllLocalCode();
+  setIsPresenting(false);
+  setCurrentSlideId(null);
+  window.location.hash = "#/editor/p1";
+
+  const target = document.createElement("div");
+  document.body.appendChild(target);
+  const app = mount(App, { target });
+
+  await waitFor(
+    () => target.querySelector(".shiki-magic-move-container") !== null,
+    "preview magic-move container",
+  );
+  const firstContainer = target.querySelector(
+    ".shiki-magic-move-container",
+  ) as HTMLElement | null;
+  assert.ok(firstContainer, "preview mounted without line numbers");
+  assert.equal(
+    target.querySelectorAll(".shiki-magic-move-line-number").length,
+    0,
+    "line numbers start disabled",
+  );
+
+  const settingsButton = buttonByTitle(target, "Settings");
+  assert.ok(settingsButton, "settings button exists");
+  click(settingsButton!);
+  await waitFor(
+    () => target.textContent?.includes("Settings") === true,
+    "settings drawer",
+  );
+
+  const layoutTab = [...target.querySelectorAll("button")].find(
+    (button) => button.textContent?.trim() === "Layout",
+  );
+  assert.ok(layoutTab, "layout tab exists");
+  click(layoutTab!);
+  await settle();
+
+  const slideLineNumbers = switchForLabel(target, "Slide line numbers");
+  assert.ok(slideLineNumbers, "slide line numbers toggle exists");
+  click(slideLineNumbers!);
+
+  await waitFor(
+    () => target.querySelectorAll(".shiki-magic-move-line-number").length === 3,
+    "line numbers enabled in preview",
+  );
+  const secondContainer = target.querySelector(
+    ".shiki-magic-move-container",
+  ) as HTMLElement | null;
+  assert.ok(secondContainer, "preview re-mounted with line numbers");
+  assert.notEqual(
+    secondContainer,
+    firstContainer,
+    "schema change remounts the magic-move subtree",
+  );
+
+  click(slideLineNumbers!);
+  await waitFor(
+    () => target.querySelectorAll(".shiki-magic-move-line-number").length === 0,
+    "line numbers disabled again",
+  );
+  const thirdContainer = target.querySelector(
+    ".shiki-magic-move-container",
+  ) as HTMLElement | null;
+  assert.ok(thirdContainer, "preview remains mounted after toggling off");
+  assert.notEqual(
+    thirdContainer,
+    secondContainer,
+    "disabling line numbers remounts back into the no-gutter schema",
+  );
+  assertNoAppErrors("line-number schema toggle");
 
   await unmount(app);
   target.remove();
