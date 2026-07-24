@@ -29,7 +29,6 @@
   import DrawerCodeBackgroundSection from "./drawer/DrawerCodeBackgroundSection.svelte";
   import DrawerLineNumbersSection from "./drawer/DrawerLineNumbersSection.svelte";
   import DimColorPicker from "./DimColorPicker.svelte";
-  import { THEMES } from "$lib/lib/themes";
   import type { SettingsPatch } from "$lib/lib/tauri-api";
   import type {
     GlobalAnimationKey,
@@ -94,7 +93,6 @@
   let activeTab = $state<DrawerTab>("theme");
   let railEl: HTMLElement | undefined = $state();
   let resetConfirmOpen = $state(false);
-  let previewingThemeLabel: string | null = $state(null);
 
   const previewProject = $derived(previewProjectSettings());
   const reduceMotion = $derived(
@@ -106,7 +104,6 @@
   $effect(() => {
     if (!open) {
       clearPreviewProjectSetting("theme");
-      previewingThemeLabel = null;
       resetConfirmOpen = false;
     }
   });
@@ -209,13 +206,10 @@
 
   function handlePreviewTheme(theme: ThemeName) {
     setPreviewProjectSetting("theme", theme);
-    previewingThemeLabel =
-      THEMES.find((candidate) => candidate.value === theme)?.label ?? theme;
   }
 
   function clearThemePreview() {
     clearPreviewProjectSetting("theme");
-    previewingThemeLabel = null;
   }
 
   function resetThemeSection() {
@@ -288,10 +282,6 @@
     onClose();
   }
 </script>
-
-<span class="sr-only" aria-live="polite">
-  {previewingThemeLabel ? `Previewing ${previewingThemeLabel}` : ""}
-</span>
 
 <button
   type="button"
@@ -390,18 +380,6 @@
       </Button>
     </div>
   </div>
-
-  {#if previewingThemeLabel}
-    <div
-      class="mx-4 mt-3 flex shrink-0 items-center justify-between rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs text-primary shadow-sm"
-      transition:fade={{ duration: reduceMotion ? 0 : 120 }}
-    >
-      <span class="font-medium">Previewing…</span>
-      <span class="min-w-0 truncate text-[11px] text-primary/80">
-        {previewingThemeLabel}
-      </span>
-    </div>
-  {/if}
 
   <div class="flex min-h-0 flex-1">
     <div
