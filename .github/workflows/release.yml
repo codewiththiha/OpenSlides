@@ -27,75 +27,34 @@ jobs:
           RELEASE_VERSION: ${{ github.ref_name }}
         run: node scripts/extract-release-note.mjs
 
-  build-tauri:
-    name: Build ${{ matrix.name }}
+  build-macos:
+    name: Build macOS packages (${{ matrix.name }})
     needs: extract-notes
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: macOS Apple Silicon
-            runner: macos-14
+          - name: Apple Silicon
             args: --target aarch64-apple-darwin
             rust_targets: aarch64-apple-darwin
-
-          - name: macOS Intel
-            runner: macos-13
+          - name: Intel
             args: --target x86_64-apple-darwin
             rust_targets: x86_64-apple-darwin
-
-          - name: macOS Universal
-            runner: macos-14
+          - name: Universal
             args: --target universal-apple-darwin
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
-
-          - name: Windows x64
-            runner: windows-latest
-            args: ""
-            rust_targets: ""
-
-          - name: Windows ARM64
-            runner: windows-latest
-            args: --target aarch64-pc-windows-msvc
-            rust_targets: aarch64-pc-windows-msvc
-
-          - name: Linux DEB + RPM
-            runner: ubuntu-22.04
-            args: --bundles deb,rpm
-            rust_targets: ""
-
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
-      - name: Install Linux system dependencies
-        if: startsWith(matrix.runner, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            rpm
-
       - uses: dtolnay/rust-toolchain@stable
-        if: matrix.rust_targets != ''
         with:
           targets: ${{ matrix.rust_targets }}
-
-      - uses: dtolnay/rust-toolchain@stable
-        if: matrix.rust_targets == ''
-
       - run: npm ci
-
-      - name: Build, bundle, and attach release artifacts
+      - name: Build, bundle, and attach macOS release artifacts
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -107,8 +66,81 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+  build-windows:
+    name: Build Windows packages (${{ matrix.name }})
+    needs: extract-notes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: x64
+            args: ""
+            rust_targets: ""
+          - name: ARM64
+            args: --target aarch64-pc-windows-msvc
+            rust_targets: aarch64-pc-windows-msvc
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.rust_targets != ''
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: dtolnay/rust-toolchain@stable
+        if: matrix.rust_targets == ''
+      - run: npm ci
+      - name: Build, bundle, and attach Windows release artifacts
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: OpenSlides ${{ needs.extract-notes.outputs.version }}
+          releaseBody: ${{ fromJSON(needs.extract-notes.outputs.payloadJson).fullNotes }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  build-linux:
+    name: Build Linux packages
+    needs: extract-notes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - name: Build, bundle, and attach Linux release artifacts
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: OpenSlides ${{ needs.extract-notes.outputs.version }}
+          releaseBody: ${{ fromJSON(needs.extract-notes.outputs.payloadJson).fullNotes }}
+          releaseDraft: false
+          prerelease: false
+          args: --bundles deb,rpm
+
   update-marketing-site:
-    needs: [extract-notes, build-tauri]
+    needs: [extract-notes, build-macos, build-windows, build-linux]
     runs-on: macos-latest
     steps:
       - name: Send release notes to the marketing site
@@ -116,8 +148,6 @@ jobs:
         env:
           PAYLOAD: ${{ needs.extract-notes.outputs.payloadJson }}
         with:
-          # Add WEBSITE_DISPATCH_TOKEN to this repository's Actions secrets. It needs
-          # access to codewiththiha/OpenSlidesWebsite and repository_dispatch permission.
           github-token: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
           script: |
             await github.rest.repos.createDispatchEvent({
