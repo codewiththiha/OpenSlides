@@ -5,7 +5,12 @@
    * Uses @humanspeak/svelte-motion (Framer Motion API for Svelte 5).
    * A single spring drives left / top / scale / opacity / rotate with a
    * per-card stagger delay, matching the original React/framer-motion fan.
+   *
+   * BUG FIX: `initial` is captured ONCE via untrack() so it never
+   * re-applies mid-animation. A base `opacity: 0` in the style prevents
+   * any single-frame flash at (0,0) during mount/unmount races.
    */
+  import { untrack } from "svelte";
   import { motion } from "@humanspeak/svelte-motion";
   import { type ProjectSummary } from "$lib/types";
   import { computeFanLayout } from "$lib/lib/stacking";
@@ -65,6 +70,15 @@
   /** Center-out stagger — matches React's 0.05s per step. */
   const delaySeconds = $derived(Math.abs(index - (total - 1) / 2) * 0.05);
 
+  // BUG FIX: Capture initial position ONCE, non-reactively.
+  const initialPose = untrack(() => ({
+    left: originLeft,
+    top: originTop,
+    scale: 0.5,
+    opacity: 0,
+    rotate: 0,
+  }));
+
   const animateTarget = $derived(
     isClosing
       ? {
@@ -101,14 +115,8 @@
   class="absolute touch-none"
   style="width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
     ? 60
-    : 30 + index};"
-  initial={{
-    left: originLeft,
-    top: originTop,
-    scale: 0.5,
-    opacity: 0,
-    rotate: 0,
-  }}
+    : 30 + index}; opacity: 0;"
+  initial={initialPose}
   animate={animateTarget}
   transition={{
     type: "spring",

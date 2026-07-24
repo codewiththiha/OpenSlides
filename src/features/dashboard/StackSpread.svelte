@@ -4,7 +4,7 @@
    *
    * Uses @humanspeak/svelte-motion for backdrop, highlight ring, and
    * control cluster. Fan cards (StackSpreadItem) own their own spring.
-   * Close choreography: 480ms for all springs to settle, then unmount.
+   * Close choreography: 650ms for all springs to settle, then unmount.
    */
   import { untrack } from "svelte";
   import { motion } from "@humanspeak/svelte-motion";
@@ -72,8 +72,7 @@
       currentDeckRect = deckElement.getBoundingClientRect();
     }
     isClosing = true;
-    // Enough for the slowest spring (controls, delay 0.15 + settle).
-    closeTimer = window.setTimeout(() => onClose(), 480);
+    closeTimer = window.setTimeout(() => onClose(), 650);
   }
 
   $effect(() => {
@@ -92,8 +91,12 @@
   });
 
   // Viewport size as state — fan centering reacts to resize.
-  let viewportW = $state(0);
-  let viewportH = $state(0);
+  let viewportW = $state(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+  let viewportH = $state(
+    typeof window !== "undefined" ? window.innerHeight : 800,
+  );
 
   $effect(() => {
     const measure = () => {
