@@ -41,6 +41,10 @@ pub async fn export_project_to_json(
         "globalTransitionDuration": project.settings.global_transition_duration,
         "useGlobalStagger": project.settings.use_global_stagger,
         "globalStagger": project.settings.global_stagger,
+        "useGlobalHighlight": project.settings.use_global_highlight,
+        "globalDimAmount": project.settings.global_dim_amount,
+        "globalSizeUpAmount": project.settings.global_size_up_amount,
+        "highlightDimColor": project.settings.highlight_dim_color,
         "currentSlideId": project.settings.current_slide_id,
         "language": project.settings.language,
         "codeAlign": project.settings.code_align,
@@ -174,6 +178,23 @@ pub async fn import_project_from_json(
             .get("globalStagger")
             .and_then(|v| v.as_i64())
             .unwrap_or(5),
+        use_global_highlight: value
+            .get("useGlobalHighlight")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        global_dim_amount: value
+            .get("globalDimAmount")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(75),
+        global_size_up_amount: value
+            .get("globalSizeUpAmount")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(100),
+        highlight_dim_color: value
+            .get("highlightDimColor")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "black".to_string()),
         current_slide_id: None,
         language: language.clone(),
         code_align,
