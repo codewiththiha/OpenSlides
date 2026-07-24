@@ -235,8 +235,6 @@ pub struct ImportSlidePayload {
     pub name: String,
     #[serde(default)]
     pub section_id: Option<String>,
-    #[serde(default)]
-    pub language: Option<String>,
 }
 
 pub(crate) fn default_dim_amount() -> i64 {
