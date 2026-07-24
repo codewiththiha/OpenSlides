@@ -98,16 +98,18 @@
     save,
   });
 
-  const { findReplace, isFindOpen, closeFind, openFind } = createCodeEditorFind(
-    {
-      code: () => code,
-      textareaEl: () => st.textareaEl,
-      applyCode: handleChange,
-      saveCaret,
-      editorFontSize: () => editorFontSize,
-      lineHeight: () => lineHeight,
-    },
-  );
+  const findCtl = createCodeEditorFind({
+    code: () => code,
+    textareaEl: () => st.textareaEl,
+    applyCode: handleChange,
+    saveCaret,
+    editorFontSize: () => editorFontSize,
+    lineHeight: () => lineHeight,
+  });
+  const findReplace = findCtl.findReplace;
+  const isFindOpen = $derived(findCtl.isFindOpen);
+  const closeFind = findCtl.closeFind;
+  const openFind = findCtl.openFind;
 
   const { handleKeyDown } = createCodeEditorKeyboard({
     slideId: () => slideId,

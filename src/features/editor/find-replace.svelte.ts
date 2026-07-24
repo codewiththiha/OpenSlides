@@ -30,12 +30,18 @@ export function createFindReplace(args: Args) {
     return result;
   });
 
-  function selectMatch(index: number) {
+  /**
+   * Select a match in the textarea.
+   * @param focusEditor - when true (Enter/Shift+Enter navigation), focus the
+   *   textarea so the cursor teleports to the match. When false (auto-select
+   *   on bar open), keep focus in the find input.
+   */
+  function selectMatch(index: number, focusEditor = false) {
     const el = args.textarea();
     const match = matches[index];
     const code = args.code();
     if (!el || !match) return;
-    // Keep focus in the find input so the user can continue typing.
+    if (focusEditor) el.focus();
     el.selectionStart = match.start;
     el.selectionEnd = match.end;
     args.saveCaret();
@@ -50,14 +56,14 @@ export function createFindReplace(args: Args) {
     if (!matches.length) return;
     const next = (currentMatchIndex + 1) % matches.length;
     currentMatchIndex = next;
-    selectMatch(next);
+    selectMatch(next, true);
   }
 
   function goPrev() {
     if (!matches.length) return;
     const previous = (currentMatchIndex - 1 + matches.length) % matches.length;
     currentMatchIndex = previous;
-    selectMatch(previous);
+    selectMatch(previous, true);
   }
 
   function replaceCurrent() {
@@ -89,7 +95,7 @@ export function createFindReplace(args: Args) {
     searchTerm;
     currentMatchIndex = 0;
     if (isOpen && !wasOpen && matches.length) {
-      requestAnimationFrame(() => selectMatch(0));
+      requestAnimationFrame(() => selectMatch(0, false));
     }
     wasOpen = isOpen;
   });
