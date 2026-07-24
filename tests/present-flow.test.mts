@@ -458,7 +458,7 @@ test("present: forward then BACKWARD through highlights (ArrowLeft) — no rende
   target.remove();
 });
 
-test("editor: restored originals end PRISTINE after highlight removal (morph-safe)", async () => {
+test("editor: eraser covers originals and leaves token spans pristine after highlight removal", async () => {
   resetFullApiMocks();
   seedProjects([makeProject()]);
   queryClient.clear();
@@ -489,21 +489,20 @@ test("editor: restored originals end PRISTINE after highlight removal (morph-saf
 
   pressKey("1"); // reveal highlight 1 (covers line 0: "let a = 1;")
   await settle();
-  // Under-fade engaged: at least one token span is at opacity 0 under the clone.
+  // Eraser engaged: the original selected text is covered by geometry,
+  // not by mutating token span opacity.
   await waitFor(
-    () => itemSpans().some((el) => el.style.opacity === "0"),
-    "original highlighted span faded under the clone",
+    () => Boolean(target.querySelector('[data-highlight-eraser="true"]')),
+    "highlight eraser covers the original text",
     4000,
   );
-  assertNoAppErrors("under-fade engaged");
+  assertNoAppErrors("eraser engaged");
 
-  pressKey("0"); // back to clean — restore fade starts
-  await settle(500 + 80 + 400); // restore (dimMs) + settle buffer + slack
+  pressKey("0"); // back to clean — eraser unmounts with the highlight
+  await settle(500 + 400); // dim/clone outro + slack
 
-  // Restore contract: no token span may keep an inline opacity transition —
-  // a leftover `transition: opacity …` would override shiki-magic-move's
-  // class-driven transitions and make these exact tokens teleport on the
-  // next slide morph while untouched tokens glide.
+  // The eraser strategy must leave shiki token spans pristine: no inline
+  // opacity or opacity transition can remain to override magic-move classes.
   const lingering = itemSpans().filter((el) =>
     el.style.transition.includes("opacity"),
   );
@@ -514,20 +513,24 @@ test("editor: restored originals end PRISTINE after highlight removal (morph-saf
   );
   assert.ok(
     itemSpans().every((el) => el.style.opacity !== "0"),
-    "restored originals are fully visible again",
+    "token spans remain visible/pristine after the eraser unmounts",
   );
-  assertNoAppErrors("restore settle");
+  assert.equal(
+    target.querySelector('[data-highlight-eraser="true"]'),
+    null,
+    "eraser is removed on clean slide",
+  );
+  assertNoAppErrors("eraser removal");
 
   await unmount(app);
   target.remove();
 });
 
-test("present: slide morph waits for restored originals (custom dim > size)", async () => {
+test("present: slide advance waits for highlight outro with eraser strategy (custom dim > size)", async () => {
   resetFullApiMocks();
   const proj = makeProject();
-  // One highlight, dim much longer than size: the clone fade outro ends
-  // exactly with the restore fade (dimMs) — without restore bookkeeping the
-  // morph would start while originals are mid-restore / still styled.
+  // One highlight, dim much longer than size: advancing past it must wait
+  // for the dim/clone outro budget before the slide changes.
   proj.slides[0]!.highlights = [
     {
       ...makeHighlight("h1", 0),
@@ -575,31 +578,28 @@ test("present: slide morph waits for restored originals (custom dim > size)", as
   pressKey("ArrowRight"); // reveal the only highlight
   await settle();
   await waitFor(
-    () =>
-      (
-        [...target.querySelectorAll(".shiki-magic-move-item")] as HTMLElement[]
-      ).some((el) => el.style.opacity === "0"),
-    "original highlighted span faded under the clone",
+    () => Boolean(target.querySelector('[data-highlight-eraser="true"]')),
+    "highlight eraser covers the original text",
     4000,
   );
   assertNoAppErrors("reveal");
 
-  // Fail-safe budget: max(1600, 300) + 250 = 1850 — always after this test's
-  // normal-path assertions, so it can't accidentally satisfy them.
+  // Fail-safe budget: max(1600, 300) + 250 = 1850 — after this test's
+  // normal-path assertion, so it can't accidentally satisfy it.
   pressKey("ArrowRight"); // past the last highlight → outro → advance
-  await sleep(1600 + 40); // fade outros end at 1600; settle is 1600 + 80
+  await sleep(1600 - 80);
   flushSync();
   assert.equal(
     ui.currentSlideId,
     "s1",
-    "morph must NOT start before restored originals are pristine",
+    "slide must remain until the custom dim/clone outro is almost complete",
   );
   await waitFor(
     () => ui.currentSlideId === "s2",
-    "advance once restores settled",
+    "advance once highlight outro completes",
     3000,
   );
-  assertNoAppErrors("restore-gated advance");
+  assertNoAppErrors("outro-gated advance");
 
   await unmount(app);
   target.remove();
