@@ -3,6 +3,8 @@
  * good output while a new one loads (or clears for unsafe states).
  */
 
+import { MAX_CODE_LENGTH } from "./shiki-limits";
+
 type RetentionPolicy = "clear" | "keep-last";
 export type ShikiDisplayStatus =
   "disabled" | "empty" | "too-large" | "loading" | "ready" | "error";
@@ -24,7 +26,7 @@ const SHIKI_DISPLAY_POLICIES = {
     emptyPolicy: "clear",
     largeCodePolicy: "clear",
     disabledPolicy: "clear",
-    maxCodeLength: 20_000,
+    maxCodeLength: MAX_CODE_LENGTH,
   },
   /** Thumbnails should never cache or show stale HTML for another cache key. */
   thumbnail: {
@@ -33,7 +35,7 @@ const SHIKI_DISPLAY_POLICIES = {
     emptyPolicy: "clear",
     largeCodePolicy: "clear",
     disabledPolicy: "clear",
-    maxCodeLength: 20_000,
+    maxCodeLength: MAX_CODE_LENGTH,
   },
   /** Small static previews can disappear on failures instead of keeping stale theme HTML. */
   previewTile: {
@@ -42,7 +44,7 @@ const SHIKI_DISPLAY_POLICIES = {
     emptyPolicy: "clear",
     largeCodePolicy: "clear",
     disabledPolicy: "clear",
-    maxCodeLength: 20_000,
+    maxCodeLength: MAX_CODE_LENGTH,
   },
   /** MagicMove preview keeps the previous highlighter while a new theme/language loads. */
   magicMove: {
@@ -51,7 +53,7 @@ const SHIKI_DISPLAY_POLICIES = {
     emptyPolicy: "clear",
     largeCodePolicy: "clear",
     disabledPolicy: "clear",
-    maxCodeLength: 20_000,
+    maxCodeLength: MAX_CODE_LENGTH,
   },
 } as const satisfies Record<string, ShikiDisplayPolicy>;
 

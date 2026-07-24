@@ -39,7 +39,7 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     pending = selectionToRange(args.code(), selectionStart, selectionEnd);
     position = {
       x: Math.min(Math.max(8, x), Math.max(8, window.innerWidth - 188)),
-      y: Math.min(Math.max(8, y - 84), Math.max(8, window.innerHeight - 92)),
+      y: Math.min(Math.max(8, y), Math.max(8, window.innerHeight - 92)),
     };
     visible = true;
   }
@@ -56,18 +56,40 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     if (el && el.selectionStart === el.selectionEnd) visible = false;
   }
 
-  function onMouseUp(e: MouseEvent) {
-    args.saveCaret();
-    const el = args.textarea();
-    if (
-      e.button === 0 &&
-      args.highlightMode() &&
-      el &&
-      el.selectionStart !== el.selectionEnd
-    ) {
-      showAt(e.clientX, e.clientY);
-    }
-  }
+  // === Document-level listener for reliable menu on drag-select ===
+  // This fixes "menu doesn't appear when releasing mouse outside textarea".
+  $effect(() => {
+    if (!args.highlightMode()) return;
+
+    let lastMouse = { x: 0, y: 0 };
+
+    const trackMouse = (e: MouseEvent) => {
+      lastMouse = { x: e.clientX, y: e.clientY };
+    };
+
+    const onDocMouseUp = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+
+      requestAnimationFrame(() => {
+        const el = args.textarea();
+        if (!el || el.selectionStart === el.selectionEnd) return;
+
+        // Only show if selection is in our textarea
+        const active = document.activeElement;
+        if (active === el || (el.contains && el.contains(active as Node))) {
+          showAt(lastMouse.x, lastMouse.y);
+        }
+      });
+    };
+
+    document.addEventListener("mousemove", trackMouse, { passive: true });
+    document.addEventListener("mouseup", onDocMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", trackMouse);
+      document.removeEventListener("mouseup", onDocMouseUp);
+    };
+  });
 
   function onKeyUp(e: KeyboardEvent) {
     args.saveCaret();
@@ -205,7 +227,6 @@ export function createHighlightCrud(args: HighlightCrudArgs) {
     closeContextMenu,
     onContextMenu,
     onSelect,
-    onMouseUp,
     onKeyUp,
     addPendingHighlight,
     updateHighlight,

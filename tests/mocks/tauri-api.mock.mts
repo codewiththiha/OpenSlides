@@ -41,6 +41,28 @@ export function resetApiMocks(): void {
 }
 
 export const api = {
+  getDefaultSettings: () =>
+    Promise.resolve({
+      showLineNumbers: true,
+      useBlackCodeBackground: false,
+      showHighlightStepIndicator: false,
+      fontSize: 16,
+      lineHeight: 1.5,
+      editorFontSize: 14,
+      useGlobalTransition: true,
+      globalTransitionDuration: 700,
+      useGlobalStagger: true,
+      globalStagger: 3,
+      useGlobalHighlight: true,
+      globalDimAmount: 80,
+      globalSizeUpAmount: 105,
+      highlightDimColor: "theme",
+      currentSlideId: null,
+      language: "typescript",
+      codeAlign: "left",
+    }),
+  getSupportedLanguages: () => Promise.resolve([]),
+  getSupportedThemes: () => Promise.resolve([]),
   updateSlideCode: (slideId: string, code: string) => {
     saveCalls.push({ slideId, code });
     return new Promise<void>((res, rej) => {

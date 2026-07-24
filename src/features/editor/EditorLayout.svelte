@@ -41,6 +41,7 @@
     onSelectHighlight,
     editorExpanded,
     onToggleEditorExpanded,
+    settingsFocus = false,
   }: {
     project: Project;
     activeSlide?: Slide;
@@ -50,6 +51,7 @@
     onSelectHighlight: (index: number) => boolean;
     editorExpanded: boolean;
     onToggleEditorExpanded: (v: boolean) => void;
+    settingsFocus?: boolean;
   } = $props();
 
   let codePane = $state<PaneHandle | null>(null);
@@ -112,25 +114,40 @@
 
 <div class={cn("flex min-h-0 flex-1 flex-col", isZenMode && "pt-0")}>
   <PaneGroup direction="vertical" class="min-h-0 flex-1">
-    <Pane defaultSize={isZenMode ? 100 : 78} minSize={35} class="min-h-0">
+    <Pane
+      defaultSize={settingsFocus || isZenMode ? 100 : 78}
+      minSize={35}
+      class="min-h-0"
+    >
       <PaneGroup direction="horizontal" class="h-full min-h-0">
+        <!-- Keep PreviewPane mounted across settings-focus toggles so an
+             active HighlightLayer is not destroyed/recreated while its clone
+             and dim layers are live. Only the sibling code/slides panes are
+             conditionally hidden. -->
         <Pane
-          defaultSize={isCodePanelCollapsed
-            ? 100 - CODE_COLLAPSED_SIZE
+          defaultSize={settingsFocus || isCodePanelCollapsed || isZenMode
+            ? 100
             : 100 - ui.codePanelSize}
           minSize={30}
           class="min-w-0"
         >
-          <PreviewPane
-            {project}
-            {activeSlide}
-            {effectiveHighlight}
-            {onHighlightExitComplete}
-            {onSelectHighlight}
-          />
+          <div
+            class={cn(
+              "h-full transition-[padding] duration-200 ease-out",
+              settingsFocus && "pr-[420px]",
+            )}
+          >
+            <PreviewPane
+              {project}
+              {activeSlide}
+              {effectiveHighlight}
+              {onHighlightExitComplete}
+              {onSelectHighlight}
+            />
+          </div>
         </Pane>
 
-        {#if !isZenMode}
+        {#if !isZenMode && !settingsFocus}
           <PaneResizer
             class={cn(
               "w-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-active:bg-primary/60",
@@ -176,7 +193,7 @@
       </PaneGroup>
     </Pane>
 
-    {#if !isZenMode}
+    {#if !isZenMode && !settingsFocus}
       <PaneResizer
         class={cn(
           "h-1.5 bg-border/60 transition-colors hover:bg-primary/50 data-active:bg-primary/60",

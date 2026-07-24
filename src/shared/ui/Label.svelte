@@ -8,6 +8,7 @@
     children,
     ...rest
   }: {
+    id?: string;
     class?: string;
     children?: Snippet;
     for?: string;

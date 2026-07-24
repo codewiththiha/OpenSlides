@@ -155,6 +155,7 @@ proto.animate = function () {
 proto.getAnimations = function () {
   return [];
 };
+proto.scrollIntoView = function () {};
 // jsdom layout returns 0×0 rects everywhere; virtualized lists then render
 // no rows at all. Give CONNECTED elements a stable, realistic default rect.
 proto.getBoundingClientRect = function () {

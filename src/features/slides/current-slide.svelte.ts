@@ -21,23 +21,11 @@ export function createCurrentSlide(
   );
 
   return {
-    get currentSlideId() {
-      return id;
-    },
-    get slides() {
-      return slides;
-    },
     get activeSlide() {
       return activeSlide;
     },
     get activeIndex() {
       return activeIndex;
-    },
-    get slideMap() {
-      return maps.slideMap;
-    },
-    get indexMap() {
-      return maps.indexMap;
     },
   };
 }

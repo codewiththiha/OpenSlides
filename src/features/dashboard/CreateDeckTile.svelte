@@ -5,7 +5,7 @@
   import Input from "$lib/ui/Input.svelte";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
   import { shikiDisplayHtml } from "$lib/shiki/shiki-display.svelte";
-  import { THEMES } from "$lib/lib/themes";
+  import { availableThemes } from "$lib/lib/themes";
   import { cn } from "$lib/lib/utils";
 
   let {
@@ -34,10 +34,15 @@
 
   let inputEl = $state<HTMLInputElement | null>(null);
 
+  const themes = $derived(availableThemes());
+  const resolvedTheme = $derived(
+    selectedTheme || themes[0]?.value || "dark-plus",
+  );
+
   const preview = shikiDisplayHtml(() => ({
     code: NEW_PRESENTATION_CODE,
     language: "typescript",
-    theme: selectedTheme || "dark-plus",
+    theme: resolvedTheme,
     resetKey: "create-deck-preview",
     debounceMs: 80,
     policyName: "previewTile",
@@ -138,13 +143,13 @@
 
           <div>
             <span class="mb-1.5 block text-xs font-medium text-foreground">
-              Theme Color Palette ({THEMES.find(
-                (t) => t.value === (selectedTheme || "dark-plus"),
+              Theme Color Palette ({themes.find(
+                (t) => t.value === resolvedTheme,
               )?.label || "Dark+"})
             </span>
             <div class="flex flex-wrap gap-2 pt-1">
-              {#each THEMES as t (t.value)}
-                {@const isSelected = (selectedTheme || "dark-plus") === t.value}
+              {#each themes as t (t.value)}
+                {@const isSelected = resolvedTheme === t.value}
                 <button
                   type="button"
                   onclick={() => onThemeChange(t.value)}
@@ -188,7 +193,7 @@
         >
           <CodeThumbnail
             html={preview.html}
-            theme={selectedTheme || "dark-plus"}
+            theme={resolvedTheme}
             fontSize={7.5}
             lineHeight={1.4}
             class="h-44 w-full rounded-md border border-border/40 p-3 shadow-inner"

@@ -1,19 +1,19 @@
 <script lang="ts">
   /**
-   * The deck fan overlay — portal'd to body. Springs (stiffness/damping
-   * per-config below), a 260ms close-then-unmount choreography, and
-   * fan-item dragging run on svelte/motion + the shared pointer-drag
-   * manager.
+   * The deck fan overlay — portal'd to body.
+   *
+   * Uses @humanspeak/svelte-motion for backdrop, highlight ring, and
+   * control cluster. Fan cards (StackSpreadItem) own their own spring.
+   * Close choreography: 650ms for all springs to settle, then unmount.
    */
   import { untrack } from "svelte";
-  import { Spring, Tween } from "svelte/motion";
+  import { motion } from "@humanspeak/svelte-motion";
   import { Ungroup, X } from "@lucide/svelte";
   import { type ProjectSummary } from "$lib/types";
   import { type GroupChunk } from "$lib/lib/grouping";
   import StackSpreadItem from "./StackSpreadItem.svelte";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { portal } from "$lib/actions/portal";
-  import { EASE_DIM } from "$lib/lib/easings";
   import { stackFanCenter, stackFanSize } from "./stack-fan-layout";
   import {
     consumeProjectCardActions,
@@ -34,8 +34,6 @@
 
   const baseCardActions = consumeProjectCardActions();
 
-  // Opened from the fan, a project must close the transient overlay first,
-  // so this scope wraps open() while forwarding the rest untouched.
   provideProjectCardActions({
     get renamingId() {
       return baseCardActions.renamingId;
@@ -63,7 +61,6 @@
   });
 
   let isClosing = $state(false);
-  // Initial anchor only — re-measured in triggerClose() before every close.
   let currentDeckRect = $state<DOMRect | null>(
     untrack(() => deckElement?.getBoundingClientRect() ?? null),
   );
@@ -75,9 +72,7 @@
       currentDeckRect = deckElement.getBoundingClientRect();
     }
     isClosing = true;
-    closeTimer = window.setTimeout(() => {
-      onClose();
-    }, 260);
+    closeTimer = window.setTimeout(() => onClose(), 650);
   }
 
   $effect(() => {
@@ -95,11 +90,13 @@
     };
   });
 
-  // Viewport size as state (§10.2): fan centering must react to window
-  // resizes while the spread is open — reading window.innerWidth inside a
-  // $derived is not tracked.
-  let viewportW = $state(0);
-  let viewportH = $state(0);
+  // Viewport size as state — fan centering reacts to resize.
+  let viewportW = $state(
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+  let viewportH = $state(
+    typeof window !== "undefined" ? window.innerHeight : 800,
+  );
 
   $effect(() => {
     const measure = () => {
@@ -123,40 +120,6 @@
   const fanSize = $derived(stackFanSize(total));
   const spreadWidth = $derived(fanSize.width);
   const spreadHeight = $derived(fanSize.height);
-
-  /* Motion values */
-  const backdrop = new Tween(0, { duration: 240, easing: EASE_DIM });
-  const wrap = new Spring(
-    { opacity: 0, scale: 0.85 },
-    { stiffness: 300, damping: 25 },
-  );
-  const controls = new Spring(
-    { opacity: 0, scale: 0.5 },
-    { stiffness: 350, damping: 22 },
-  );
-
-  $effect(() => {
-    void backdrop.set(isClosing ? 0 : 1, { duration: 240, easing: EASE_DIM });
-  });
-
-  $effect(() => {
-    void wrap.set(
-      isClosing ? { opacity: 0, scale: 0.85 } : { opacity: 1, scale: 1 },
-    );
-  });
-
-  $effect(() => {
-    const closed = isClosing;
-    const timer = window.setTimeout(
-      () => {
-        void controls.set(
-          closed ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 },
-        );
-      },
-      closed ? 0 : 150,
-    );
-    return () => window.clearTimeout(timer);
-  });
 </script>
 
 <div
@@ -164,30 +127,34 @@
   class="fixed inset-0 overflow-hidden select-none"
   style="z-index: {Z_INDEX.hoverPreview};"
 >
-  <!-- Transparent catcher backdrop -->
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div
+  <!-- Backdrop — React: duration 0.2 -->
+  <motion.div
     class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-    style="opacity: {backdrop.current};"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: isClosing ? 0 : 1 }}
+    transition={{ duration: 0.2 }}
     onclick={triggerClose}
-  ></div>
+  />
 
-  <!-- Highlight wrapper around the spread -->
-  <div
+  <!-- Highlight wrapper — React: spring stiffness 300, damping 25 -->
+  <motion.div
     class="absolute rounded-2xl border-2 border-primary/25 bg-primary/[0.04] shadow-[0_0_40px_rgba(0,0,0,0.3)]"
     style="left: {fanCenterX - spreadWidth / 2}px; top: {fanCenterY -
-      spreadHeight /
-        2}px; width: {spreadWidth}px; height: {spreadHeight}px; opacity: {wrap
-      .current.opacity}; transform: scale({wrap.current.scale});"
-  ></div>
+      spreadHeight / 2}px; width: {spreadWidth}px; height: {spreadHeight}px;"
+    initial={{ opacity: 0, scale: 0.85 }}
+    animate={isClosing ? { opacity: 0, scale: 0.85 } : { opacity: 1, scale: 1 }}
+    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+  />
 
-  <!-- Mini floating controls — top-right of the highlight wrapper -->
-  <div
+  <!-- Floating controls — React: spring stiffness 350, damping 22, delay 0.15 -->
+  <motion.div
     class="absolute z-50 flex items-center gap-1.5"
     style="left: {fanCenterX + spreadWidth / 2 - 4}px; top: {fanCenterY -
       spreadHeight / 2 -
-      4}px; opacity: {controls.current.opacity}; transform: scale({controls
-      .current.scale});"
+      4}px;"
+    initial={{ opacity: 0, scale: 0.5 }}
+    animate={isClosing ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 }}
+    transition={{ type: "spring", stiffness: 350, damping: 22, delay: 0.15 }}
   >
     <button
       type="button"
@@ -208,7 +175,7 @@
     >
       <X class="h-3.5 w-3.5" />
     </button>
-  </div>
+  </motion.div>
 
   <!-- Fanned Cards -->
   <div class="pointer-events-none absolute inset-0">

@@ -2,13 +2,16 @@
   /**
    * One fanned-out project card inside StackSpread.
    *
-   * left/top/scale/opacity/rotate run on a spring with stiffness 325,
-   * damping 25 (Svelte's Spring has unit mass; those are normalized from
-   * mass 0.8 / k 260 / d 20, which solves to the same ODE) + a per-index
-   * delay.
+   * Uses @humanspeak/svelte-motion (Framer Motion API for Svelte 5).
+   * A single spring drives left / top / scale / opacity / rotate with a
+   * per-card stagger delay, matching the original React/framer-motion fan.
+   *
+   * BUG FIX: `initial` is captured ONCE via untrack() so it never
+   * re-applies mid-animation. A base `opacity: 0` in the style prevents
+   * any single-frame flash at (0,0) during mount/unmount races.
    */
   import { untrack } from "svelte";
-  import { Spring } from "svelte/motion";
+  import { motion } from "@humanspeak/svelte-motion";
   import { type ProjectSummary } from "$lib/types";
   import { computeFanLayout } from "$lib/lib/stacking";
   import ProjectCard from "./ProjectCard.svelte";
@@ -16,10 +19,7 @@
     beginProjectDrag,
     projectDnd,
   } from "@/features/dashboard/project-dnd.svelte";
-  import { riseFade } from "$lib/ui/transitions/rise-fade";
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
-
-  const SPRING_OPTS = { stiffness: 325, damping: 25 };
 
   let {
     project,
@@ -43,17 +43,20 @@
 
   const fan = $derived(computeFanLayout(total, index));
 
+  // Deck origin (where cards return on close)
   const originLeft = $derived(
     (deckRect?.left ?? fanCenterX - PROJECT_CARD_WIDTH / 2) +
       (deckRect?.width ?? PROJECT_CARD_WIDTH) / 2 -
       PROJECT_CARD_WIDTH / 2,
   );
+
   const originTop = $derived(
     (deckRect?.top ?? fanCenterY - PROJECT_CARD_HEIGHT / 2) +
       (deckRect?.height ?? PROJECT_CARD_HEIGHT) / 2 -
       PROJECT_CARD_HEIGHT / 2,
   );
 
+  // Final fan target
   const targetLeft = $derived(fanCenterX - PROJECT_CARD_WIDTH / 2 + fan.x);
   const targetTop = $derived(fanCenterY - PROJECT_CARD_HEIGHT / 2 + fan.y);
 
@@ -64,50 +67,37 @@
       session.active,
   );
 
-  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 35);
+  /** Center-out stagger — matches React's 0.05s per step. */
+  const delaySeconds = $derived(Math.abs(index - (total - 1) / 2) * 0.05);
 
-  const originState = $derived({
+  // BUG FIX: Capture initial position ONCE, non-reactively.
+  const initialPose = untrack(() => ({
     left: originLeft,
     top: originTop,
     scale: 0.5,
     opacity: 0,
     rotate: 0,
-  });
+  }));
 
-  // The spring only STARTS at the origin rect — the effect below drives it
-  // to its fan target (and back on close) via pos.set(). untrack() marks
-  // the initial read of the deriveds as deliberate.
-  const pos = new Spring(
-    untrack(() => ({
-      left: originLeft,
-      top: originTop,
-      scale: 0.5,
-      opacity: 1, // fade-in is owned by the riseFade intro transition
-      rotate: 0,
-    })),
-    SPRING_OPTS,
-  );
-
-  let timer: number | undefined;
-
-  $effect(() => {
-    const target = isClosing
-      ? originState
+  const animateTarget = $derived(
+    isClosing
+      ? {
+          left: originLeft,
+          top: originTop,
+          scale: 0.5,
+          opacity: 0,
+          rotate: 0,
+        }
       : {
           left: targetLeft,
           top: targetTop,
           scale: 1,
           opacity: isDragging ? 0.3 : 1,
           rotate: fan.rotate,
-        };
-    window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      void pos.set(target);
-    }, delayMs);
-    return () => window.clearTimeout(timer);
-  });
+        },
+  );
 
-  let itemEl = $state<HTMLDivElement | null>(null);
+  let itemEl = $state<HTMLElement | null>(null);
 
   function onPointerDown(e: PointerEvent) {
     beginProjectDrag({ kind: "fan-item", project, groupId }, e, {
@@ -118,20 +108,25 @@
   }
 </script>
 
-<div
-  bind:this={itemEl}
+<motion.div
+  bind:ref={itemEl}
   onpointerdown={onPointerDown}
   role="presentation"
   class="absolute touch-none"
   style="width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
     ? 60
-    : 30 + index}; left: {pos.current.left}px; top: {pos.current
-    .top}px; transform: scale({pos.current.scale}) rotate({pos.current
-    .rotate}deg); opacity: {pos.current.opacity};"
+    : 30 + index}; opacity: 0;"
+  initial={initialPose}
+  animate={animateTarget}
+  transition={{
+    type: "spring",
+    stiffness: 260,
+    damping: 20,
+    mass: 0.8,
+    delay: delaySeconds,
+  }}
 >
-  <div in:riseFade={{ duration: 300, delay: delayMs, y: 18 }}>
-    <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
-      <ProjectCard {project} />
-    </div>
+  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+    <ProjectCard {project} />
   </div>
-</div>
+</motion.div>

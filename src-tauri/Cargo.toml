@@ -31,3 +31,10 @@ chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 once_cell = "1"
 aho-corasick = "1"
+
+[profile.release]
+opt-level = "z"   # Optimize strictly for binary size
+lto = true         # Link-Time Optimization across dependencies
+codegen-units = 1  # Maximize LTO effectiveness
+panic = "abort"   # Strip stack unwinding logic
+strip = true       # Strip debug symbols and tables

@@ -45,11 +45,30 @@ export function createSlideStripSelection(args: {
     return () => root.removeAttribute("data-slide-selection-active");
   });
 
+  // Per-card deletes (and other external list changes) can remove slides that
+  // are still present in the raw selection set. Prune those stale ids so the
+  // toolbar count and delete guards always reflect the actual remaining cards.
+  $effect(() => {
+    const validIds = new Set(args.ordered().map((slide) => slide.id));
+    let changed = false;
+    for (const id of [...selectedSlideIds]) {
+      if (validIds.has(id)) continue;
+      selectedSlideIds.delete(id);
+      changed = true;
+    }
+    if (confirmBulkDelete && selectedCount() === 0) confirmBulkDelete = false;
+    if (isMultiSelectMode && changed && selectedSlideIds.size === 0) {
+      isMultiSelectMode = false;
+    }
+  });
+
   const selectedInOrder = () =>
     args
       .ordered()
       .filter((slide) => selectedSlideIds.has(slide.id))
       .map((slide) => slide.id);
+
+  const selectedCount = () => selectedInOrder().length;
 
   function toggleSlideSelection(
     id: string,
@@ -139,6 +158,9 @@ export function createSlideStripSelection(args: {
 
   return {
     selectedSlideIds,
+    get selectionCount() {
+      return selectedCount();
+    },
     get isMultiSelectMode() {
       return isMultiSelectMode;
     },

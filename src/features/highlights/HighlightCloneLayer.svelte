@@ -17,6 +17,7 @@
    * 1) therefore only plays when the keyed block swaps or the highlight is
    * removed — never right after the intro.
    */
+  import { untrack } from "svelte";
   import { fade } from "svelte/transition";
   import type { HighlightMeasurement } from "@/features/highlights/highlight-utils";
   import { EASE_DIM, EASE_SCALE } from "$lib/lib/easings";
@@ -43,12 +44,25 @@
     onOutroStart?: () => void;
     onOutroEnd?: () => void;
   } = $props();
+
+  // Svelte evaluates transition options outside a reactive context during
+  // outros. Copy prop values into plain state so those late reads don't touch
+  // inert prop-derived getters.
+  let fadeMs = $state(untrack(() => dimMs));
+  let growMs = $state(untrack(() => sizeMs));
+  let transitionScale = $state(untrack(() => scaleTarget));
+
+  $effect(() => {
+    fadeMs = dimMs;
+    growMs = sizeMs;
+    transitionScale = scaleTarget;
+  });
 </script>
 
 <div
   class="pointer-events-none absolute z-20 font-mono font-medium tracking-wide"
   style="left: {union.x}px; top: {union.y}px; width: {union.width}px; height: {union.height}px; font-size: {fontSize}px; line-height: {lineHeight}; will-change: opacity;"
-  transition:fade|global={{ duration: dimMs, easing: EASE_DIM }}
+  transition:fade|global={{ duration: fadeMs, easing: EASE_DIM }}
   onoutrostart={onOutroStart}
   onoutroend={onOutroEnd}
 >
@@ -56,10 +70,10 @@
     class="h-full w-full"
     style="transform-origin: center center; transform: scale({scaleTarget}); will-change: transform;"
     transition:grow|global={{
-      duration: sizeMs,
+      duration: growMs,
       easing: EASE_SCALE,
       from: 1,
-      to: scaleTarget,
+      to: transitionScale,
     }}
   >
     {#each measurement.segments as seg (seg.line.lineIndex)}

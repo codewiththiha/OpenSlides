@@ -13,7 +13,6 @@ import type {
 } from "@/features/highlights/highlight-tokens";
 import { getLineTextNodes } from "$lib/lib/line-nodes-cache";
 import { measureCharWidth } from "$lib/lib/char-width-cache";
-export { measureCharWidth } from "$lib/lib/char-width-cache";
 
 interface HighlightLineRect {
   x: number;

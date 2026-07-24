@@ -1,30 +1,39 @@
 <script lang="ts">
-  /**
-   * Right-side settings drawer for global project options (§6.9):
-   * a shell owning the mutations; each settings section is a component
-   * under ./drawer/.
-   */
+  /** Right-side settings panel for project-level presentation options. */
   import { untrack } from "svelte";
   import { X } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
+  import ConfirmDialog from "$lib/ui/ConfirmDialog.svelte";
   import { type Project, type ThemeName } from "$lib/types";
   import {
     updateProjectSettingsMutation,
     updateProjectThemeMutation,
   } from "$lib/queries";
   import {
-    setPreviewProjectSetting,
     clearPreviewProjectSetting,
+    setEditorShowLineNumbers,
+    setPreviewProjectSetting,
+    setShowSlideHoverPreview,
   } from "$lib/stores/ui-state.svelte";
   import { previewProjectSettings } from "@/features/settings/preview-settings";
+  import { loadDefaultProjectSettings } from "$lib/lib/backend-config-loader";
+  import { supportedThemeOptions } from "$lib/lib/backend-config.svelte";
   import { cn } from "$lib/lib/utils";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
+  import { escapeKey } from "$lib/actions/escape-key";
   import SettingsSection from "$lib/ui/SettingsSection.svelte";
   import GlobalAnimationSection from "@/features/settings/GlobalAnimationSection.svelte";
   import DrawerThemeSection from "./drawer/DrawerThemeSection.svelte";
   import DrawerCodeLayoutSection from "./drawer/DrawerCodeLayoutSection.svelte";
   import DrawerCodeBackgroundSection from "./drawer/DrawerCodeBackgroundSection.svelte";
-  import DrawerLineNumbersSection from "./drawer/DrawerLineNumbersSection.svelte";
+  import DrawerPreviewSection from "./drawer/DrawerPreviewSection.svelte";
+  import DrawerEditorSection from "./drawer/DrawerEditorSection.svelte";
+  import DimColorPicker from "./DimColorPicker.svelte";
+  import type { SettingsPatch } from "$lib/lib/tauri-api";
+  import type {
+    GlobalAnimationKey,
+    PreviewProjectSettings,
+  } from "$lib/stores/types";
 
   let {
     project,
@@ -36,89 +45,305 @@
     onClose: () => void;
   } = $props();
 
-  // The drawer is mounted under the project-keyed EditorInner, so project.id
-  // is stable for this mount — untrack() marks the one-time capture.
+  type DrawerTab = "theme" | "layout" | "motion";
+
+  const TABS: { id: DrawerTab; label: string }[] = [
+    { id: "theme", label: "Theme" },
+    { id: "layout", label: "Layout" },
+    { id: "motion", label: "Motion" },
+  ];
+
+  const DEFAULT_THEME: ThemeName = "dark-plus";
+
   const projectId = untrack(() => project.id);
   const updateSettings = updateProjectSettingsMutation(projectId);
   const updateTheme = updateProjectThemeMutation(projectId);
 
+  let activeTab = $state<DrawerTab>("theme");
+  let resetConfirmOpen = $state(false);
+  let drawerEl: HTMLElement | null = $state(null);
+
   const previewProject = $derived(previewProjectSettings());
 
   $effect(() => {
-    if (!open) clearPreviewProjectSetting("theme");
+    if (!open) {
+      clearTransientPreviews();
+      resetConfirmOpen = false;
+    }
+  });
+
+  $effect(() => {
+    if (!open) return;
+
+    function handleDocumentPointerDown(event: PointerEvent) {
+      if (resetConfirmOpen) return;
+      const target = event.target;
+      if (target instanceof Node && drawerEl?.contains(target)) return;
+      onClose();
+    }
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+    return () => {
+      document.removeEventListener(
+        "pointerdown",
+        handleDocumentPointerDown,
+        true,
+      );
+    };
   });
 
   const s = $derived(project.settings);
+  const activeTabIndex = $derived(
+    Math.max(
+      0,
+      TABS.findIndex((tab) => tab.id === activeTab),
+    ),
+  );
 
-  // effective values (preview wins)
+  const effTheme = $derived(previewProject.theme ?? project.theme);
+  const defaultTheme = $derived(
+    supportedThemeOptions()[0]?.value ?? DEFAULT_THEME,
+  );
+  const effFontSize = $derived(previewProject.fontSize ?? s.fontSize);
+  const effLineHeight = $derived(previewProject.lineHeight ?? s.lineHeight);
+  const effEditorFontSize = $derived(
+    previewProject.editorFontSize ?? s.editorFontSize,
+  );
   const effGlobalTransition = $derived(
     previewProject.globalTransitionDuration ?? s.globalTransitionDuration,
   );
   const effGlobalStagger = $derived(
     previewProject.globalStagger ?? s.globalStagger,
   );
+  const effGlobalDimAmount = $derived(
+    previewProject.globalDimAmount ?? s.globalDimAmount ?? 80,
+  );
+  const effGlobalSizeUpAmount = $derived(
+    previewProject.globalSizeUpAmount ?? s.globalSizeUpAmount ?? 105,
+  );
+  const effHighlightDimColor = $derived(
+    (previewProject.highlightDimColor ?? s.highlightDimColor ?? "theme") as
+      "black" | "theme",
+  );
+  const globalMotionActive = $derived(
+    s.useGlobalTransition || s.useGlobalStagger || s.useGlobalHighlight,
+  );
 
-  function patch(partial: Parameters<typeof updateSettings.mutate>[0]) {
+  function patch(partial: SettingsPatch) {
     updateSettings.mutate(partial);
+  }
+
+  function previewGlobalSetting(
+    key: GlobalAnimationKey,
+    value: number | string,
+  ) {
+    const typedKey = key as keyof PreviewProjectSettings;
+    setPreviewProjectSetting(
+      typedKey,
+      value as PreviewProjectSettings[typeof typedKey],
+    );
+  }
+
+  function clearTransientPreviews() {
+    clearPreviewProjectSetting("theme");
+    clearPreviewProjectSetting("useBlackCodeBackground");
+    clearPreviewProjectSetting("highlightDimColor");
+    clearPreviewProjectSetting("fontSize");
+    clearPreviewProjectSetting("lineHeight");
+    clearPreviewProjectSetting("editorFontSize");
+    clearPreviewProjectSetting("globalTransitionDuration");
+    clearPreviewProjectSetting("globalStagger");
+    clearPreviewProjectSetting("globalDimAmount");
+    clearPreviewProjectSetting("globalSizeUpAmount");
+  }
+
+  function handlePreviewTheme(theme: ThemeName) {
+    setPreviewProjectSetting("theme", theme);
+  }
+
+  function clearThemePreview() {
+    clearPreviewProjectSetting("theme");
+  }
+
+  async function resetAllSettings() {
+    clearTransientPreviews();
+    const defaults = await loadDefaultProjectSettings();
+    updateTheme.mutate(defaultTheme);
+    if (defaults) {
+      const {
+        currentSlideId: _currentSlideId,
+        language: _language,
+        ...rest
+      } = defaults;
+      patch(rest as SettingsPatch);
+      setEditorShowLineNumbers(defaults.showLineNumbers);
+    }
+    setShowSlideHoverPreview(false);
+    resetConfirmOpen = false;
+  }
+
+  function handleEscape() {
+    if (!open) return;
+    if (resetConfirmOpen) {
+      resetConfirmOpen = false;
+      return;
+    }
+    onClose();
   }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 <div
-  class={cn(
-    "fixed inset-0 bg-black/40 transition-opacity",
-    open ? "opacity-100" : "pointer-events-none opacity-0",
-  )}
-  style="z-index: {Z_INDEX.drawerBackdrop};"
-  onclick={onClose}
-></div>
-<aside
-  class={cn(
-    "fixed top-0 right-0 flex h-full w-[340px] flex-col border-l bg-card shadow-2xl transition-transform duration-200",
-    open ? "translate-x-0" : "translate-x-full",
-  )}
+  class="pointer-events-none fixed inset-0"
   style="z-index: {Z_INDEX.drawer};"
+  aria-hidden={!open}
 >
-  <div class="flex h-12 items-center justify-between border-b px-4">
-    <h2 class="text-sm font-semibold">Presentation Settings</h2>
-    <Button variant="ghost" size="icon" class="h-8 w-8" onclick={onClose}>
-      <X class="h-4 w-4" />
-    </Button>
-  </div>
+  <div
+    bind:this={drawerEl}
+    class={cn(
+      "pointer-events-auto absolute top-0 right-0 flex h-full w-[420px] flex-col overflow-hidden rounded-l-2xl border-l border-border/60 bg-background/95 shadow-[-8px_0_30px_rgba(0,0,0,0.12)] backdrop-blur-xl will-change-transform motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-reduce:transition-none",
+      open ? "translate-x-0" : "translate-x-full",
+    )}
+    role="dialog"
+    aria-modal="false"
+    aria-label="Settings"
+    use:escapeKey={{ onEscape: handleEscape, delayMs: 50 }}
+  >
+    <div class="flex h-12 shrink-0 items-center justify-between border-b px-4">
+      <h2 class="truncate text-sm font-semibold">Settings</h2>
+      <Button
+        variant="ghost"
+        size="icon"
+        class="h-8 w-8 focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+        onclick={onClose}
+        aria-label="Close settings"
+      >
+        <X class="h-4 w-4" />
+      </Button>
+    </div>
 
-  <div class="flex-1 space-y-6 overflow-y-auto p-4">
-    <DrawerThemeSection
-      currentTheme={project.theme}
-      onCommitTheme={(theme: ThemeName) => updateTheme.mutate(theme)}
-    />
+    <div class="shrink-0 border-b px-4 py-3">
+      <div
+        class="relative grid h-9 grid-cols-3 rounded-lg bg-muted p-1"
+        role="tablist"
+        aria-label="Settings categories"
+      >
+        <span
+          class="absolute top-1 bottom-1 left-1 rounded-md bg-background shadow-sm motion-safe:transition-transform motion-safe:duration-200 motion-reduce:transition-none"
+          style="width: calc((100% - 0.5rem) / 3); transform: translateX({activeTabIndex *
+            100}%);"
+          aria-hidden="true"
+        ></span>
+        {#each TABS as tab (tab.id)}
+          {@const active = activeTab === tab.id}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-controls={`settings-panel-${tab.id}`}
+            id={`settings-tab-${tab.id}`}
+            class={cn(
+              "relative z-10 rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none",
+              active
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            onclick={() => {
+              activeTab = tab.id;
+            }}
+          >
+            {tab.label}
+          </button>
+        {/each}
+      </div>
+    </div>
 
-    <DrawerCodeLayoutSection
-      value={s.codeAlign ?? "left"}
-      onChange={(align) => patch({ codeAlign: align })}
-    />
-
-    <DrawerCodeBackgroundSection
-      checked={s.useBlackCodeBackground}
-      onChange={(v) => patch({ useBlackCodeBackground: v })}
-    />
-
-    <DrawerLineNumbersSection settings={s} onPatch={patch} />
-
-    <SettingsSection
-      title="Global Animations"
-      description="When on, every slide uses these animation values and the per-slide sliders are locked."
-      borderTop
+    <div
+      id={`settings-panel-${activeTab}`}
+      role="tabpanel"
+      aria-labelledby={`settings-tab-${activeTab}`}
+      class="min-h-0 flex-1 overflow-y-auto p-4"
     >
-      <p class="text-[11px] text-muted-foreground">
-        Stagger is the delay between each animated character.
-      </p>
-      <GlobalAnimationSection
-        settings={s}
-        effTransition={effGlobalTransition}
-        effStagger={effGlobalStagger}
-        onPreview={setPreviewProjectSetting}
-        onCommit={patch}
-      />
-    </SettingsSection>
+      <div class="space-y-5">
+        {#if activeTab === "theme"}
+          <DrawerThemeSection
+            currentTheme={project.theme}
+            onPreviewTheme={handlePreviewTheme}
+            onClearPreviewTheme={clearThemePreview}
+            onCommitTheme={(theme: ThemeName) => updateTheme.mutate(theme)}
+          />
+
+          <DrawerCodeBackgroundSection
+            checked={s.useBlackCodeBackground}
+            theme={effTheme}
+            onChange={(v) => patch({ useBlackCodeBackground: v })}
+          />
+
+          <SettingsSection title="Highlight dim color">
+            <DimColorPicker
+              value={effHighlightDimColor}
+              theme={effTheme}
+              onPreview={(v) =>
+                setPreviewProjectSetting("highlightDimColor", v)}
+              onPreviewEnd={() =>
+                clearPreviewProjectSetting("highlightDimColor")}
+              onCommit={(v) => patch({ highlightDimColor: v })}
+            />
+          </SettingsSection>
+        {:else if activeTab === "layout"}
+          <DrawerCodeLayoutSection
+            value={s.codeAlign ?? "left"}
+            onChange={(align) => patch({ codeAlign: align })}
+          />
+
+          <DrawerPreviewSection
+            settings={s}
+            {effFontSize}
+            {effLineHeight}
+            onPatch={patch}
+          />
+
+          <DrawerEditorSection {effEditorFontSize} onPatch={patch} />
+        {:else}
+          <SettingsSection
+            title="Global Animations"
+            badge={globalMotionActive ? "GLOBAL" : undefined}
+          >
+            <GlobalAnimationSection
+              settings={s}
+              effTransition={effGlobalTransition}
+              effStagger={effGlobalStagger}
+              {effGlobalDimAmount}
+              {effGlobalSizeUpAmount}
+              onPreview={previewGlobalSetting}
+              onCommit={patch}
+            />
+          </SettingsSection>
+        {/if}
+
+        <div class="pt-2">
+          <button
+            type="button"
+            class="rounded px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none"
+            onclick={() => {
+              resetConfirmOpen = true;
+            }}
+          >
+            Reset all settings
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
-</aside>
+</div>
+
+<ConfirmDialog
+  open={resetConfirmOpen}
+  title="Reset presentation settings?"
+  description="This restores theme, layout, typography, visibility, and motion settings to their defaults."
+  confirmLabel="Reset"
+  destructive={false}
+  onConfirm={resetAllSettings}
+  onCancel={() => {
+    resetConfirmOpen = false;
+  }}
+/>

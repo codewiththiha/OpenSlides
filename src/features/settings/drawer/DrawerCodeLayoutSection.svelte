@@ -12,9 +12,6 @@
   } = $props();
 </script>
 
-<SettingsSection
-  title="Code layout"
-  description="Where the code block sits on your slides. Applies to all slides."
->
+<SettingsSection title="Code layout">
   <CodeAlignPicker {value} {onChange} />
 </SettingsSection>

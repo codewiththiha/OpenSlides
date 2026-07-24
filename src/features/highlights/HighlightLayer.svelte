@@ -34,7 +34,7 @@
    * transition that would break shiki-magic-move's class transitions.
    */
   import type { Highlighter } from "shiki";
-  import type { Highlight } from "$lib/types";
+  import { HIGHLIGHT_DEFAULTS, type Highlight } from "$lib/types";
   import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
   import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
   import { createHighlightUnderlay } from "@/features/highlights/highlight-underlay.svelte";
@@ -56,6 +56,9 @@
     fontSize,
     lineHeight,
     onExitComplete,
+    globalDimAmount,
+    globalSizeUpAmount,
+    globalDimColor = "black",
   }: {
     container: () => HTMLElement | null;
     codeContainer: () => HTMLElement | null;
@@ -67,6 +70,9 @@
     fontSize: () => number;
     lineHeight: () => number;
     onExitComplete?: () => void;
+    globalDimAmount?: number;
+    globalSizeUpAmount?: number;
+    globalDimColor?: "black" | "theme";
   } = $props();
 
   const planCtl = createHighlightPlan({
@@ -86,9 +92,9 @@
     theme: () => theme(),
   });
 
-  const DEFAULT_SIZE_UP_AMOUNT = 125;
-  const DEFAULT_DIM_MS = 500;
-  const DEFAULT_SIZE_MS = 600;
+  const DEFAULT_SIZE_UP_AMOUNT = HIGHLIGHT_DEFAULTS.sizeUpAmount;
+  const DEFAULT_DIM_MS = HIGHLIGHT_DEFAULTS.dimTransition;
+  const DEFAULT_SIZE_MS = HIGHLIGHT_DEFAULTS.sizeUpTransition;
 
   const hl = $derived(highlight());
 
@@ -150,8 +156,13 @@
   const dimMs = $derived(
     dimSource?.useCustomTransition ? dimSource.dimTransition : DEFAULT_DIM_MS,
   );
-  const dimAmount = $derived((dimSource?.dimAmount ?? 75) / 100);
-  const sizeUpAmount = $derived(hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT);
+
+  const dimAmount = $derived(
+    (globalDimAmount ?? dimSource?.dimAmount ?? 75) / 100,
+  );
+  const sizeUpAmount = $derived(
+    globalSizeUpAmount ?? hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT,
+  );
   const scaleTarget = $derived(
     hl?.sizeUpEnabled && sizeUpAmount > 100
       ? Math.min(Math.max(sizeUpAmount, 100), 300) / 100
@@ -218,6 +229,7 @@
   <HighlightDimOverlay
     {dimAmount}
     {dimMs}
+    dimColor={globalDimColor}
     onOutroStart={handleOutroStart}
     onOutroEnd={handleOutroEnd}
   />

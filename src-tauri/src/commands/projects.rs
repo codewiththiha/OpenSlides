@@ -1,13 +1,15 @@
 //! Project-level Tauri commands.
 
 use crate::commands::helpers::{
-    fetch_project, invalidate_project_thumbnails, is_supported_language, is_supported_theme, load_settings,
-    normalize_copied_slide_highlights, now_ms, remap_section_id, DEFAULT_CODE,
+    fetch_project, invalidate_project_thumbnails, is_supported_language, is_supported_theme,
+    load_settings, normalize_copied_slide_highlights, now_ms, remap_section_id,
+    supported_languages, supported_themes, DEFAULT_CODE, DEFAULT_THEME,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
 use crate::models::{
     merge_settings, settings_to_json, Project, ProjectSettings, ProjectSummary,
+    DEFAULT_SLIDE_DURATION_MS, DEFAULT_SLIDE_STAGGER, DEFAULT_SLIDE_TRANSITION_MS,
 };
 use serde_json::Value as JsonValue;
 use sqlx::Row;
@@ -62,6 +64,21 @@ pub async fn get_project(pool: State<'_, DbPool>, project_id: String) -> Command
 }
 
 #[tauri::command]
+pub async fn get_default_settings() -> CommandResult<ProjectSettings> {
+    Ok(ProjectSettings::default())
+}
+
+#[tauri::command]
+pub async fn get_supported_languages() -> CommandResult<Vec<crate::commands::shared::naming::SupportedLanguageOption>> {
+    Ok(supported_languages())
+}
+
+#[tauri::command]
+pub async fn get_supported_themes() -> CommandResult<Vec<crate::commands::shared::naming::SupportedThemeOption>> {
+    Ok(supported_themes())
+}
+
+#[tauri::command]
 pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandResult<Project> {
     let project_id = Uuid::new_v4().to_string();
     let slide_id = Uuid::new_v4().to_string();
@@ -85,11 +102,12 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandRes
     sqlx::query(
         r#"
         INSERT INTO projects (id, name, theme, settings, created_at, updated_at)
-        VALUES (?, ?, 'dark-plus', ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
         "#,
     )
     .bind(&project_id)
     .bind(&project_name)
+    .bind(DEFAULT_THEME)
     .bind(&settings_json)
     .bind(ts)
     .bind(ts)
@@ -101,12 +119,15 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandRes
         r#"
         INSERT INTO slides
           (id, project_id, order_index, code, transition_duration, stagger, duration, name)
-        VALUES (?, ?, 0, ?, 750, 5, 3000, '1. Open with an idea')
+        VALUES (?, ?, 0, ?, ?, ?, ?, '1. Open with an idea')
         "#,
     )
     .bind(&slide_id)
     .bind(&project_id)
     .bind(DEFAULT_CODE)
+    .bind(DEFAULT_SLIDE_TRANSITION_MS)
+    .bind(DEFAULT_SLIDE_STAGGER)
+    .bind(DEFAULT_SLIDE_DURATION_MS)
     .execute(&mut *tx)
     .await
     .map_err(|e| format!("Failed to insert default slide: {e}"))?;

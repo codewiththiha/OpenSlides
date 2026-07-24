@@ -60,5 +60,6 @@
     {onPreview}
     {onMove}
     {onReorder}
+    useGlobalHighlight={project.settings.useGlobalHighlight}
   />
 {/if}

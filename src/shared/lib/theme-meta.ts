@@ -1,9 +1,21 @@
 /**
- * Theme metadata — the single source of truth. `ThemeName` is derived from
- * the THEMES list, so adding a theme here updates the type automatically.
+ * Theme metadata fallback list.
+ *
+ * In Tauri, the live supported-theme list is fetched from the backend and used
+ * at runtime. This fallback keeps browser/dev/test contexts working and avoids
+ * a blank UI before the async bootstrap fetch lands.
  */
 
-export const THEMES = [
+export type ThemeName = string;
+
+export interface ThemeMeta {
+  value: ThemeName;
+  label: string;
+  background: string;
+  light: boolean;
+}
+
+export const THEMES: readonly ThemeMeta[] = [
   { value: "dark-plus", label: "Dark+", background: "#1e1e1e", light: false },
   { value: "dracula", label: "Dracula", background: "#282a36", light: false },
   {
@@ -53,16 +65,16 @@ export const THEMES = [
   },
   { value: "aurora-x", label: "Aurora X", background: "#07090f", light: false },
   {
-    value: "catppuccin-mocha",
-    label: "Catppuccin Mocha",
-    background: "#1e1e2e",
-    light: false,
-  },
-  {
     value: "catppuccin-latte",
     label: "Catppuccin Latte",
     background: "#eff1f5",
     light: true,
+  },
+  {
+    value: "catppuccin-mocha",
+    label: "Catppuccin Mocha",
+    background: "#1e1e2e",
+    light: false,
   },
   {
     value: "night-owl",
@@ -71,12 +83,3 @@ export const THEMES = [
     light: false,
   },
 ] as const;
-
-export type ThemeName = (typeof THEMES)[number]["value"];
-
-export interface ThemeMeta {
-  value: ThemeName;
-  label: string;
-  background: string;
-  light: boolean;
-}

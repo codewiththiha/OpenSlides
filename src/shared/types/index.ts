@@ -6,26 +6,8 @@
 
 type CodeAlign = "left" | "center";
 
-export const SUPPORTED_LANGUAGES = [
-  { value: "typescript", label: "TypeScript" },
-  { value: "javascript", label: "JavaScript" },
-  { value: "tsx", label: "React (TSX)" },
-  { value: "jsx", label: "React (JSX)" },
-  { value: "python", label: "Python" },
-  { value: "java", label: "Java" },
-  { value: "go", label: "Go" },
-  { value: "rust", label: "Rust" },
-  { value: "php", label: "PHP" },
-  { value: "groovy", label: "Groovy" },
-  { value: "css", label: "CSS" },
-  { value: "html", label: "HTML" },
-  { value: "json", label: "JSON" },
-  { value: "yaml", label: "YAML" },
-  { value: "sql", label: "SQL" },
-  { value: "bash", label: "Bash/Shell" },
-  { value: "markdown", label: "Markdown" },
-  { value: "merustmar", label: "Merustmar" },
-] as const;
+export type { LanguageOption } from "$lib/lib/language-meta";
+export { FALLBACK_SUPPORTED_LANGUAGES as SUPPORTED_LANGUAGES } from "$lib/lib/language-meta";
 
 export type { ThemeName } from "$lib/lib/theme-meta";
 
@@ -95,6 +77,12 @@ export interface ProjectSettings {
   globalTransitionDuration: number;
   useGlobalStagger: boolean;
   globalStagger: number;
+  /** Global highlight pop-up size + dim controls (like stagger/transition) */
+  useGlobalHighlight: boolean;
+  globalDimAmount: number;
+  globalSizeUpAmount: number;
+  /** Dim background color for highlights: "black" or "theme" (theme's code background) */
+  highlightDimColor: "black" | "theme";
   currentSlideId: string | null;
   /** Project-wide language (source of truth). */
   language: string;

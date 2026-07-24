@@ -19,7 +19,6 @@
   } from "@lucide/svelte";
   import Button from "$lib/ui/Button.svelte";
   import TitleBar from "$lib/components/TitleBar.svelte";
-  import SaveStatusBadge from "./SaveStatusBadge.svelte";
   import InlineEditableText from "$lib/ui/InlineEditableText.svelte";
   import {
     ui,
@@ -140,8 +139,6 @@
         </button>
       {/if}
     </div>
-
-    <SaveStatusBadge status={ui.saveStatus} />
 
     <Button
       variant="ghost"

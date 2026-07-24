@@ -58,3 +58,5 @@ function cubicBezier(
 export const EASE_DIM: EasingFn = cubicBezier(0.25, 0.1, 0.25, 1);
 /** framer backOut — used for the highlight scale pop. */
 export const EASE_SCALE: EasingFn = cubicBezier(0.34, 1.56, 0.64, 1);
+/** Bouncy ease-out for pop-from-below entrances. */
+export const EASE_BOUNCE_OUT: EasingFn = cubicBezier(0.34, 1.8, 0.64, 1);

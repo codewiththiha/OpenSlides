@@ -98,16 +98,18 @@
     save,
   });
 
-  const { findReplace, isFindOpen, closeFind, openFind } = createCodeEditorFind(
-    {
-      code: () => code,
-      textareaEl: () => st.textareaEl,
-      applyCode: handleChange,
-      saveCaret,
-      editorFontSize: () => editorFontSize,
-      lineHeight: () => lineHeight,
-    },
-  );
+  const findCtl = createCodeEditorFind({
+    code: () => code,
+    textareaEl: () => st.textareaEl,
+    applyCode: handleChange,
+    saveCaret,
+    editorFontSize: () => editorFontSize,
+    lineHeight: () => lineHeight,
+  });
+  const findReplace = findCtl.findReplace;
+  const isFindOpen = $derived(findCtl.isFindOpen);
+  const closeFind = findCtl.closeFind;
+  const openFind = findCtl.openFind;
 
   const { handleKeyDown } = createCodeEditorKeyboard({
     slideId: () => slideId,
@@ -127,6 +129,7 @@
   });
 
   const currentHighlights = $derived(slide?.highlights ?? []);
+
   const crud = createCodeEditorHighlighting({
     projectId,
     slideId: () => slideId,
@@ -189,7 +192,6 @@
       onKeyDown={handleKeyDown}
       onKeyUp={(e) => crud.onKeyUp(e)}
       onSelect={() => crud.onSelect()}
-      onMouseUp={(e) => crud.onMouseUp(e)}
       onBlur={saveCaret}
       onScroll={syncScroll}
       onContextMenu={(e) => crud.onContextMenu(e)}

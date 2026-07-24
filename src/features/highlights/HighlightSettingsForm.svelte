@@ -8,9 +8,11 @@
   let {
     highlight,
     onUpdate,
+    disabled = false,
   }: {
     highlight: Highlight;
     onUpdate: (id: string, patch: Partial<Highlight>) => void;
+    disabled?: boolean;
   } = $props();
 
   const preview = $derived(previewHighlightSettings(highlight.id));
@@ -18,7 +20,7 @@
   const id = $derived(highlight.id);
 </script>
 
-<div class="space-y-2">
+<div class="space-y-2 {disabled ? 'pointer-events-none opacity-50' : ''}">
   <SliderField
     label="Dim amount"
     labelClassName="text-[9px]"
@@ -27,6 +29,7 @@
     max={100}
     step={5}
     format={(v) => `${v}%`}
+    {disabled}
     onPreview={(v) => setPreviewHighlightSetting(id, { dimAmount: v })}
     onCommit={(v) => onUpdate(id, { dimAmount: v })}
   />
@@ -34,6 +37,7 @@
     label="Enlarge selection"
     labelClassName="text-[9px]"
     checked={eff.sizeUpEnabled}
+    {disabled}
     onChange={(v) => onUpdate(id, { sizeUpEnabled: v })}
   />
   {#if eff.sizeUpEnabled}
@@ -41,10 +45,11 @@
       label="Enlarge amount"
       labelClassName="text-[9px]"
       value={eff.sizeUpAmount}
-      min={105}
+      min={100}
       max={250}
       step={5}
       format={(v) => `${v}%`}
+      {disabled}
       onPreview={(v) => setPreviewHighlightSetting(id, { sizeUpAmount: v })}
       onCommit={(v) => onUpdate(id, { sizeUpAmount: v })}
     />

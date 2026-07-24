@@ -77,6 +77,9 @@ const previewProjectSettingKeys = new Set<string>([
   "globalTransitionDuration",
   "globalStagger",
   "useBlackCodeBackground",
+  "globalDimAmount",
+  "globalSizeUpAmount",
+  "highlightDimColor",
 ]);
 
 function isPreviewProjectSettingKey(
@@ -133,6 +136,28 @@ function describeProjectChange(
     return patch.useGlobalStagger
       ? "Global stagger enabled"
       : "Global stagger disabled";
+  if (
+    patch.useGlobalHighlight !== undefined &&
+    patch.useGlobalHighlight !== before.useGlobalHighlight
+  )
+    return patch.useGlobalHighlight
+      ? "Global highlight enabled"
+      : "Global highlight disabled";
+  if (
+    patch.globalDimAmount !== undefined &&
+    patch.globalDimAmount !== before.globalDimAmount
+  )
+    return `Global dim ${before.globalDimAmount}% → ${patch.globalDimAmount}%`;
+  if (
+    patch.globalSizeUpAmount !== undefined &&
+    patch.globalSizeUpAmount !== before.globalSizeUpAmount
+  )
+    return `Global pop ${before.globalSizeUpAmount}% → ${patch.globalSizeUpAmount}%`;
+  if (
+    patch.highlightDimColor !== undefined &&
+    patch.highlightDimColor !== before.highlightDimColor
+  )
+    return `Highlight dim color → ${patch.highlightDimColor}`;
   return null;
 }
 

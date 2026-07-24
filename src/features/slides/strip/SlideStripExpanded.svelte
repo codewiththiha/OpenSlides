@@ -238,7 +238,7 @@
 
   <SlideSelectionToolbar
     open={selection.isMultiSelectMode}
-    selectionCount={selection.selectedSlideIds.size}
+    selectionCount={selection.selectionCount}
     totalSlides={strip.ordered.length}
     onMoveToStart={() => selection.moveSelected("start")}
     onMoveToEnd={() => selection.moveSelected("end")}
@@ -249,8 +249,8 @@
 
   <ConfirmDialog
     open={selection.confirmBulkDelete}
-    title="Delete {selection.selectedSlideIds.size} selected slide{selection
-      .selectedSlideIds.size === 1
+    title="Delete {selection.selectionCount} selected slide{selection.selectionCount ===
+    1
       ? ''
       : 's'}?"
     description="This cannot be undone."

@@ -142,12 +142,43 @@ export function createHighlightUnderlay(args: UseHighlightUnderlayArgs) {
     const targets = new Set(m && root ? collectTargets(root, m) : []);
 
     // Restore spans no longer covered (step change / removal).
+    let rekeyed = false;
     for (const el of [...active.keys()]) {
-      if (!targets.has(el)) restore(el, dimMs);
+      if (targets.has(el)) continue;
+
+      // Theme/language re-keys recreate token spans. The old highlighted
+      // spans are torn down (disconnected, or briefly leave-classed) and so
+      // drop out of `targets` even though the highlight is still active.
+      // Restoring them would paint a dim, un-scaled duplicate under the live
+      // clone — drop the bookkeeping and leave opacity at 0. Also record that
+      // a re-key happened: the freshly mounted replacements below are then
+      // hidden in one frame instead of over a 500ms fade, which (with the dim
+      // overlay already up) would flash that same duplicate.
+      if (
+        !el.isConnected ||
+        el.closest(".shiki-magic-move-leave-active, .shiki-magic-move-leave")
+      ) {
+        cancelSettle(el);
+        active.delete(el);
+        rekeyed = true;
+        continue;
+      }
+
+      restore(el, dimMs);
     }
-    // Fade newly covered ones (idempotent across re-measures).
+    // Cover newly highlighted spans. After a re-key these are brand-new nodes
+    // sitting at opacity 1 over an already-dimmed stage, so hide them without
+    // a transition; genuine first reveals / step changes keep the smooth fade.
     for (const el of targets) {
-      if (!active.has(el)) fade(el, dimMs);
+      if (active.has(el)) continue;
+      if (rekeyed) {
+        cancelSettle(el);
+        active.set(el, { opacity: el.style.opacity });
+        el.style.transition = "";
+        el.style.opacity = "0";
+      } else {
+        fade(el, dimMs);
+      }
     }
   });
 
