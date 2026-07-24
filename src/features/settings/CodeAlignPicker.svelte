@@ -19,7 +19,7 @@
       type="button"
       onclick={() => onChange(align)}
       class={cn(
-        "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+        "rounded-md border px-3 py-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-card focus-visible:outline-none",
         active
           ? "border-primary bg-primary/10 text-foreground"
           : "border-border bg-background hover:bg-muted/50",

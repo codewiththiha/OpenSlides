@@ -1,33 +1,37 @@
 <script lang="ts">
   /** Theme section of the settings drawer (§6.9). */
   import SettingsSection from "$lib/ui/SettingsSection.svelte";
-  import ThemeStrip from "@/features/settings/ThemeStrip.svelte";
-  import {
-    setPreviewProjectSetting,
-    clearPreviewProjectSetting,
-  } from "$lib/stores/ui-state.svelte";
+  import ThemeGridPicker from "@/features/settings/ThemeGridPicker.svelte";
+  import { clearPreviewProjectSetting } from "$lib/stores/ui-state.svelte";
   import type { ThemeName } from "$lib/types";
 
   let {
     currentTheme,
     onCommitTheme,
+    onPreviewTheme,
+    onClearPreviewTheme,
+    onReset,
     sampleCode = "",
   }: {
     currentTheme: string;
     onCommitTheme: (theme: ThemeName) => void;
+    onPreviewTheme: (theme: ThemeName) => void;
+    onClearPreviewTheme: () => void;
+    onReset: () => void;
     sampleCode?: string;
   } = $props();
 </script>
 
 <SettingsSection
   title="Theme"
-  description="Choose a syntax theme from its live code preview."
+  description="Choose a syntax theme from its live code preview. Hover or focus a tile to preview it on the slide."
+  {onReset}
 >
-  <ThemeStrip
+  <ThemeGridPicker
     value={currentTheme}
     {sampleCode}
-    onPreviewTheme={(theme) => setPreviewProjectSetting("theme", theme)}
-    onClearPreviewTheme={() => clearPreviewProjectSetting("theme")}
+    {onPreviewTheme}
+    {onClearPreviewTheme}
     onChange={(theme) => {
       clearPreviewProjectSetting("theme");
       onCommitTheme(theme as ThemeName);
