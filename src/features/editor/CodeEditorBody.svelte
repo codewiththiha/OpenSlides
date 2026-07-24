@@ -18,7 +18,6 @@
     onKeyDown,
     onKeyUp,
     onSelect,
-    onMouseUp,
     onBlur,
     onScroll,
     onContextMenu,
@@ -42,7 +41,6 @@
       e: KeyboardEvent & { currentTarget: HTMLTextAreaElement },
     ) => void;
     onSelect: (e: Event & { currentTarget: HTMLTextAreaElement }) => void;
-    onMouseUp: (e: MouseEvent & { currentTarget: HTMLTextAreaElement }) => void;
     onBlur: () => void;
     onScroll: () => void;
     onContextMenu: (
@@ -84,7 +82,6 @@
       onkeydown={onKeyDown}
       onkeyup={onKeyUp}
       onselect={onSelect}
-      onmouseup={onMouseUp}
       onblur={onBlur}
       onscroll={onScroll}
       oncontextmenu={onContextMenu}

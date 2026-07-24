@@ -190,7 +190,6 @@
       onKeyDown={handleKeyDown}
       onKeyUp={(e) => crud.onKeyUp(e)}
       onSelect={() => crud.onSelect()}
-      onMouseUp={(e) => crud.onMouseUp(e)}
       onBlur={saveCaret}
       onScroll={syncScroll}
       onContextMenu={(e) => crud.onContextMenu(e)}
