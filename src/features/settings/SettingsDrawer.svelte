@@ -16,6 +16,7 @@
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
   } from "$lib/stores/ui-state.svelte";
+  import type { GlobalAnimationKey, PreviewProjectSettings } from "$lib/stores/types";
   import { previewProjectSettings } from "@/features/settings/preview-settings";
   import { cn } from "$lib/lib/utils";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
@@ -128,7 +129,13 @@
         effGlobalDimAmount={effGlobalDimAmount}
         effGlobalSizeUpAmount={effGlobalSizeUpAmount}
         effHighlightDimColor={effHighlightDimColor}
-        onPreview={(key, value) => setPreviewProjectSetting(key as any, value as any)}
+        onPreview={(key, value) => {
+          const typedKey = key as keyof PreviewProjectSettings;
+          setPreviewProjectSetting(
+            typedKey,
+            value as PreviewProjectSettings[typeof typedKey],
+          );
+        }}
         onCommit={patch}
       />
     </SettingsSection>

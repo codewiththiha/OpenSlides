@@ -15,6 +15,13 @@ export type PreviewProjectSettings = {
   highlightDimColor?: "black" | "theme";
 };
 
+export type GlobalAnimationKey =
+  | "globalTransitionDuration"
+  | "globalStagger"
+  | "globalDimAmount"
+  | "globalSizeUpAmount"
+  | "highlightDimColor";
+
 export type PreviewSlideSettings = {
   transitionDuration?: number;
   stagger?: number;

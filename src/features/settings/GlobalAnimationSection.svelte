@@ -2,6 +2,7 @@
   import ToggleField from "$lib/ui/ToggleField.svelte";
   import SliderField from "$lib/ui/SliderField.svelte";
   import type { ProjectSettings } from "$lib/types";
+  import type { GlobalAnimationKey } from "$lib/stores/types";
 
   let {
     settings,
@@ -20,7 +21,7 @@
     effGlobalSizeUpAmount: number;
     effHighlightDimColor: "black" | "theme";
     onPreview: (
-      key: string,
+      key: GlobalAnimationKey,
       value: number | string,
     ) => void;
     onCommit: (partial: Record<string, unknown>) => void;
