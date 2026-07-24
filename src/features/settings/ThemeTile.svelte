@@ -42,7 +42,8 @@
   onfocus={onPreview}
   onblur={onPreviewEnd}
   class={cn(
-    "group relative overflow-hidden rounded-lg border text-left transition-all duration-150",
+    "group relative shrink-0 overflow-hidden rounded-lg border text-left transition-all duration-150",
+    "w-[120px]",
     selected
       ? "border-primary ring-2 ring-primary/35"
       : "border-border/70 hover:-translate-y-0.5 hover:border-primary/50",
@@ -53,9 +54,9 @@
   <CodeThumbnail
     html={tile.html}
     theme={value}
-    fontSize={5.5}
+    fontSize={6.5}
     lineHeight={1.35}
-    class="h-[72px] w-full p-2"
+    class="h-[80px] w-full p-2"
     codeClassName="!absolute left-1/2 top-1/2 !inline-block -translate-x-1/2 -translate-y-1/2"
   >
     {#snippet fallback()}

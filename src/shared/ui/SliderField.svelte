@@ -28,20 +28,26 @@
     class?: string;
     labelClassName?: string;
   } = $props();
-
-  const text = $derived(`${label} (${format ? format(value) : value})`);
 </script>
 
 <div class={cn("min-w-0 space-y-1", disabled && "opacity-45", className)}>
-  <Label
-    class={cn(
-      "block truncate text-[10px] text-muted-foreground",
-      labelClassName,
-    )}
-    title={text}
-  >
-    {text}
-  </Label>
+  <div class="flex items-center justify-between">
+    <Label
+      class={cn(
+        "block truncate text-[10px] text-muted-foreground",
+        labelClassName,
+      )}
+      title={label}
+    >
+      {label}
+    </Label>
+    <!-- Visible value badge -->
+    <span
+      class="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-foreground tabular-nums"
+    >
+      {format ? format(value) : value}
+    </span>
+  </div>
   <DebouncedSlider
     {min}
     {max}

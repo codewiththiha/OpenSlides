@@ -1,7 +1,7 @@
 <script lang="ts">
   /** Theme section of the settings drawer (§6.9). */
   import SettingsSection from "$lib/ui/SettingsSection.svelte";
-  import ThemeGridPicker from "@/features/settings/ThemeGridPicker.svelte";
+  import ThemeStrip from "@/features/settings/ThemeStrip.svelte";
   import {
     setPreviewProjectSetting,
     clearPreviewProjectSetting,
@@ -11,9 +11,11 @@
   let {
     currentTheme,
     onCommitTheme,
+    sampleCode = "",
   }: {
     currentTheme: string;
     onCommitTheme: (theme: ThemeName) => void;
+    sampleCode?: string;
   } = $props();
 </script>
 
@@ -21,8 +23,9 @@
   title="Theme"
   description="Choose a syntax theme from its live code preview."
 >
-  <ThemeGridPicker
+  <ThemeStrip
     value={currentTheme}
+    {sampleCode}
     onPreviewTheme={(theme) => setPreviewProjectSetting("theme", theme)}
     onClearPreviewTheme={() => clearPreviewProjectSetting("theme")}
     onChange={(theme) => {
