@@ -2,10 +2,10 @@
   /**
    * One fanned-out project card inside StackSpread.
    *
-   * left/top/scale/opacity/rotate run on a spring with stiffness 325,
-   * damping 25 (Svelte's Spring has unit mass; those are normalized from
-   * mass 0.8 / k 260 / d 20, which solves to the same ODE) + a per-index
-   * delay.
+   * The card springs from the source deck rect into its fan slot with a
+   * slower, underdamped motion: starts lower + smaller + transparent,
+   * then lifts, fades, and bounces into place. A wider per-index delay
+   * creates a more deliberate cascade across the fan.
    */
   import { untrack } from "svelte";
   import { Spring } from "svelte/motion";
@@ -16,10 +16,9 @@
     beginProjectDrag,
     projectDnd,
   } from "@/features/dashboard/project-dnd.svelte";
-  import { riseFade } from "$lib/ui/transitions/rise-fade";
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
-  const SPRING_OPTS = { stiffness: 325, damping: 25 };
+  const SPRING_OPTS = { stiffness: 180, damping: 14 };
 
   let {
     project,
@@ -64,26 +63,28 @@
       session.active,
   );
 
-  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 35);
+  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 70);
 
   const originState = $derived({
     left: originLeft,
     top: originTop,
-    scale: 0.5,
+    scale: 0.6,
     opacity: 0,
     rotate: 0,
+    offsetY: 60,
   });
 
-  // The spring only STARTS at the origin rect — the effect below drives it
-  // to its fan target (and back on close) via pos.set(). untrack() marks
+  // The spring only starts at the deck rect — the effect below drives it
+  // into the fan target (and back on close) via pos.set(). untrack() marks
   // the initial read of the deriveds as deliberate.
   const pos = new Spring(
     untrack(() => ({
       left: originLeft,
       top: originTop,
-      scale: 0.5,
-      opacity: 1, // fade-in is owned by the riseFade intro transition
+      scale: 0.6,
+      opacity: 0,
       rotate: 0,
+      offsetY: 60,
     })),
     SPRING_OPTS,
   );
@@ -99,6 +100,7 @@
           scale: 1,
           opacity: isDragging ? 0.3 : 1,
           rotate: fan.rotate,
+          offsetY: 0,
         };
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
@@ -123,15 +125,20 @@
   onpointerdown={onPointerDown}
   role="presentation"
   class="absolute touch-none"
-  style="width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
-    ? 60
-    : 30 + index}; left: {pos.current.left}px; top: {pos.current
-    .top}px; transform: scale({pos.current.scale}) rotate({pos.current
-    .rotate}deg); opacity: {pos.current.opacity};"
+  style="
+    width: {PROJECT_CARD_WIDTH}px;
+    transform-origin: center 180%;
+    z-index: {isDragging ? 60 : 30 + index};
+    left: {pos.current.left}px;
+    top: {pos.current.top}px;
+    transform:
+      translateY({pos.current.offsetY}px)
+      scale({pos.current.scale})
+      rotate({pos.current.rotate}deg);
+    opacity: {pos.current.opacity};
+  "
 >
-  <div in:riseFade={{ duration: 300, delay: delayMs, y: 18 }}>
-    <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
-      <ProjectCard {project} />
-    </div>
+  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+    <ProjectCard {project} />
   </div>
 </div>
