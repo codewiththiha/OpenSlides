@@ -32,7 +32,31 @@ Everything stays on your computer. That makes OpenSlides useful for private clie
 
 ## Download
 
-Prebuilt installers for macOS and Windows are available from the [OpenSlides Releases](https://github.com/codewiththiha/OpenSlides/releases) page.
+Prebuilt installers for macOS, Windows, and Linux are available from the [OpenSlides Releases](https://github.com/codewiththiha/OpenSlides/releases) page.
+
+### Platform packages
+
+- **macOS:** Apple Silicon, Intel, and Universal builds
+- **Windows:** x64 and ARM64 builds
+- **Linux:** `.deb` and `.rpm` packages
+
+### Linux installation
+
+OpenSlides release builds include Linux packages in `.deb` and `.rpm` formats.
+
+- **Debian / Ubuntu / Linux Mint / Pop!\_OS**
+
+```bash
+sudo apt install ./OpenSlides_<version>_amd64.deb
+```
+
+- **Fedora / RHEL / Rocky / AlmaLinux / openSUSE**
+
+```bash
+sudo rpm -i OpenSlides-<version>-1.x86_64.rpm
+```
+
+If your distribution prefers a different workflow, read the package manager guidance in your distro docs first. AppImage is intentionally not documented yet.
 
 ## Tech stack
 
