@@ -9,6 +9,12 @@
    *    outro on removal)
    *  - clone layer: {#key visual.id} — swap on steps
    *
+   * There is deliberately NO eraser panel under the clone: painting an
+   * opaque box over the original text read as a black slab. Instead the
+   * ORIGINAL token spans of the selection fade to opacity 0 in sync with
+   * the dim (createHighlightUnderlay), so only the bright clone shows in
+   * that spot — no box, no echo.
+   *
    * Step changes OVERLAP: the incoming intro starts together with the
    * outgoing outro. Rendering never follows the async plan/measurement
    * pipeline directly — `visual` snapshots the last step that was fully
@@ -19,14 +25,19 @@
    * is what would have been killed, not the visible clone's outro).
    *
    * `onExitComplete` mirrors AnimatePresence: a counter is armed by every
-   * outrostart and released by its outroend; when it drains to zero the
-   * callback fires once (createHighlightNav's finishPending is idempotent,
-   * and its fail-safe timer covers the "nothing animated" case).
+   * outrostart AND every underlay restore, and released by its
+   * outroend/restore-settle; when it drains to zero the callback fires
+   * once (createHighlightNav's finishPending is idempotent, and its
+   * fail-safe timer covers the "nothing animated" case). Restores are
+   * part of the count so a queued slide morph never starts while an
+   * original token span is still mid-restore or carrying the inline
+   * transition that would break shiki-magic-move's class transitions.
    */
   import type { Highlighter } from "shiki";
   import type { Highlight } from "$lib/types";
   import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
   import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
+  import { createHighlightUnderlay } from "@/features/highlights/highlight-underlay.svelte";
   import {
     measurementMatchesPlan,
     type HighlightMeasurement,
@@ -181,10 +192,13 @@
   });
 
   /**
-   * AnimatePresence-style exit bookkeeping. Armed by the dim/clone outros;
-   * released as each completes. When the counter drains to zero,
-   * `onExitComplete` fires once (createHighlightNav's finishPending is
-   * idempotent, and its fail-safe timer covers the "nothing animated" case).
+   * AnimatePresence-style exit bookkeeping. Armed by the dim/clone outros
+   * AND by every underlay restore (the restore's inline transition must be
+   * wiped before a queued slide morph may start — see the restore contract
+   * in highlight-underlay); released as each completes. When the counter
+   * drains to zero, `onExitComplete` fires once (createHighlightNav's
+   * finishPending is idempotent, and its fail-safe timer covers the
+   * "nothing animated" case).
    */
   let pendingExits = 0;
 
@@ -196,6 +210,19 @@
     pendingExits = Math.max(0, pendingExits - 1);
     if (pendingExits === 0) onExitComplete?.();
   }
+
+  // Fade the original text chunk under the clone (under-fade to 0).
+  // Gated by `shown` so originals fade back in even though `visual` is
+  // retained (see note above). Restores arm the exit counter above so a
+  // slide morph queued behind the outro only starts once the originals
+  // are fully visible and pristine again.
+  createHighlightUnderlay({
+    codeContainer: () => codeContainer(),
+    measurement: () => (shown ? (visual?.measurement ?? null) : null),
+    dimMs: () => visual?.dimMs ?? dimMs,
+    onRestoreStart: handleOutroStart,
+    onRestoreEnd: handleOutroEnd,
+  });
 </script>
 
 {#if hl}
