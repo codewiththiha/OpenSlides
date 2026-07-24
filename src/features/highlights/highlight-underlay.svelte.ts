@@ -143,7 +143,25 @@ export function createHighlightUnderlay(args: UseHighlightUnderlayArgs) {
 
     // Restore spans no longer covered (step change / removal).
     for (const el of [...active.keys()]) {
-      if (!targets.has(el)) restore(el, dimMs);
+      if (targets.has(el)) continue;
+
+      // Theme/language re-keys recreate token spans. The old highlighted
+      // spans become shiki-magic-move leave nodes and are skipped by
+      // getLineTextNodes(), so they disappear from `targets` even though the
+      // highlight is still active. Restoring them would write inline
+      // opacity:1 + transition over magic-move's leave animation, painting a
+      // dim unscaled duplicate below the live clone. Those nodes are being
+      // torn down; drop our bookkeeping and leave the opacity at 0.
+      if (
+        !el.isConnected ||
+        el.closest(".shiki-magic-move-leave-active, .shiki-magic-move-leave")
+      ) {
+        cancelSettle(el);
+        active.delete(el);
+        continue;
+      }
+
+      restore(el, dimMs);
     }
     // Fade newly covered ones (idempotent across re-measures).
     for (const el of targets) {

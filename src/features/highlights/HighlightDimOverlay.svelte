@@ -32,8 +32,10 @@
     duration: untrack(() => dimMs),
     easing: EASE_DIM,
   });
+  let fadeMs = $state(untrack(() => dimMs));
 
   $effect(() => {
+    fadeMs = dimMs;
     void opacity.set(dimAmount, {
       duration: dimMs,
       easing: EASE_DIM,
@@ -50,7 +52,7 @@
     will-change: opacity;
     opacity: {opacity.current};
   "
-  out:fade|global={{ duration: dimMs, easing: EASE_DIM }}
+  out:fade={{ duration: fadeMs, easing: EASE_DIM }}
   onoutrostart={onOutroStart}
   onoutroend={onOutroEnd}
 ></div>
