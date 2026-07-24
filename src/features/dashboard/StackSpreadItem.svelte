@@ -4,13 +4,14 @@
    *
    * Two-spring architecture:
    *  - posSpring (slow): drives left / top / rotate — the visible spread.
-   *    Cards start in a slight "tarot hold" (pre-rotated, slightly
-   *    pre-spread) and gradually fan out.
+   *    Cards start in a light "tarot hold" (slightly pre-rotated, slightly
+   *    pre-spread) and fan out gradually.
    *  - popSpring (quick): drives offsetY / scale / opacity — the vertical
    *    lift. Fast, with only a barely-there settle.
    *
-   * The two springs run together at different speeds so the cards lift
-   * quickly while spreading slowly enough for the fan motion to read.
+   * Open uses a two-phase trigger: the pop starts immediately so cards begin
+   * materializing with no dead zone, then the fan position starts after the
+   * per-card stagger. Close collapses both springs together.
    */
   import { untrack } from "svelte";
   import { Spring } from "svelte/motion";
@@ -24,19 +25,20 @@
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
   /**
-   * Slow, visible spread. Slightly under critical so the settle is barely
-   * perceptible but the fan still reads as smooth.
+   * Horizontal fan spread.
+   * Slightly stiffer than before so it settles closer to the pop landing.
    */
-  const SPREAD_SPRING = { stiffness: 45, damping: 12 };
+  const SPREAD_SPRING = { stiffness: 80, damping: 14 };
 
   /**
-   * Quick lift/pop. Near critical damping keeps the bounce almost invisible.
+   * Vertical pop + fade.
+   * Underdamped enough for one subtle overshoot, but still restrained.
    */
-  const POP_SPRING = { stiffness: 220, damping: 28 };
+  const POP_SPRING = { stiffness: 260, damping: 18 };
 
-  /** Tarot-hold starting pose — cards begin slightly pre-spread and angled. */
-  const INITIAL_ROTATION_FRACTION = 0.3;
-  const INITIAL_SPREAD_FRACTION = 0.12;
+  /** Tarot-hold starting pose — cards begin barely pre-spread and angled. */
+  const INITIAL_ROTATION_FRACTION = 0.15;
+  const INITIAL_SPREAD_FRACTION = 0.06;
 
   let {
     project,
@@ -92,8 +94,8 @@
       session.active,
   );
 
-  /** Wide enough that each card's spread is visible. */
-  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 110);
+  /** Tighter center-out ripple. */
+  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 70);
 
   // Spring 1: slow position spread.
   const posSpring = new Spring(
@@ -108,9 +110,9 @@
   // Spring 2: quick lift/pop.
   const popSpring = new Spring(
     untrack(() => ({
-      offsetY: 50,
-      scale: 0.75,
-      opacity: 0.3,
+      offsetY: 110,
+      scale: 0.6,
+      opacity: 0,
     })),
     POP_SPRING,
   );
@@ -123,13 +125,24 @@
       : { left: targetLeft, top: targetTop, rotate: fan.rotate };
 
     const popTarget = isClosing
-      ? { offsetY: 35, scale: 0.8, opacity: 0 }
+      ? { offsetY: 60, scale: 0.7, opacity: 0 }
       : { offsetY: 0, scale: 1, opacity: isDragging ? 0.3 : 1 };
 
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
+
+    if (isClosing) {
+      // Close: everything collapses together, no stagger.
       void posSpring.set(posTarget);
       void popSpring.set(popTarget);
+      return;
+    }
+
+    // Phase 1: pop starts immediately (no dead zone).
+    void popSpring.set(popTarget);
+
+    // Phase 2: fan position is staggered.
+    timer = window.setTimeout(() => {
+      void posSpring.set(posTarget);
     }, delayMs);
 
     return () => window.clearTimeout(timer);
@@ -162,9 +175,39 @@
       scale({popSpring.current.scale})
       rotate({posSpring.current.rotate}deg);
     opacity: {popSpring.current.opacity};
+    transition: opacity 80ms linear;
+    will-change: transform, opacity;
   "
 >
-  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+  <div
+    class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80"
+    class:card-settle={!isClosing}
+    style="animation-delay: {delayMs + 60}ms;"
+  >
     <ProjectCard {project} />
   </div>
 </div>
+
+<style>
+  @keyframes card-settle {
+    0% {
+      transform: scale(0.92);
+    }
+
+    55% {
+      transform: scale(1.03);
+    }
+
+    78% {
+      transform: scale(0.99);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .card-settle {
+    animation: card-settle 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+</style>
