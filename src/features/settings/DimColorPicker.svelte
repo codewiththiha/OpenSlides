@@ -37,7 +37,7 @@
     >
       <span
         class="h-4 w-4 rounded-full border border-white/20 bg-black shadow-inner"
-      />
+      ></span>
       Black
     </button>
 
@@ -56,7 +56,7 @@
       <span
         class="h-4 w-4 rounded-full border border-white/20 shadow-inner"
         style="background-color: {themeBg};"
-      />
+      ></span>
       Theme BG
     </button>
   </div>
