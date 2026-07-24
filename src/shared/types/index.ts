@@ -16,6 +16,7 @@ export const SUPPORTED_LANGUAGES = [
   { value: "go", label: "Go" },
   { value: "rust", label: "Rust" },
   { value: "php", label: "PHP" },
+  { value: "groovy", label: "Groovy" },
   { value: "css", label: "CSS" },
   { value: "html", label: "HTML" },
   { value: "json", label: "JSON" },

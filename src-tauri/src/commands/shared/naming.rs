@@ -9,7 +9,7 @@ pub const DEFAULT_LANGUAGE: &str = "typescript";
 
 const SUPPORTED_LANGUAGES: &[&str] = &[
     "typescript", "javascript", "tsx", "jsx", "python", "java", "go", "rust", "php",
-    "css", "html", "json", "yaml", "sql", "bash", "markdown", "merustmar",
+    "groovy", "css", "html", "json", "yaml", "sql", "bash", "markdown", "merustmar",
 ];
 
 pub const SUPPORTED_THEMES: &[&str] = &[
