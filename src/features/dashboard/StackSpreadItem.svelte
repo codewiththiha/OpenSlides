@@ -2,14 +2,15 @@
   /**
    * One fanned-out project card inside StackSpread.
    *
-   * Two-layer animation:
-   *  - OUTER: a critically-damped Spring drives left / top / rotate
-   *    (the card's position in the fan). Smooth, no bounce.
-   *  - INNER: CSS keyframes drive translateY / scale / opacity
-   *    (the pop-from-below entrance with an explicit bounce).
+   * Two-spring architecture:
+   *  - posSpring (slow): drives left / top / rotate — the visible spread.
+   *    Cards start in a slight "tarot hold" (pre-rotated, slightly
+   *    pre-spread) and gradually fan out.
+   *  - popSpring (quick): drives offsetY / scale / opacity — the vertical
+   *    lift. Fast, with only a barely-there settle.
    *
-   * Close reverses both: the spring returns position to the deck origin
-   * while a CSS exit animation sinks + fades the card.
+   * The two springs run together at different speeds so the cards lift
+   * quickly while spreading slowly enough for the fan motion to read.
    */
   import { untrack } from "svelte";
   import { Spring } from "svelte/motion";
@@ -23,11 +24,19 @@
   import { PROJECT_CARD_WIDTH, PROJECT_CARD_HEIGHT } from "./layout";
 
   /**
-   * Position spring — critically damped.
-   * Smooth glide to the fan slot, with bounce delegated entirely to the
-   * CSS keyframes on the inner layer so it stays visible and deterministic.
+   * Slow, visible spread. Slightly under critical so the settle is barely
+   * perceptible but the fan still reads as smooth.
    */
-  const POSITION_SPRING = { stiffness: 100, damping: 20 };
+  const SPREAD_SPRING = { stiffness: 45, damping: 12 };
+
+  /**
+   * Quick lift/pop. Near critical damping keeps the bounce almost invisible.
+   */
+  const POP_SPRING = { stiffness: 220, damping: 28 };
+
+  /** Tarot-hold starting pose — cards begin slightly pre-spread and angled. */
+  const INITIAL_ROTATION_FRACTION = 0.3;
+  const INITIAL_SPREAD_FRACTION = 0.12;
 
   let {
     project,
@@ -51,6 +60,7 @@
 
   const fan = $derived(computeFanLayout(total, index));
 
+  // Deck origin (where cards return on close)
   const originLeft = $derived(
     (deckRect?.left ?? fanCenterX - PROJECT_CARD_WIDTH / 2) +
       (deckRect?.width ?? PROJECT_CARD_WIDTH) / 2 -
@@ -62,8 +72,18 @@
       PROJECT_CARD_HEIGHT / 2,
   );
 
+  // Final fan target
   const targetLeft = $derived(fanCenterX - PROJECT_CARD_WIDTH / 2 + fan.x);
   const targetTop = $derived(fanCenterY - PROJECT_CARD_HEIGHT / 2 + fan.y);
+
+  // Tarot-hold starting pose: slightly pre-spread and pre-rotated.
+  const holdLeft = $derived(
+    originLeft + (targetLeft - originLeft) * INITIAL_SPREAD_FRACTION,
+  );
+  const holdTop = $derived(
+    originTop + (targetTop - originTop) * INITIAL_SPREAD_FRACTION,
+  );
+  const holdRotate = $derived(fan.rotate * INITIAL_ROTATION_FRACTION);
 
   const session = $derived(projectDnd.session);
   const isDragging = $derived(
@@ -72,35 +92,44 @@
       session.active,
   );
 
-  /**
-   * Wider stagger: center fires first, neighbors follow with a deliberate
-   * cascade.
-   */
-  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 80);
+  /** Wide enough that each card's spread is visible. */
+  const delayMs = $derived(Math.abs(index - (total - 1) / 2) * 110);
 
-  /**
-   * Position spring — drives ONLY left / top / rotate.
-   * Starts at the deck origin; the effect retargets it to the fan slot.
-   */
-  const pos = new Spring(
+  // Spring 1: slow position spread.
+  const posSpring = new Spring(
     untrack(() => ({
-      left: originLeft,
-      top: originTop,
-      rotate: 0,
+      left: holdLeft,
+      top: holdTop,
+      rotate: holdRotate,
     })),
-    POSITION_SPRING,
+    SPREAD_SPRING,
+  );
+
+  // Spring 2: quick lift/pop.
+  const popSpring = new Spring(
+    untrack(() => ({
+      offsetY: 50,
+      scale: 0.75,
+      opacity: 0.3,
+    })),
+    POP_SPRING,
   );
 
   let timer: number | undefined;
 
   $effect(() => {
-    const target = isClosing
+    const posTarget = isClosing
       ? { left: originLeft, top: originTop, rotate: 0 }
       : { left: targetLeft, top: targetTop, rotate: fan.rotate };
 
+    const popTarget = isClosing
+      ? { offsetY: 35, scale: 0.8, opacity: 0 }
+      : { offsetY: 0, scale: 1, opacity: isDragging ? 0.3 : 1 };
+
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
-      void pos.set(target);
+      void posSpring.set(posTarget);
+      void popSpring.set(popTarget);
     }, delayMs);
 
     return () => window.clearTimeout(timer);
@@ -117,10 +146,6 @@
   }
 </script>
 
-<!--
-  OUTER: position layer.
-  Spring drives left/top/rotate.
--->
 <div
   bind:this={itemEl}
   onpointerdown={onPointerDown}
@@ -128,90 +153,18 @@
   class="absolute touch-none"
   style="
     width: {PROJECT_CARD_WIDTH}px;
+    transform-origin: center 180%;
     z-index: {isDragging ? 60 : 30 + index};
-    left: {pos.current.left}px;
-    top: {pos.current.top}px;
-    transform: rotate({pos.current.rotate}deg);
+    left: {posSpring.current.left}px;
+    top: {posSpring.current.top}px;
+    transform:
+      translateY({popSpring.current.offsetY}px)
+      scale({popSpring.current.scale})
+      rotate({posSpring.current.rotate}deg);
+    opacity: {popSpring.current.opacity};
   "
 >
-  <!--
-    INNER: pop layer.
-    CSS keyframes handle translateY + scale + opacity.
-    The open animation is staggered; the close animation starts immediately.
-  -->
-  <div
-    class="card-pop"
-    class:card-pop--closing={isClosing}
-    class:card-pop--dragging={isDragging}
-    style="animation-delay: {isClosing ? 0 : delayMs}ms;"
-  >
-    <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
-      <ProjectCard {project} />
-    </div>
+  <div class="rounded-xl bg-background shadow-2xl ring-1 ring-border/80">
+    <ProjectCard {project} />
   </div>
 </div>
-
-<style>
-  .card-pop {
-    transform-origin: center 180%;
-    will-change: transform, opacity;
-  }
-
-  .card-pop:not(.card-pop--closing) {
-    animation: card-pop-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  .card-pop--closing {
-    animation: card-pop-out 340ms cubic-bezier(0.55, 0, 1, 0.45) both;
-  }
-
-  .card-pop--dragging {
-    opacity: 0.3 !important;
-  }
-
-  @keyframes card-pop-in {
-    0% {
-      opacity: 0.3;
-      transform: translateY(70px) scale(0.82);
-    }
-
-    40% {
-      opacity: 0.85;
-      transform: translateY(-14px) scale(1.04);
-    }
-
-    62% {
-      opacity: 0.96;
-      transform: translateY(6px) scale(0.985);
-    }
-
-    80% {
-      opacity: 0.99;
-      transform: translateY(-3px) scale(1.005);
-    }
-
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes card-pop-out {
-    0% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-
-    100% {
-      opacity: 0;
-      transform: translateY(45px) scale(0.88);
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .card-pop:not(.card-pop--closing),
-    .card-pop--closing {
-      animation-duration: 1ms;
-    }
-  }
-</style>

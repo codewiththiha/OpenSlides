@@ -10,7 +10,7 @@
   import SelectField from "$lib/ui/SelectField.svelte";
   import EditorSlideNav from "./EditorSlideNav.svelte";
   import { cn } from "$lib/lib/utils";
-  import { SUPPORTED_LANGUAGES } from "$lib/types";
+  import { supportedLanguageOptions } from "$lib/lib/backend-config.svelte";
   import type { Project } from "$lib/types";
 
   let {
@@ -40,6 +40,8 @@
     onCollapse: (() => void) | undefined;
     onToggleFind: () => void;
   } = $props();
+
+  const languageOptions = $derived(supportedLanguageOptions());
 </script>
 
 <div
@@ -54,7 +56,7 @@
   <div class="flex min-w-0 items-center gap-1">
     <SelectField
       selectSize="sm"
-      options={SUPPORTED_LANGUAGES}
+      options={languageOptions}
       value={language}
       onchange={(e) => onLanguageChange(e.currentTarget.value)}
       title="Code language"

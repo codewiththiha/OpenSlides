@@ -31,6 +31,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_projects,
             get_project,
+            get_default_settings,
+            get_supported_languages,
+            get_supported_themes,
             create_project,
             duplicate_project,
             rename_project,

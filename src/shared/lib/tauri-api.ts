@@ -10,6 +10,8 @@ import type {
   ProjectSettings,
   Slide,
 } from "$lib/types";
+import type { LanguageOption } from "$lib/lib/language-meta";
+import type { ThemeMeta } from "$lib/lib/theme-meta";
 
 export type SlideSettingsPatch = Partial<{
   duration: number;
@@ -77,6 +79,14 @@ export const api = {
 
   getProject: (projectId: string) =>
     call<Project>("get_project", { projectId }),
+
+  getDefaultSettings: <T = ProjectSettings>() =>
+    call<T>("get_default_settings"),
+
+  getSupportedLanguages: () =>
+    call<LanguageOption[]>("get_supported_languages"),
+
+  getSupportedThemes: () => call<ThemeMeta[]>("get_supported_themes"),
 
   createProject: (name: string) => call<Project>("create_project", { name }),
 

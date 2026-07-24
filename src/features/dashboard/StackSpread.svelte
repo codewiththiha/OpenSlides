@@ -77,7 +77,7 @@
     isClosing = true;
     closeTimer = window.setTimeout(() => {
       onClose();
-    }, 480);
+    }, 550);
   }
 
   $effect(() => {
@@ -153,7 +153,7 @@
           closed ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 },
         );
       },
-      closed ? 0 : 350,
+      closed ? 0 : 450,
     );
     return () => window.clearTimeout(timer);
   });

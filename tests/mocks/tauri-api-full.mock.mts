@@ -5,6 +5,8 @@
  * contracts closely enough for UI-level navigation tests.
  */
 import type { Project, ProjectSummary, Slide } from "../../src/shared/types";
+import { FALLBACK_SUPPORTED_LANGUAGES } from "../../src/shared/lib/language-meta";
+import { THEMES } from "../../src/shared/lib/theme-meta";
 
 let db = new Map<string, Project>();
 let seq = 0;
@@ -46,6 +48,13 @@ export const api = {
     ),
 
   getProject: (projectId: string) => Promise.resolve(clone(mustGet(projectId))),
+
+  getDefaultSettings: () => Promise.resolve(clone(DEFAULT_SETTINGS)),
+
+  getSupportedLanguages: () =>
+    Promise.resolve(clone(FALLBACK_SUPPORTED_LANGUAGES)),
+
+  getSupportedThemes: () => Promise.resolve(clone(THEMES)),
 
   createProject: (name: string) => {
     const p: Project = {
@@ -190,15 +199,19 @@ export type SettingsPatch = Record<string, unknown>;
 const DEFAULT_SETTINGS: Project["settings"] = {
   showLineNumbers: true,
   useBlackCodeBackground: false,
-  showHighlightStepIndicator: true,
-  fontSize: 24,
+  showHighlightStepIndicator: false,
+  fontSize: 16,
   lineHeight: 1.5,
   editorFontSize: 14,
-  useGlobalTransition: false,
-  globalTransitionDuration: 300,
-  useGlobalStagger: false,
-  globalStagger: 0,
+  useGlobalTransition: true,
+  globalTransitionDuration: 700,
+  useGlobalStagger: true,
+  globalStagger: 3,
+  useGlobalHighlight: true,
+  globalDimAmount: 80,
+  globalSizeUpAmount: 105,
+  highlightDimColor: "theme",
   currentSlideId: null,
-  language: "javascript",
+  language: "typescript",
   codeAlign: "left",
 };

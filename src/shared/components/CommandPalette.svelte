@@ -25,7 +25,8 @@
     toggleZenMode,
     toggleTheme,
   } from "$lib/stores/ui-state.svelte";
-  import { THEME_OPTIONS, type ThemeName } from "$lib/types";
+  import type { ThemeName } from "$lib/types";
+  import { themeOptions } from "$lib/lib/themes";
   import { cn } from "$lib/lib/utils";
   import Kbd from "$lib/ui/Kbd.svelte";
   import CommandDialog from "$lib/ui/CommandDialog.svelte";
@@ -72,6 +73,7 @@
     // bits-ui marks selection with a presence-only data-selected attribute
     "data-[selected]:bg-accent data-[selected]:text-accent-foreground",
   );
+  const runtimeThemeOptions = $derived(themeOptions());
 </script>
 
 {#snippet item(icon: Snippet, label: string, onSelect: () => void)}
@@ -122,7 +124,7 @@
   {#if projectId && onTheme}
     <Command.Group value="themes" class="mt-2 text-xs text-muted-foreground">
       <Command.GroupHeading>Themes</Command.GroupHeading>
-      {#each THEME_OPTIONS as t (t.value)}
+      {#each runtimeThemeOptions as t (t.value)}
         {@render item(themeDot, t.label, () => run(() => onTheme(t.value)))}
       {/each}
     </Command.Group>

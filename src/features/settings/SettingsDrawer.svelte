@@ -16,6 +16,8 @@
     setShowSlideHoverPreview,
   } from "$lib/stores/ui-state.svelte";
   import { previewProjectSettings } from "@/features/settings/preview-settings";
+  import { loadDefaultProjectSettings } from "$lib/lib/backend-config-loader";
+  import { supportedThemeOptions } from "$lib/lib/backend-config.svelte";
   import { cn } from "$lib/lib/utils";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
   import { escapeKey } from "$lib/actions/escape-key";
@@ -52,23 +54,6 @@
   ];
 
   const DEFAULT_THEME: ThemeName = "dark-plus";
-  const DEFAULT_SETTINGS_PATCH = {
-    showLineNumbers: true,
-    useBlackCodeBackground: false,
-    showHighlightStepIndicator: false,
-    fontSize: 16,
-    lineHeight: 1.5,
-    editorFontSize: 14,
-    useGlobalTransition: true,
-    globalTransitionDuration: 800,
-    useGlobalStagger: true,
-    globalStagger: 5,
-    useGlobalHighlight: true,
-    globalDimAmount: 80,
-    globalSizeUpAmount: 105,
-    highlightDimColor: "theme",
-    codeAlign: "left",
-  } satisfies SettingsPatch;
 
   const projectId = untrack(() => project.id);
   const updateSettings = updateProjectSettingsMutation(projectId);
@@ -116,6 +101,9 @@
   );
 
   const effTheme = $derived(previewProject.theme ?? project.theme);
+  const defaultTheme = $derived(
+    supportedThemeOptions()[0]?.value ?? DEFAULT_THEME,
+  );
   const effFontSize = $derived(previewProject.fontSize ?? s.fontSize);
   const effLineHeight = $derived(previewProject.lineHeight ?? s.lineHeight);
   const effEditorFontSize = $derived(
@@ -177,11 +165,19 @@
     clearPreviewProjectSetting("theme");
   }
 
-  function resetAllSettings() {
+  async function resetAllSettings() {
     clearTransientPreviews();
-    updateTheme.mutate(DEFAULT_THEME);
-    patch(DEFAULT_SETTINGS_PATCH);
-    setEditorShowLineNumbers(true);
+    const defaults = await loadDefaultProjectSettings();
+    updateTheme.mutate(defaultTheme);
+    if (defaults) {
+      const {
+        currentSlideId: _currentSlideId,
+        language: _language,
+        ...rest
+      } = defaults;
+      patch(rest as SettingsPatch);
+      setEditorShowLineNumbers(defaults.showLineNumbers);
+    }
     setShowSlideHoverPreview(false);
     resetConfirmOpen = false;
   }

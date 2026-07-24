@@ -3,12 +3,12 @@
 use crate::commands::helpers::{
     default_slide_name, dialog_pick_path, fetch_project, is_supported_theme, now_ms,
     normalize_code_align, normalize_imported_highlights, normalize_language, remap_section_id,
-    sanitize_filename, DialogMode,
+    sanitize_filename, DialogMode, DEFAULT_THEME,
 };
 use crate::db::DbPool;
 use crate::error::{CommandError, CommandResult};
 use crate::models::{
-    settings_to_json, Project, ProjectSettings,
+    settings_to_json, ImportProjectPayload, ImportSlidePayload, Project, ProjectSettings,
 };
 use serde_json::Value as JsonValue;
 use std::collections::HashMap;
@@ -102,27 +102,42 @@ pub async fn import_project_from_json(
         .map_err(|e| CommandError::Failed(format!("Failed to read file: {e}")))?;
     let value: JsonValue = serde_json::from_str(&raw)
         .map_err(|_| CommandError::Failed("That file isn't a valid presentation file".to_string()))?;
+    let payload: ImportProjectPayload = serde_json::from_value(value.clone())
+        .map_err(|_| CommandError::Failed("That file isn't a valid presentation file".to_string()))?;
 
-    let name = value
-        .get("name")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Imported Presentation")
-        .to_string();
-    let imported_theme = value
-        .get("theme")
-        .and_then(|v| v.as_str())
-        .unwrap_or("dark-plus");
-    let theme = if is_supported_theme(imported_theme) {
-        imported_theme.to_string()
+    let ImportProjectPayload {
+        name: imported_name,
+        theme: imported_theme,
+        show_line_numbers,
+        use_black_code_background,
+        show_highlight_step_indicator,
+        font_size,
+        line_height,
+        editor_font_size,
+        use_global_transition,
+        global_transition_duration,
+        use_global_stagger,
+        global_stagger,
+        use_global_highlight,
+        global_dim_amount,
+        global_size_up_amount,
+        highlight_dim_color,
+        current_slide_id: imported_current_slide_id,
+        language: imported_language,
+        code_align: imported_code_align,
+        slides: slides_val,
+    } = payload;
+
+    let name = if imported_name.trim().is_empty() {
+        "Imported Presentation".to_string()
     } else {
-        "dark-plus".to_string()
+        imported_name.trim().to_string()
     };
-
-    let slides_val = value
-        .get("slides")
-        .and_then(|v| v.as_array())
-        .cloned()
-        .unwrap_or_default();
+    let theme = if is_supported_theme(imported_theme.trim()) {
+        imported_theme.trim().to_string()
+    } else {
+        DEFAULT_THEME.to_string()
+    };
 
     if slides_val.is_empty() {
         return Err(CommandError::Failed(
@@ -131,70 +146,34 @@ pub async fn import_project_from_json(
     }
 
     let language = normalize_language(
-        value.get("language").and_then(|v| v.as_str())
-            .or_else(|| slides_val.first().and_then(|s| s.get("language")).and_then(|v| v.as_str()))
+        imported_language
+            .as_deref()
+            .or_else(|| {
+                slides_val
+                    .first()
+                    .and_then(|slide| slide.get("language"))
+                    .and_then(|value| value.as_str())
+            })
             .unwrap_or(""),
     );
 
-    let code_align = normalize_code_align(
-        value.get("codeAlign").and_then(|v| v.as_str()).unwrap_or("left"),
-    );
+    let code_align = normalize_code_align(&imported_code_align);
 
     let mut settings = ProjectSettings {
-        show_line_numbers: value
-            .get("showLineNumbers")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        use_black_code_background: value
-            .get("useBlackCodeBackground")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false),
-        show_highlight_step_indicator: value
-            .get("showHighlightStepIndicator")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false),
-        font_size: value.get("fontSize").and_then(|v| v.as_i64()).unwrap_or(16),
-        line_height: value
-            .get("lineHeight")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(1.5),
-        editor_font_size: value
-            .get("editorFontSize")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(14),
-        use_global_transition: value
-            .get("useGlobalTransition")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        global_transition_duration: value
-            .get("globalTransitionDuration")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(800),
-        use_global_stagger: value
-            .get("useGlobalStagger")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        global_stagger: value
-            .get("globalStagger")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(5),
-        use_global_highlight: value
-            .get("useGlobalHighlight")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true),
-        global_dim_amount: value
-            .get("globalDimAmount")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(80),
-        global_size_up_amount: value
-            .get("globalSizeUpAmount")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(105),
-        highlight_dim_color: value
-            .get("highlightDimColor")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "theme".to_string()),
+        show_line_numbers,
+        use_black_code_background,
+        show_highlight_step_indicator,
+        font_size,
+        line_height,
+        editor_font_size,
+        use_global_transition,
+        global_transition_duration,
+        use_global_stagger,
+        global_stagger,
+        use_global_highlight,
+        global_dim_amount,
+        global_size_up_amount,
+        highlight_dim_color,
         current_slide_id: None,
         language: language.clone(),
         code_align,
@@ -208,49 +187,40 @@ pub async fn import_project_from_json(
     // collide with the original slides table rows.
     let mut imported_slide_ids: HashMap<String, String> = HashMap::new();
     let mut imported_section_ids: HashMap<String, String> = HashMap::new();
-    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String, String, Option<String>)> = Vec::new();
-    for (i, s) in slides_val.iter().enumerate() {
-        let source_id = s
-            .get("id")
-            .and_then(|v| v.as_str())
-            .map(|value| value.to_string());
+    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String, String, Option<String>)> =
+        Vec::new();
+    for (i, slide_value) in slides_val.iter().enumerate() {
+        let slide: ImportSlidePayload = serde_json::from_value(slide_value.clone())
+            .map_err(|_| CommandError::Failed("That file contains an invalid slide entry".to_string()))?;
         let id = Uuid::new_v4().to_string();
-        if let Some(source_id) = source_id {
-            imported_slide_ids.insert(source_id, id.clone());
+        if !slide.id.trim().is_empty() {
+            imported_slide_ids.insert(slide.id.clone(), id.clone());
         }
-        let code = s
-            .get("code")
-            .and_then(|v| v.as_str())
-            .unwrap_or("// empty")
-            .to_string();
-        let duration = s.get("duration").and_then(|v| v.as_i64()).unwrap_or(3000);
-        let transition = s
-            .get("transitionDuration")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(750);
-        let stagger = s.get("stagger").and_then(|v| v.as_i64()).unwrap_or(5);
-        let sname = s
-            .get("name")
-            .and_then(|v| v.as_str())
-            .filter(|n| !n.trim().is_empty())
-            .map(|n| n.to_string())
-            .unwrap_or_else(|| default_slide_name(i as i64));
-        let highlights_json = normalize_imported_highlights(s)
+        let sname = if slide.name.trim().is_empty() {
+            default_slide_name(i as i64)
+        } else {
+            slide.name.trim().to_string()
+        };
+        let highlights_json = normalize_imported_highlights(slide_value)
             .map_err(CommandError::Failed)?;
         if i == 0 {
             settings.current_slide_id = Some(id.clone());
         }
-        let section_id = remap_section_id(
-            &mut imported_section_ids,
-            s.get("sectionId")
-                .and_then(|value| value.as_str())
-                .map(|value| value.to_string()),
-        );
-        parsed_slides.push((id, code, duration, transition, stagger, sname, highlights_json, section_id));
+        let section_id = remap_section_id(&mut imported_section_ids, slide.section_id.clone());
+        parsed_slides.push((
+            id,
+            slide.code,
+            slide.duration,
+            slide.transition_duration,
+            slide.stagger,
+            sname,
+            highlights_json,
+            section_id,
+        ));
     }
 
     // Remap the exported current slide ID to the fresh imported slide ID.
-    if let Some(cid) = value.get("currentSlideId").and_then(|v| v.as_str()) {
+    if let Some(cid) = imported_current_slide_id.as_deref() {
         if let Some(imported_id) = imported_slide_ids.get(cid) {
             settings.current_slide_id = Some(imported_id.clone());
         }

@@ -2,6 +2,7 @@
 import type { BundledLanguage, BundledTheme } from "shiki";
 import { createShikiLoader } from "$lib/shiki/shiki-loader";
 import { extractShikiCodeHtml } from "./extract-html";
+import { MAX_CODE_LENGTH } from "./shiki-limits";
 
 const loader = createShikiLoader();
 
@@ -127,7 +128,7 @@ async function pump() {
 
 async function processRequest(request: QueuedRequest): Promise<void> {
   const { id, code, lang, theme } = request;
-  if (code.length > 20_000) {
+  if (code.length > MAX_CODE_LENGTH) {
     console.warn(
       `[Shiki Worker] code too large (${code.length} chars) — using plain fallback`,
     );

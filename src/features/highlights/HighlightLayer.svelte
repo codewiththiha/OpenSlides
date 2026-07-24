@@ -34,7 +34,7 @@
    * transition that would break shiki-magic-move's class transitions.
    */
   import type { Highlighter } from "shiki";
-  import type { Highlight } from "$lib/types";
+  import { HIGHLIGHT_DEFAULTS, type Highlight } from "$lib/types";
   import { createHighlightPlan } from "@/features/highlights/highlight-plan.svelte";
   import { createHighlightMeasurement } from "@/features/highlights/highlight-measurement.svelte";
   import { createHighlightUnderlay } from "@/features/highlights/highlight-underlay.svelte";
@@ -92,9 +92,9 @@
     theme: () => theme(),
   });
 
-  const DEFAULT_SIZE_UP_AMOUNT = 125;
-  const DEFAULT_DIM_MS = 500;
-  const DEFAULT_SIZE_MS = 600;
+  const DEFAULT_SIZE_UP_AMOUNT = HIGHLIGHT_DEFAULTS.sizeUpAmount;
+  const DEFAULT_DIM_MS = HIGHLIGHT_DEFAULTS.dimTransition;
+  const DEFAULT_SIZE_MS = HIGHLIGHT_DEFAULTS.sizeUpTransition;
 
   const hl = $derived(highlight());
 

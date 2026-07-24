@@ -3,6 +3,7 @@ import App from "./App.svelte";
 import { installAppMenu } from "$lib/lib/app-menu";
 import { flushPendingSave } from "$lib/lib/code-save";
 import { initInitialTheme } from "$lib/stores/ui-persistence";
+import { initBackendConfig } from "$lib/lib/backend-config-loader";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import "../index.css";
@@ -18,6 +19,8 @@ document.documentElement.setAttribute("data-enable-grammarly", "false");
 
 // Native macOS menu bar / Windows window menu
 void installAppMenu();
+// Backend-owned capabilities/defaults bootstrap once per app session.
+void initBackendConfig();
 
 // Quit handshake: Rust intercepts window close / Cmd+Q and asks us to flush
 // the pending debounced slide-code save before letting the process die

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Check } from "@lucide/svelte";
-  import { THEMES } from "$lib/lib/themes";
+  import { availableThemes } from "$lib/lib/themes";
   import type { ThemeName } from "$lib/types";
   import { cn } from "$lib/lib/utils";
 
@@ -15,10 +15,12 @@
     onPreviewTheme: (theme: ThemeName) => void;
     onClearPreviewTheme: () => void;
   } = $props();
+
+  const themes = $derived(availableThemes());
 </script>
 
 <div class="grid grid-cols-4 gap-3" role="radiogroup" aria-label="Syntax theme">
-  {#each THEMES as theme (theme.value)}
+  {#each themes as theme (theme.value)}
     {@const selected = value === theme.value}
     {@const codeLineClass = theme.light ? "bg-black/25" : "bg-white/30"}
     <button
