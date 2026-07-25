@@ -10,7 +10,7 @@ const UI_STORAGE_VERSION = 2;
 export const DEFAULT_CODE_SIZE = 42;
 export const DEFAULT_SLIDES_SIZE = 14;
 
-export interface PersistedUiState {
+interface PersistedUiState {
   isBottomPanelCollapsed: boolean;
   isCodePanelCollapsed: boolean;
   codePanelSize: number;

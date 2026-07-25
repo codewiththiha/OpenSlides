@@ -1,6 +1,11 @@
 <script lang="ts">
   import { Loader2, Plus, X } from "@lucide/svelte";
-  import { NEW_PRESENTATION_CODE } from "$lib/constants";
+  import {
+    NEW_PRESENTATION_CODE,
+    DEFAULT_THEME,
+    DEFAULT_LANGUAGE,
+    SHIKI_DEBOUNCE_MS,
+  } from "$lib/constants";
   import Button from "$lib/ui/Button.svelte";
   import Input from "$lib/ui/Input.svelte";
   import CodeThumbnail from "$lib/ui/CodeThumbnail.svelte";
@@ -36,15 +41,15 @@
 
   const themes = $derived(availableThemes());
   const resolvedTheme = $derived(
-    selectedTheme || themes[0]?.value || "dark-plus",
+    selectedTheme || themes[0]?.value || DEFAULT_THEME,
   );
 
   const preview = shikiDisplayHtml(() => ({
     code: NEW_PRESENTATION_CODE,
-    language: "typescript",
+    language: DEFAULT_LANGUAGE,
     theme: resolvedTheme,
     resetKey: "create-deck-preview",
-    debounceMs: 80,
+    debounceMs: SHIKI_DEBOUNCE_MS,
     policyName: "previewTile",
   }));
 

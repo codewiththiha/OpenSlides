@@ -11,7 +11,7 @@ import type {
  * slide strip's decideFinalize (§6.5) — the grid component only applies
  * the result.
  */
-export type ProjectDropDecision =
+type ProjectDropDecision =
   | { kind: "stack"; sourceIds: string[]; targetId: string }
   | { kind: "unstack"; projectId: string }
   | { kind: "none" };

@@ -7,15 +7,10 @@
 
 import { api } from "./tauri-api";
 
-export type CodeWriter = (slideId: string, code: string) => Promise<unknown>;
+type CodeWriter = (slideId: string, code: string) => Promise<unknown>;
 
 // -- Per-slide serialized queue (previously code-save-queue.ts) --
 const tails = new Map<string, Promise<void>>();
-export const pendingSaveChains = () => tails.size;
-export const pendingSaveChainKeys = () => Array.from(tails.keys());
-export function resetCodeSaveQueue() {
-  tails.clear();
-}
 
 function defaultWrite(slideId: string, code: string) {
   return api.updateSlideCode(slideId, code);

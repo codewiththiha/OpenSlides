@@ -18,10 +18,15 @@
  * hardcoded timeout.
  */
 import type { Highlight, Slide } from "$lib/types";
+import {
+  DEFAULT_HIGHLIGHT_DIM_TRANSITION,
+  DEFAULT_HIGHLIGHT_SIZE_UP_TRANSITION,
+  DEFAULT_SLIDE_TRANSITION_MS,
+} from "$lib/constants";
 
 /** Default outro budgets (match HighlightLayer defaults). */
-const DEFAULT_DIM_MS = 500;
-const DEFAULT_SIZE_MS = 600;
+const DEFAULT_DIM_MS = DEFAULT_HIGHLIGHT_DIM_TRANSITION;
+const DEFAULT_SIZE_MS = DEFAULT_HIGHLIGHT_SIZE_UP_TRANSITION;
 /** Extra breathing room on the fail-safe timer. */
 const FAILSAFE_BUFFER_MS = 250;
 /** Never block nav input longer than this, whatever the settings say. */
@@ -74,7 +79,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
       const target = list[i + 1];
       if (!target) return;
       args.setCurrentSlideId(target.id);
-      markMorphStart(target.transitionDuration ?? 800);
+      markMorphStart(target.transitionDuration ?? DEFAULT_SLIDE_TRANSITION_MS);
       return;
     }
     if (dir === -1) {
@@ -83,7 +88,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
       const target = list[i - 1];
       if (!target) return;
       args.setCurrentSlideId(target.id);
-      markMorphStart(target.transitionDuration ?? 800);
+      markMorphStart(target.transitionDuration ?? DEFAULT_SLIDE_TRANSITION_MS);
     }
   }
 
@@ -114,7 +119,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
       const target = p.dir === 1 ? list[i + 1] : list[i - 1];
       if (!target) return;
       args.setCurrentSlideId(target.id);
-      markMorphStart(target.transitionDuration ?? 800);
+      markMorphStart(target.transitionDuration ?? DEFAULT_SLIDE_TRANSITION_MS);
     }
   }
 
@@ -179,7 +184,9 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
           return true;
         }
         args.setCurrentSlideId(target.id);
-        markMorphStart(target.transitionDuration ?? 800);
+        markMorphStart(
+          target.transitionDuration ?? DEFAULT_SLIDE_TRANSITION_MS,
+        );
       }
       return true;
     }
@@ -223,7 +230,7 @@ export function createHighlightNav(args: UseHighlightNavArgs) {
         return true;
       }
       args.setCurrentSlideId(target.id);
-      markMorphStart(target.transitionDuration ?? 800);
+      markMorphStart(target.transitionDuration ?? DEFAULT_SLIDE_TRANSITION_MS);
       return true;
     }
     return false;

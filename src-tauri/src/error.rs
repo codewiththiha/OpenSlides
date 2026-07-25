@@ -23,13 +23,6 @@ pub enum CommandError {
     Failed(String),
 }
 
-impl CommandError {
-    #[allow(dead_code)]
-    pub fn failed(msg: impl Into<String>) -> Self {
-        Self::Failed(msg.into())
-    }
-}
-
 impl From<String> for CommandError {
     fn from(s: String) -> Self {
         Self::Failed(s)

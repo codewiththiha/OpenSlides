@@ -48,6 +48,7 @@
   import { createEditorMenuHandlers } from "./menu-handlers";
   import { createEditorState } from "./editor-state.svelte";
   import { createPresentFullscreen } from "@/features/presentation/fullscreen.svelte";
+  import { DEFAULT_SLIDE_DURATION_MS } from "$lib/constants";
 
   let { projectId }: { projectId?: string } = $props();
 
@@ -99,7 +100,10 @@
     // Read to re-arm the countdown after each highlight step.
     void nav.highlightIndex;
 
-    const ms = Math.max(500, slides[currentIndex]?.duration ?? 3000);
+    const ms = Math.max(
+      500,
+      slides[currentIndex]?.duration ?? DEFAULT_SLIDE_DURATION_MS,
+    );
     const timer = window.setTimeout(() => {
       const acted = nav.goNext();
       if (!acted) setIsAutoPlaying(false);

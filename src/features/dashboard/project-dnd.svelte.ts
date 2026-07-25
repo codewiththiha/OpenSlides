@@ -38,7 +38,7 @@ export const projectDnd = $state<{ session: ProjectDragSession | null }>({
   session: null,
 });
 
-export type ProjectDropHandler = (session: ProjectDragSession) => void;
+type ProjectDropHandler = (session: ProjectDragSession) => void;
 
 let dropHandler: ProjectDropHandler | null = null;
 /** ProjectGridView registers its resolver while mounted. */

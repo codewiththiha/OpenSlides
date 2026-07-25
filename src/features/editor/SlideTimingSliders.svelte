@@ -14,6 +14,11 @@
   } from "$lib/queries";
   import SliderField from "$lib/ui/SliderField.svelte";
   import type { Project, Slide } from "$lib/types";
+  import {
+    SLIDER_TRANSITION,
+    SLIDER_STAGGER,
+    SLIDER_DURATION,
+  } from "$lib/constants";
 
   let { project, slide }: { project: Project; slide: Slide } = $props();
 
@@ -47,9 +52,9 @@
     label="Transition"
     labelClassName="uppercase tracking-wide"
     value={transition}
-    min={100}
-    max={2000}
-    step={50}
+    min={SLIDER_TRANSITION.min}
+    max={SLIDER_TRANSITION.max}
+    step={SLIDER_TRANSITION.step}
     format={(v) => (globalTransitionEnabled ? `${v}ms · global` : `${v}ms`)}
     disabled={globalTransitionEnabled}
     onPreview={(v) =>
@@ -70,9 +75,9 @@
     label="Stagger"
     labelClassName="uppercase tracking-wide"
     value={stagger}
-    min={0}
-    max={50}
-    step={1}
+    min={SLIDER_STAGGER.min}
+    max={SLIDER_STAGGER.max}
+    step={SLIDER_STAGGER.step}
     format={(v) => (globalStaggerEnabled ? `${v} · global` : `${v}`)}
     disabled={globalStaggerEnabled}
     onPreview={(v) =>
@@ -90,9 +95,9 @@
     label="Duration"
     labelClassName="uppercase tracking-wide"
     value={duration}
-    min={500}
-    max={10000}
-    step={100}
+    min={SLIDER_DURATION.min}
+    max={SLIDER_DURATION.max}
+    step={SLIDER_DURATION.step}
     format={(v) => `${v}ms`}
     onPreview={(v) => setPreviewSlideSetting(slide.id, "duration", v)}
     onCommit={(v) =>

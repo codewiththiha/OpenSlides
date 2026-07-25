@@ -158,7 +158,8 @@
   );
 
   const dimAmount = $derived(
-    (globalDimAmount ?? dimSource?.dimAmount ?? 75) / 100,
+    (globalDimAmount ?? dimSource?.dimAmount ?? HIGHLIGHT_DEFAULTS.dimAmount) /
+      100,
   );
   const sizeUpAmount = $derived(
     globalSizeUpAmount ?? hl?.sizeUpAmount ?? DEFAULT_SIZE_UP_AMOUNT,

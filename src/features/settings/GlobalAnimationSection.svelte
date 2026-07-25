@@ -3,6 +3,12 @@
   import SliderField from "$lib/ui/SliderField.svelte";
   import type { ProjectSettings } from "$lib/types";
   import type { GlobalAnimationKey } from "$lib/stores/types";
+  import {
+    SLIDER_TRANSITION,
+    SLIDER_STAGGER,
+    SLIDER_DIM_AMOUNT,
+    SLIDER_SIZE_UP_AMOUNT,
+  } from "$lib/constants";
 
   let {
     settings,
@@ -34,9 +40,9 @@
       label="Transition"
       labelClassName="text-xs text-muted-foreground"
       value={effTransition}
-      min={100}
-      max={2000}
-      step={50}
+      min={SLIDER_TRANSITION.min}
+      max={SLIDER_TRANSITION.max}
+      step={SLIDER_TRANSITION.step}
       format={(v) => `${v}ms`}
       onPreview={(v) => onPreview("globalTransitionDuration", v)}
       onCommit={(v) => onCommit({ globalTransitionDuration: v })}
@@ -55,9 +61,9 @@
       label="Stagger"
       labelClassName="text-xs text-muted-foreground"
       value={effStagger}
-      min={0}
-      max={50}
-      step={1}
+      min={SLIDER_STAGGER.min}
+      max={SLIDER_STAGGER.max}
+      step={SLIDER_STAGGER.step}
       onPreview={(v) => onPreview("globalStagger", v)}
       onCommit={(v) => onCommit({ globalStagger: v })}
     />
@@ -80,9 +86,9 @@
       label="Global dim amount"
       labelClassName="text-xs text-muted-foreground"
       value={effGlobalDimAmount}
-      min={0}
-      max={100}
-      step={5}
+      min={SLIDER_DIM_AMOUNT.min}
+      max={SLIDER_DIM_AMOUNT.max}
+      step={SLIDER_DIM_AMOUNT.step}
       format={(v) => `${v}%`}
       onPreview={(v) => onPreview("globalDimAmount", v)}
       onCommit={(v) => onCommit({ globalDimAmount: v })}
@@ -92,9 +98,9 @@
       label="Global pop-up size"
       labelClassName="text-xs text-muted-foreground"
       value={effGlobalSizeUpAmount}
-      min={100}
-      max={250}
-      step={5}
+      min={SLIDER_SIZE_UP_AMOUNT.min}
+      max={SLIDER_SIZE_UP_AMOUNT.max}
+      step={SLIDER_SIZE_UP_AMOUNT.step}
       format={(v) => `${v}%`}
       onPreview={(v) => onPreview("globalSizeUpAmount", v)}
       onCommit={(v) => onCommit({ globalSizeUpAmount: v })}

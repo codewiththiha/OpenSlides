@@ -94,6 +94,30 @@ function rectForCharRange(
   }
 }
 
+function computeUnion(segments: MeasuredSegment[]): HighlightLineRect {
+  const first = segments[0]!;
+  const acc = segments.reduce(
+    (a, s) => ({
+      x: Math.min(a.x, s.rect.x),
+      y: Math.min(a.y, s.rect.y),
+      right: Math.max(a.right, s.rect.x + s.rect.width),
+      bottom: Math.max(a.bottom, s.rect.y + s.rect.height),
+    }),
+    {
+      x: first.rect.x,
+      y: first.rect.y,
+      right: first.rect.x + first.rect.width,
+      bottom: first.rect.y + first.rect.height,
+    },
+  );
+  return {
+    x: acc.x,
+    y: acc.y,
+    width: Math.max(acc.right - acc.x, 1),
+    height: Math.max(acc.bottom - acc.y, 1),
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Public API: measureHighlight — batched, cached, 60fps              */
 /* ------------------------------------------------------------------ */
@@ -157,31 +181,7 @@ export function measureHighlight(
 
   if (segments.length === 0) return null;
 
-  const first = segments[0]!;
-  const union = segments.reduce(
-    (acc, s) => ({
-      x: Math.min(acc.x, s.rect.x),
-      y: Math.min(acc.y, s.rect.y),
-      right: Math.max(acc.right, s.rect.x + s.rect.width),
-      bottom: Math.max(acc.bottom, s.rect.y + s.rect.height),
-    }),
-    {
-      x: first.rect.x,
-      y: first.rect.y,
-      right: first.rect.x + first.rect.width,
-      bottom: first.rect.y + first.rect.height,
-    },
-  );
-
-  return {
-    segments,
-    union: {
-      x: union.x,
-      y: union.y,
-      width: Math.max(union.right - union.x, 1),
-      height: Math.max(union.bottom - union.y, 1),
-    },
-  };
+  return { segments, union: computeUnion(segments) };
 }
 
 /**
@@ -239,29 +239,5 @@ export function measureHighlightPureMath(
 
   if (segments.length === 0) return null;
 
-  const first = segments[0]!;
-  const union = segments.reduce(
-    (acc, s) => ({
-      x: Math.min(acc.x, s.rect.x),
-      y: Math.min(acc.y, s.rect.y),
-      right: Math.max(acc.right, s.rect.x + s.rect.width),
-      bottom: Math.max(acc.bottom, s.rect.y + s.rect.height),
-    }),
-    {
-      x: first.rect.x,
-      y: first.rect.y,
-      right: first.rect.x + first.rect.width,
-      bottom: first.rect.y + first.rect.height,
-    },
-  );
-
-  return {
-    segments,
-    union: {
-      x: union.x,
-      y: union.y,
-      width: Math.max(union.right - union.x, 1),
-      height: Math.max(union.bottom - union.y, 1),
-    },
-  };
+  return { segments, union: computeUnion(segments) };
 }

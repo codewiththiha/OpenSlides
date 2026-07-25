@@ -24,6 +24,7 @@
   import { updateProjectSettingsMutation } from "$lib/queries";
   import { editorShikiHtml } from "$lib/shiki/shiki-display.svelte";
   import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
+  import { DEFAULT_EDITOR_FONT_SIZE, EDITOR_LINE_HEIGHT } from "$lib/constants";
   import { createCaretSync } from "@/features/editor/caret.svelte";
   import { createScrollSync } from "@/features/editor/scroll-sync";
   import { createCodeEditorApply } from "./code-editor/code-editor-apply.svelte";
@@ -72,11 +73,13 @@
   const language = $derived(resolveProjectLanguage(project));
   const theme = $derived(project.theme);
 
-  const rawEditorFontSize = $derived(project.settings.editorFontSize || 14);
+  const rawEditorFontSize = $derived(
+    project.settings.editorFontSize || DEFAULT_EDITOR_FONT_SIZE,
+  );
   const editorFontSize = $derived(
     previewProjectSetting("editorFontSize") ?? rawEditorFontSize,
   );
-  const lineHeight = 1.55;
+  const lineHeight = EDITOR_LINE_HEIGHT;
   const lineCount = $derived(Math.max(1, code.split("\n").length));
   const lineNumbersText = $derived(
     Array.from({ length: lineCount }, (_, i) => i + 1).join("\n"),

@@ -18,6 +18,10 @@
   } from "@/features/settings/preview-settings";
   import { effectiveSlideCode } from "$lib/stores/slide-code.svelte";
   import { createCurrentSlide } from "@/features/slides/current-slide.svelte";
+  import {
+    DEFAULT_GLOBAL_DIM_AMOUNT,
+    DEFAULT_GLOBAL_SIZE_UP_AMOUNT,
+  } from "$lib/constants";
   import HighlightLayer from "@/features/highlights/HighlightLayer.svelte";
   import MagicMoveBlock from "./MagicMoveBlock.svelte";
   import PreviewFallback from "./PreviewFallback.svelte";
@@ -80,11 +84,13 @@
   // Global highlight overrides (only active when useGlobalHighlight)
   const useGlobalHighlight = $derived(s.useGlobalHighlight);
   const globalDimAmount = $derived(
-    useGlobalHighlight ? (effective.settings.globalDimAmount ?? 80) : undefined,
+    useGlobalHighlight
+      ? (effective.settings.globalDimAmount ?? DEFAULT_GLOBAL_DIM_AMOUNT)
+      : undefined,
   );
   const globalSizeUpAmount = $derived(
     useGlobalHighlight
-      ? (effective.settings.globalSizeUpAmount ?? 105)
+      ? (effective.settings.globalSizeUpAmount ?? DEFAULT_GLOBAL_SIZE_UP_AMOUNT)
       : undefined,
   );
   const globalDimColor = $derived(

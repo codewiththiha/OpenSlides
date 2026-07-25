@@ -140,8 +140,10 @@ export function slideDisplayName(slide: Slide, index: number): string {
  * Project settings are the source of truth; the first slide is a legacy
  * fallback from when language was per-slide.
  */
+import { DEFAULT_LANGUAGE } from "$lib/constants";
+
 export function resolveProjectLanguage(project: Project): string {
   return (
-    project.settings.language || project.slides[0]?.language || "typescript"
+    project.settings.language || project.slides[0]?.language || DEFAULT_LANGUAGE
   );
 }

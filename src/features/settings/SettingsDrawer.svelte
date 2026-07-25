@@ -20,6 +20,10 @@
   import { supportedThemeOptions } from "$lib/lib/backend-config.svelte";
   import { cn } from "$lib/lib/utils";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
+  import {
+    DEFAULT_GLOBAL_DIM_AMOUNT,
+    DEFAULT_GLOBAL_SIZE_UP_AMOUNT,
+  } from "$lib/constants";
   import { escapeKey } from "$lib/actions/escape-key";
   import SettingsSection from "$lib/ui/SettingsSection.svelte";
   import GlobalAnimationSection from "@/features/settings/GlobalAnimationSection.svelte";
@@ -53,7 +57,7 @@
     { id: "motion", label: "Motion" },
   ];
 
-  const DEFAULT_THEME: ThemeName = "dark-plus";
+  const DEFAULT_THEME: ThemeName = "dark-plus" as const;
 
   const projectId = untrack(() => project.id);
   const updateSettings = updateProjectSettingsMutation(projectId);
@@ -116,10 +120,14 @@
     previewProject.globalStagger ?? s.globalStagger,
   );
   const effGlobalDimAmount = $derived(
-    previewProject.globalDimAmount ?? s.globalDimAmount ?? 80,
+    previewProject.globalDimAmount ??
+      s.globalDimAmount ??
+      DEFAULT_GLOBAL_DIM_AMOUNT,
   );
   const effGlobalSizeUpAmount = $derived(
-    previewProject.globalSizeUpAmount ?? s.globalSizeUpAmount ?? 105,
+    previewProject.globalSizeUpAmount ??
+      s.globalSizeUpAmount ??
+      DEFAULT_GLOBAL_SIZE_UP_AMOUNT,
   );
   const effHighlightDimColor = $derived(
     (previewProject.highlightDimColor ?? s.highlightDimColor ?? "theme") as

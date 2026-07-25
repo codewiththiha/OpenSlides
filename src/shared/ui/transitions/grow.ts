@@ -3,7 +3,7 @@
  * Durations are in MILLISECONDS.
  */
 
-export interface GrowParams {
+interface GrowParams {
   duration?: number;
   easing?: (t: number) => number;
   /** Scale at t=0 (intro start / outro end). */

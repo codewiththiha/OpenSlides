@@ -20,6 +20,7 @@
 
   import { consumeSlideCardActions } from "./slide-card-actions.svelte";
   import { handleSlideCardKeyDown } from "./slide-card-keyboard";
+  import { SHIKI_DEBOUNCE_MS } from "$lib/constants";
 
   let {
     slide,
@@ -85,7 +86,7 @@
     maxChars: 1000,
     enabled: hover.showHoverPreview && enableHoverPreview,
     priority: "high",
-    debounceMs: 80,
+    debounceMs: SHIKI_DEBOUNCE_MS,
   }));
 
   const title = $derived(slideDisplayName(slide, index));

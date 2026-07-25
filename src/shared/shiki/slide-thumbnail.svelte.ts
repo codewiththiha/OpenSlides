@@ -19,7 +19,7 @@ function truncateCode(
   return code.split("\n").slice(0, maxLines).join("\n").slice(0, maxChars);
 }
 
-export interface SlideThumbnailArgs {
+interface SlideThumbnailArgs {
   slideId: string;
   code: string;
   theme: string;

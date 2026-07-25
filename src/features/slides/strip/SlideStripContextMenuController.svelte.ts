@@ -5,7 +5,7 @@
 import { setCurrentSlideId } from "$lib/stores/ui-state.svelte";
 import type { Slide } from "$lib/types";
 
-export interface SlideStripMenuState {
+interface SlideStripMenuState {
   slide: Slide;
   title: string;
   position: { x: number; y: number };

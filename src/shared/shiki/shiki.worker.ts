@@ -20,7 +20,7 @@ export interface WorkerAbort {
   id: number;
 }
 
-export type WorkerIncoming = WorkerRequest | WorkerAbort;
+type WorkerIncoming = WorkerRequest | WorkerAbort;
 
 export interface WorkerResponse {
   id: number;

@@ -8,7 +8,7 @@ import { getContext, setContext } from "svelte";
  * Readonly fields are getter-backed, so consumers track the live values
  * (rename text, busy flags) without the context value itself being replaced.
  */
-export type ProjectCardActions = {
+type ProjectCardActions = {
   readonly renamingId: string | null;
   readonly renameValue: string;
   readonly duplicateBusy: boolean;

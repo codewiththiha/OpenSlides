@@ -14,6 +14,7 @@ import {
 } from "$lib/queries";
 import { api } from "$lib/lib/tauri-api";
 import { notify } from "$lib/lib/toast";
+import { DEFAULT_THEME } from "$lib/constants";
 import {
   setIsCommandOpen,
   setIsShortcutsOpen,
@@ -55,7 +56,7 @@ export function createDashboardActions(
       );
       if (
         st.selectedTheme &&
-        st.selectedTheme !== "dark-plus" &&
+        st.selectedTheme !== DEFAULT_THEME &&
         st.selectedTheme !== project.theme
       ) {
         try {

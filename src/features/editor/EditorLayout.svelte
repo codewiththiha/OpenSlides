@@ -25,12 +25,20 @@
   import { cn } from "$lib/lib/utils";
   import type { Project, Slide } from "$lib/types";
   import { Z_INDEX } from "$lib/ui/Overlay.svelte";
+  import {
+    PANEL_CODE_MIN,
+    PANEL_CODE_MAX,
+    PANEL_SLIDES_MIN,
+    PANEL_SLIDES_MAX,
+    PANEL_CODE_COLLAPSED_SIZE,
+    PANEL_SLIDES_COLLAPSED_SIZE,
+  } from "$lib/constants";
 
-  const CODE_COLLAPSE_THRESHOLD = 14;
-  const SLIDES_MIN_EXPANDED_SIZE = 14;
+  const CODE_COLLAPSE_THRESHOLD = PANEL_SLIDES_MIN;
+  const SLIDES_MIN_EXPANDED_SIZE = PANEL_SLIDES_MIN;
   const SLIDES_COLLAPSE_THRESHOLD = SLIDES_MIN_EXPANDED_SIZE;
-  const CODE_COLLAPSED_SIZE = 3.5;
-  const SLIDES_COLLAPSED_SIZE = 6;
+  const CODE_COLLAPSED_SIZE = PANEL_CODE_COLLAPSED_SIZE;
+  const SLIDES_COLLAPSED_SIZE = PANEL_SLIDES_COLLAPSED_SIZE;
 
   let {
     project,
@@ -160,8 +168,8 @@
             defaultSize={isCodePanelCollapsed
               ? CODE_COLLAPSED_SIZE
               : ui.codePanelSize}
-            minSize={18}
-            maxSize={70}
+            minSize={PANEL_CODE_MIN}
+            maxSize={PANEL_CODE_MAX}
             collapsible
             collapsedSize={CODE_COLLAPSED_SIZE}
             class="min-w-0"
@@ -206,7 +214,7 @@
           ? SLIDES_COLLAPSED_SIZE
           : slidesExpandedSize}
         minSize={SLIDES_MIN_EXPANDED_SIZE}
-        maxSize={28}
+        maxSize={PANEL_SLIDES_MAX}
         collapsible
         collapsedSize={SLIDES_COLLAPSED_SIZE}
         class="min-h-0"

@@ -3,7 +3,7 @@
  * point, keeping it fully inside the window. Menus open ABOVE the point and
  * flip below when there is no room.
  */
-export interface ClampMenuPositionOptions {
+interface ClampMenuPositionOptions {
   /** Pointer point (client coordinates). */
   x: number;
   y: number;

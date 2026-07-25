@@ -1,5 +1,54 @@
 import type { Highlight, Slide } from "$lib/types";
 
+// ── App-wide defaults (mirrors src-tauri/src/models.rs) ──────────────
+/** Default slide duration in milliseconds. */
+export const DEFAULT_SLIDE_DURATION_MS = 3000;
+/** Default slide transition duration in milliseconds. */
+export const DEFAULT_SLIDE_TRANSITION_MS = 750;
+/** Default slide stagger count. */
+export const DEFAULT_SLIDE_STAGGER = 5;
+
+// ── Default language / theme ─────────────────────────────────────────
+export const DEFAULT_LANGUAGE = "typescript";
+export const DEFAULT_THEME = "dark-plus";
+export const DEFAULT_IMPORT_PROJECT_NAME = "Imported Presentation";
+
+// ── Project settings defaults (mirror Rust serde defaults) ───────────
+export const DEFAULT_FONT_SIZE = 16;
+export const DEFAULT_LINE_HEIGHT = 1.5;
+export const DEFAULT_EDITOR_FONT_SIZE = 14;
+export const DEFAULT_GLOBAL_TRANSITION_DURATION = 700;
+export const DEFAULT_GLOBAL_STAGGER = 3;
+
+// ── Highlight defaults ───────────────────────────────────────────────
+export const DEFAULT_HIGHLIGHT_DIM_AMOUNT = 75;
+export const DEFAULT_GLOBAL_DIM_AMOUNT = 80;
+export const DEFAULT_GLOBAL_SIZE_UP_AMOUNT = 105;
+export const DEFAULT_HIGHLIGHT_DIM_TRANSITION = 500;
+export const DEFAULT_HIGHLIGHT_SIZE_UP_TRANSITION = 600;
+
+// ── Editor ───────────────────────────────────────────────────────────
+/** Editor-specific line height (differs from project setting default). */
+export const EDITOR_LINE_HEIGHT = 1.55;
+
+// ── Shiki debounce ───────────────────────────────────────────────────
+export const SHIKI_DEBOUNCE_MS = 80;
+
+// ── Panel constraints ────────────────────────────────────────────────
+export const PANEL_CODE_MIN = 18;
+export const PANEL_CODE_MAX = 70;
+export const PANEL_SLIDES_MIN = 14;
+export const PANEL_SLIDES_MAX = 28;
+export const PANEL_CODE_COLLAPSED_SIZE = 3.5;
+export const PANEL_SLIDES_COLLAPSED_SIZE = 6;
+
+// ── Slider constraints ───────────────────────────────────────────────
+export const SLIDER_TRANSITION = { min: 100, max: 2000, step: 50 } as const;
+export const SLIDER_DURATION = { min: 500, max: 10000, step: 100 } as const;
+export const SLIDER_STAGGER = { min: 0, max: 50, step: 1 } as const;
+export const SLIDER_SIZE_UP_AMOUNT = { min: 100, max: 250, step: 5 } as const;
+export const SLIDER_DIM_AMOUNT = { min: 0, max: 100, step: 5 } as const;
+
 type StarterSlide = {
   name: string;
   code: string;

@@ -3,6 +3,7 @@
  * delete-confirmation target.
  */
 import { projectsQuery } from "$lib/queries";
+import { DEFAULT_THEME } from "$lib/constants";
 
 export function createDashboardState() {
   const query = projectsQuery();
@@ -10,13 +11,13 @@ export function createDashboardState() {
 
   let creating = $state(false);
   let newName = $state("Untitled Presentation");
-  let selectedTheme = $state("dark-plus");
+  let selectedTheme = $state(DEFAULT_THEME);
   let deleteTarget = $state<{ id: string; name: string } | null>(null);
 
   function resetForm() {
     creating = false;
     newName = "Untitled Presentation";
-    selectedTheme = "dark-plus";
+    selectedTheme = DEFAULT_THEME;
   }
 
   return {

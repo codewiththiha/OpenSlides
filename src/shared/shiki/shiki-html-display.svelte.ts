@@ -1,5 +1,6 @@
 import { requestHtml } from "$lib/shiki/shiki-worker-client";
 import { isTestEnv } from "$lib/lib/env";
+import { SHIKI_DEBOUNCE_MS } from "$lib/constants";
 import {
   resolvePolicy,
   type ShikiDisplayPolicy,
@@ -7,7 +8,7 @@ import {
   type ShikiDisplayStatus,
 } from "./shiki-policies";
 
-export interface ShikiDisplayHtmlArgs {
+interface ShikiDisplayHtmlArgs {
   code: string;
   language: string;
   theme: string;
@@ -45,7 +46,7 @@ export function shikiDisplayHtml(args: () => ShikiDisplayHtmlArgs) {
     const a = args();
     const code = a.code;
     const enabled = a.enabled ?? true;
-    const debounceMs = a.debounceMs ?? 80;
+    const debounceMs = a.debounceMs ?? SHIKI_DEBOUNCE_MS;
     const priority = a.priority ?? "high";
     const policy = resolvedPolicy;
 
@@ -167,7 +168,7 @@ export function editorShikiHtml(
 ) {
   return shikiDisplayHtml(() => ({
     ...args(),
-    debounceMs: 80,
+    debounceMs: SHIKI_DEBOUNCE_MS,
     priority: "high",
     policyName: "editor",
   }));

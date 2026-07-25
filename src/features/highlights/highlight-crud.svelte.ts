@@ -4,7 +4,7 @@ import { selectionToRange } from "@/features/highlights/highlight-tokens";
 import { createDefaultHighlight } from "@/features/highlights/highlight-factory";
 import type { Highlight } from "$lib/types";
 
-export interface HighlightCrudArgs {
+interface HighlightCrudArgs {
   projectId: string;
   slideId: () => string | undefined;
   highlights: () => Highlight[];
