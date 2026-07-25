@@ -23,6 +23,7 @@
   import {
     DEFAULT_GLOBAL_DIM_AMOUNT,
     DEFAULT_GLOBAL_SIZE_UP_AMOUNT,
+    DEFAULT_THEME,
   } from "$lib/constants";
   import { escapeKey } from "$lib/actions/escape-key";
   import SettingsSection from "$lib/ui/SettingsSection.svelte";
@@ -56,8 +57,6 @@
     { id: "layout", label: "Layout" },
     { id: "motion", label: "Motion" },
   ];
-
-  const DEFAULT_THEME: ThemeName = "dark-plus" as const;
 
   const projectId = untrack(() => project.id);
   const updateSettings = updateProjectSettingsMutation(projectId);
