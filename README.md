@@ -92,19 +92,19 @@ If your distribution prefers a different workflow, read the package manager guid
 
 ### Requirements
 
-- Node.js 20 or newer
+- Bun or newer
 - Rust stable toolchain and Cargo
 - Platform requirements for Tauri 2
 
 ```bash
-npm install
-npm run tauri dev
+bun install
+bun run tauri dev
 ```
 
 To run the interface in a browser:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 ### Development checks
@@ -112,14 +112,14 @@ npm run dev
 The same gates CI enforces on every push and pull request:
 
 ```bash
-npm run check              # svelte-check: 0 errors, 0 warnings
-npm run lint               # eslint
-npm run format:check       # prettier (svelte + tailwind plugins)
-npm run test:highlight     # highlight token pipeline (11 tests)
-npm run test:save-race     # editor save/debounce races (14 tests)
-npm run test:app-flow      # real app flows in jsdom: dashboard -> editor -> present (9 tests)
-npm run test:stack-targeting  # slide stack drop-zone geometry (4 tests)
-npm run build              # production bundle
+bun run check              # svelte-check: 0 errors, 0 warnings
+bun run lint               # eslint
+bun run format:check       # prettier (svelte + tailwind plugins)
+bun run test:highlight     # highlight token pipeline (11 tests)
+bun run test:save-race     # editor save/debounce races (14 tests)
+bun run test:app-flow      # real app flows in jsdom: dashboard -> editor -> present (9 tests)
+bun run test:stack-targeting  # slide stack drop-zone geometry (4 tests)
+bun run build              # production bundle
 ```
 
 ## License

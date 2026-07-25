@@ -7,22 +7,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
       - name: Lint
-        run: npm run lint
+        run: bun run lint
       - name: Format check
-        run: npm run format:check
+        run: bun run format:check
       - name: svelte-check
-        run: ./node_modules/.bin/svelte-check --tsconfig ./tsconfig.json
+        run: bunx svelte-check --tsconfig ./tsconfig.json
       - name: Tests
         run: |
-          npm run test:stack-targeting
-          npm run test:highlight
-          npm run test:save-race
-          npm run test:app-flow
+          bun run test:stack-targeting
+          bun run test:highlight
+          bun run test:save-race
+          bun run test:app-flow
       - name: Build
-        run: npm run build
+        run: bun run build

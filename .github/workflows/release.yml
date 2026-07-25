@@ -16,85 +16,47 @@ jobs:
       payloadJson: ${{ steps.notes.outputs.payloadJson }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
       - name: Extract release notes
         id: notes
         env:
           RELEASE_VERSION: ${{ github.ref_name }}
-        run: node scripts/extract-release-note.mjs
+        run: bun scripts/extract-release-note.mjs
 
-  build-macos:
-    name: Build macOS packages (${{ matrix.name }})
+  build-tauri:
     needs: extract-notes
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Apple Silicon
-            args: --target aarch64-apple-darwin
-            rust_targets: aarch64-apple-darwin
-          - name: Intel
-            args: --target x86_64-apple-darwin
-            rust_targets: x86_64-apple-darwin
-          - name: Universal
+          - runner: macos-latest
             args: --target universal-apple-darwin
             rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust_targets }}
-      - run: npm ci
-      - name: Build, bundle, and attach macOS release artifacts
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: OpenSlides ${{ needs.extract-notes.outputs.version }}
-          releaseBody: ${{ fromJSON(needs.extract-notes.outputs.payloadJson).fullNotes }}
-          releaseDraft: false
-          prerelease: false
-          args: ${{ matrix.args }}
-
-  build-windows:
-    name: Build Windows packages (${{ matrix.name }})
-    needs: extract-notes
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: x64
+          - runner: windows-latest
             args: ""
             rust_targets: ""
-          - name: ARM64
-            args: --target aarch64-pc-windows-msvc
-            rust_targets: aarch64-pc-windows-msvc
-    runs-on: windows-latest
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: npm
+          bun-version: latest
+
       - uses: dtolnay/rust-toolchain@stable
-        if: matrix.rust_targets != ''
         with:
           targets: ${{ matrix.rust_targets }}
-      - uses: dtolnay/rust-toolchain@stable
-        if: matrix.rust_targets == ''
-      - run: npm ci
-      - name: Build, bundle, and attach Windows release artifacts
-        uses: tauri-apps/tauri-action@v0
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build, bundle, and attach release artifacts
+        uses: tauri-apps/tauri-action@v0.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -104,43 +66,10 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
-
-  build-linux:
-    name: Build Linux packages
-    needs: extract-notes
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - name: Install Linux system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            rpm
-      - uses: dtolnay/rust-toolchain@stable
-      - run: npm ci
-      - name: Build, bundle, and attach Linux release artifacts
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: OpenSlides ${{ needs.extract-notes.outputs.version }}
-          releaseBody: ${{ fromJSON(needs.extract-notes.outputs.payloadJson).fullNotes }}
-          releaseDraft: false
-          prerelease: false
-          args: --bundles deb,rpm
+          tauriScript: bun run tauri
 
   update-marketing-site:
-    needs: [extract-notes, build-macos, build-windows, build-linux]
+    needs: [extract-notes, build-tauri]
     runs-on: macos-latest
     steps:
       - name: Send release notes to the marketing site
