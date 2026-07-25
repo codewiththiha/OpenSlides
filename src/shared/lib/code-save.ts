@@ -11,6 +11,14 @@ type CodeWriter = (slideId: string, code: string) => Promise<unknown>;
 
 // -- Per-slide serialized queue (previously code-save-queue.ts) --
 const tails = new Map<string, Promise<void>>();
+/** Number of in-flight save chains (test observability). */
+export const pendingSaveChains = () => tails.size;
+/** Slide IDs with in-flight saves (test observability). */
+export const pendingSaveChainKeys = () => Array.from(tails.keys());
+/** Clear the serialized queue between tests. */
+export function resetCodeSaveQueue() {
+  tails.clear();
+}
 
 function defaultWrite(slideId: string, code: string) {
   return api.updateSlideCode(slideId, code);
