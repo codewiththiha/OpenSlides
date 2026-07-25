@@ -4,25 +4,37 @@
 
 OpenSlides is a free, open-source, offline desktop app for turning code into polished slides with smooth, step-by-step transitions. It is a direct alternative to [codeslides.app](https://codeslides.app): create expressive code decks, keep your work on your own machine, and present without a subscription or internet connection.
 
+---
+
+### Slides
+
+![slides demo](https://www.image2url.com/r2/default/gifs/1784959147106-cee92309-e79d-42f0-8dc0-1edf29556368.gif)
+
+Turn source code into presentation-ready slides. Move between code states with smooth Magic Move transitions, and build a visual story around your code instead of showing a static editor.
+
+### Highlights
+
+![highlight demo](https://www.image2url.com/r2/default/gifs/1784959026570-b96f1a88-2500-464b-b34c-b551d382aab6.gif)
+
+Reveal an idea line by line with stepped highlights. Control emphasis per step: dim amount, size-up scale, and custom transition timings — so you can guide viewers through a function, refactor, algorithm, or feature at a natural pace.
+
+### Themes
+
+![themes demo](https://www.image2url.com/r2/default/gifs/1784959215303-431de853-3e09-4b5f-8ebd-af19973168b4.gif)
+
+Choose light or dark presentation themes to match your style and recording setup.
+
+---
+
 ## Made for explaining code beautifully
 
 Whether you are recording a tutorial, teaching a class, streaming a live build, giving a conference talk, or sharing a technical demo, OpenSlides helps you focus attention on the exact part of the code that matters.
 
-- Turn source code into presentation-ready slides.
-- Reveal an idea line by line with highlight steps.
-- Move between code states with smooth Magic Move transitions.
 - Keep projects private, local, and ready to present anywhere.
-- Build a visual story around your code instead of showing a static editor.
-
-## What you can do
-
-- Create, organize, rename, duplicate, import, and export slide projects.
-- Arrange slides in stacks and reorder them with drag and drop.
-- Apply syntax highlighting and choose light or dark presentation themes.
-- Create stepped highlights and control their emphasis: dim amount, size-up scale, and custom transition timings per highlight.
 - Search across slides, use thumbnails and hover previews, and navigate by keyboard.
 - Present in full screen with optional autoplay and per-slide timing.
-- Keep working confidently with local projects, saved layouts, and per-slide undo/redo.
+- Create, organize, rename, duplicate, import, and export slide projects.
+- Arrange slides in stacks and reorder them with drag and drop.
 
 ## How it works
 

@@ -9,6 +9,11 @@
    * BUG FIX: `initial` is captured ONCE via untrack() so it never
    * re-applies mid-animation. A base `opacity: 0` in the style prevents
    * any single-frame flash at (0,0) during mount/unmount races.
+   *
+   * The style also carries a CSS base pose (left, top, transform) equal
+   * to the open fan pose. If the motion library ever re-measures the node
+   * and resets its position spring, the reset reads the fan pose — which
+   * equals the card's on-screen position — making it invisible.
    */
   import { untrack } from "svelte";
   import { motion } from "@humanspeak/svelte-motion";
@@ -100,6 +105,7 @@
   let itemEl = $state<HTMLElement | null>(null);
 
   function onPointerDown(e: PointerEvent) {
+    if (isClosing) return;
     beginProjectDrag({ kind: "fan-item", project, groupId }, e, {
       width: itemEl?.getBoundingClientRect().width ?? PROJECT_CARD_WIDTH,
       originLeft: itemEl?.getBoundingClientRect().left ?? 0,
@@ -113,7 +119,7 @@
   onpointerdown={onPointerDown}
   role="presentation"
   class="absolute touch-none"
-  style="width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; z-index: {isDragging
+  style="left: {targetLeft}px; top: {targetTop}px; width: {PROJECT_CARD_WIDTH}px; transform-origin: center 180%; transform: scale(1) rotate({fan.rotate}deg); z-index: {isDragging
     ? 60
     : 30 + index}; opacity: 0;"
   initial={initialPose}

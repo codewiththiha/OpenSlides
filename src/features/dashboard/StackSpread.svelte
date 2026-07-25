@@ -52,6 +52,7 @@
     cancelRename: baseCardActions.cancelRename,
     startRename: baseCardActions.startRename,
     open: (id) => {
+      if (isClosing) return;
       triggerClose();
       baseCardActions.open(id);
     },
@@ -138,7 +139,7 @@
 
   <!-- Highlight wrapper — React: spring stiffness 300, damping 25 -->
   <motion.div
-    class="absolute rounded-2xl border-2 border-primary/25 bg-primary/[0.04] shadow-[0_0_40px_rgba(0,0,0,0.3)]"
+    class="pointer-events-none absolute rounded-2xl border-2 border-primary/25 bg-primary/[0.04] shadow-[0_0_40px_rgba(0,0,0,0.3)]"
     style="left: {fanCenterX - spreadWidth / 2}px; top: {fanCenterY -
       spreadHeight / 2}px; width: {spreadWidth}px; height: {spreadHeight}px;"
     initial={{ opacity: 0, scale: 0.85 }}
@@ -177,7 +178,7 @@
     </button>
   </motion.div>
 
-  <!-- Fanned Cards -->
+  <!-- Fanned Cards — keep hit-testing stable across the whole close gesture -->
   <div class="pointer-events-none absolute inset-0">
     <div class="pointer-events-auto">
       {#each projects as project, index (project.id)}
