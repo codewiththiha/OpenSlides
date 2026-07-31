@@ -129,12 +129,13 @@ pub async fn search_slides(
             }
             Err(_) => {
                 let safe_query = safe_prefix_query(query);
-                if !safe_query.is_empty() && safe_query != primary_query {
-                    if let Ok(rows) = run_fts_search(pool.inner(), &project_id, &safe_query).await {
-                        if !rows.is_empty() || !has_literal_punctuation(query) {
-                            return Ok(rows);
-                        }
-                    }
+                if !safe_query.is_empty()
+                    && safe_query != primary_query
+                    && let Ok(rows) =
+                        run_fts_search(pool.inner(), &project_id, &safe_query).await
+                    && (!rows.is_empty() || !has_literal_punctuation(query))
+                {
+                    return Ok(rows);
                 }
             }
         }

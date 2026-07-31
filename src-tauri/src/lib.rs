@@ -20,10 +20,7 @@ pub fn run() {
             let handle = app.handle().clone();
             let pool = tauri::async_runtime::block_on(async move { init_db(&handle).await })
                 .map_err(|error| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        format!("failed to initialize database: {error}"),
-                    )
+                    std::io::Error::other(format!("failed to initialize database: {error}"))
                 })?;
             app.handle().manage(pool);
             Ok(())
@@ -61,11 +58,11 @@ pub fn run() {
         .on_window_event(|window, event| {
             // Window X / native close: flush the debounced auto-save first —
             // without this, the last <500ms of keystrokes could vanish.
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if !QUIT_FLUSHED.load(Ordering::SeqCst) {
-                    api.prevent_close();
-                    request_flush_before_quit(window);
-                }
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && !QUIT_FLUSHED.load(Ordering::SeqCst)
+            {
+                api.prevent_close();
+                request_flush_before_quit(window);
             }
         })
         .build(tauri::generate_context!())
@@ -73,11 +70,11 @@ pub fn run() {
 
     app.run(|app_handle, event| {
         // Cmd+Q / OS-level quit goes through the same flush handshake.
-        if let tauri::RunEvent::ExitRequested { api, .. } = event {
-            if !QUIT_FLUSHED.load(Ordering::SeqCst) {
-                api.prevent_exit();
-                request_flush_before_quit(app_handle);
-            }
+        if let tauri::RunEvent::ExitRequested { api, .. } = event
+            && !QUIT_FLUSHED.load(Ordering::SeqCst)
+        {
+            api.prevent_exit();
+            request_flush_before_quit(app_handle);
         }
     });
 }

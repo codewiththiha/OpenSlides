@@ -53,6 +53,20 @@ Prebuilt installers for macOS, Windows, and Linux are available from the [OpenSl
 - **Linux:** `.deb`, `.rpm`, and AppImage
 - **Nix:** flake package for `x86_64-linux`, `x86_64-darwin`, and `aarch64-darwin`
 
+### macOS installation
+
+OpenSlides macOS builds are ad-hoc signed. That is enough for Apple Silicon packages to launch after download; a paid Apple Developer certificate is still required for full notarization later.
+
+1. Open the `.dmg` and drag **OpenSlides** into **Applications**.
+2. First launch: right-click the app → **Open**, then confirm.
+3. If macOS still says the app is damaged, clear the download quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/OpenSlides.app
+```
+
+Then open the app again from Applications.
+
 ### Linux installation
 
 OpenSlides release builds include Linux packages in `.deb`, `.rpm`, and AppImage formats.

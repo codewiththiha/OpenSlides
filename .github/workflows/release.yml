@@ -4,7 +4,14 @@ on:
   push:
     tags:
       - "v*"
+    branches:
+      - "build/**"
   workflow_dispatch:
+    inputs:
+      prerelease:
+        description: "Publish as a prerelease"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -15,6 +22,9 @@ jobs:
     outputs:
       version: ${{ steps.notes.outputs.version }}
       payloadJson: ${{ steps.notes.outputs.payloadJson }}
+      isPrerelease: ${{ steps.meta.outputs.isPrerelease }}
+      releaseTag: ${{ steps.meta.outputs.releaseTag }}
+      releaseName: ${{ steps.meta.outputs.releaseName }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,11 +34,44 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      - name: Resolve release version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            VER=$(node -p "require('./package.json').version")
+            echo "version=v${VER}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Extract release notes
         id: notes
         env:
-          RELEASE_VERSION: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: bun scripts/extract-release-note.mjs
+
+      - name: Release metadata
+        id: meta
+        shell: bash
+        env:
+          INPUT_PRERELEASE: ${{ github.event.inputs.prerelease }}
+          VERSION: ${{ steps.notes.outputs.version }}
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "isPrerelease=false" >> "$GITHUB_OUTPUT"
+            echo "releaseTag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "releaseName=OpenSlides ${VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            # Branch / manual builds never create a v* tag.
+            if [[ "${INPUT_PRERELEASE}" == "false" ]]; then
+              echo "isPrerelease=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "isPrerelease=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "releaseTag=build-${VERSION}-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+            echo "releaseName=OpenSlides ${VERSION} (build ${GITHUB_RUN_NUMBER})" >> "$GITHUB_OUTPUT"
+          fi
 
   build-tauri:
     needs: extract-notes
@@ -104,11 +147,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: OpenSlides ${{ needs.extract-notes.outputs.version }}
+          tagName: ${{ needs.extract-notes.outputs.releaseTag }}
+          releaseName: ${{ needs.extract-notes.outputs.releaseName }}
           releaseBody: ${{ fromJSON(needs.extract-notes.outputs.payloadJson).fullNotes }}
           releaseDraft: false
-          prerelease: false
+          prerelease: ${{ needs.extract-notes.outputs.isPrerelease }}
           args: ${{ matrix.args }}
           tauriScript: bun run tauri
 
@@ -118,9 +161,10 @@ jobs:
       # stale copy wins and EGL can fail. Removing them redirects resolution to
       # the host copy present on every GTK-capable system.
       - name: Fix AppImage wayland libs
-        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.platform == 'ubuntu-22.04'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.extract-notes.outputs.releaseTag }}
         run: |
           set -euo pipefail
 
@@ -156,13 +200,12 @@ jobs:
 
           cp "$WORK/$BASENAME" "$APPIMAGE"
 
-          TAG="${GITHUB_REF_NAME}"
-          gh release upload "$TAG" "$APPIMAGE" \
+          gh release upload "$RELEASE_TAG" "$APPIMAGE" \
             --clobber --repo "$GITHUB_REPOSITORY"
 
   update-marketing-site:
     needs: [extract-notes, build-tauri]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Send release notes to the marketing site

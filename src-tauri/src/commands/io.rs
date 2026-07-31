@@ -15,6 +15,17 @@ use std::collections::HashMap;
 use tauri::{AppHandle, State};
 use uuid::Uuid;
 
+struct ParsedImportSlide {
+    id: String,
+    code: String,
+    duration: i64,
+    transition_duration: i64,
+    stagger: i64,
+    name: String,
+    highlights_json: String,
+    section_id: Option<String>,
+}
+
 #[tauri::command]
 pub async fn export_project_to_json(
     app: AppHandle,
@@ -187,8 +198,7 @@ pub async fn import_project_from_json(
     // collide with the original slides table rows.
     let mut imported_slide_ids: HashMap<String, String> = HashMap::new();
     let mut imported_section_ids: HashMap<String, String> = HashMap::new();
-    let mut parsed_slides: Vec<(String, String, i64, i64, i64, String, String, Option<String>)> =
-        Vec::new();
+    let mut parsed_slides: Vec<ParsedImportSlide> = Vec::new();
     for (i, slide_value) in slides_val.iter().enumerate() {
         let slide: ImportSlidePayload = serde_json::from_value(slide_value.clone())
             .map_err(|_| CommandError::Failed("That file contains an invalid slide entry".to_string()))?;
@@ -207,23 +217,23 @@ pub async fn import_project_from_json(
             settings.current_slide_id = Some(id.clone());
         }
         let section_id = remap_section_id(&mut imported_section_ids, slide.section_id.clone());
-        parsed_slides.push((
+        parsed_slides.push(ParsedImportSlide {
             id,
-            slide.code,
-            slide.duration,
-            slide.transition_duration,
-            slide.stagger,
-            sname,
+            code: slide.code,
+            duration: slide.duration,
+            transition_duration: slide.transition_duration,
+            stagger: slide.stagger,
+            name: sname,
             highlights_json,
             section_id,
-        ));
+        });
     }
 
     // Remap the exported current slide ID to the fresh imported slide ID.
-    if let Some(cid) = imported_current_slide_id.as_deref() {
-        if let Some(imported_id) = imported_slide_ids.get(cid) {
-            settings.current_slide_id = Some(imported_id.clone());
-        }
+    if let Some(cid) = imported_current_slide_id.as_deref()
+        && let Some(imported_id) = imported_slide_ids.get(cid)
+    {
+        settings.current_slide_id = Some(imported_id.clone());
     }
 
     let settings_json = settings_to_json(&settings).map_err(CommandError::Failed)?;
@@ -250,7 +260,7 @@ pub async fn import_project_from_json(
     .await
     .map_err(|e| CommandError::Failed(format!("Failed to insert project: {e}")))?;
 
-    for (i, (id, code, duration, transition, stagger, sname, highlights_json, section_id)) in parsed_slides.iter().enumerate() {
+    for (i, slide) in parsed_slides.iter().enumerate() {
         sqlx::query(
             r#"
             INSERT INTO slides
@@ -258,16 +268,16 @@ pub async fn import_project_from_json(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
-        .bind(id)
+        .bind(&slide.id)
         .bind(&project_id)
         .bind(i as i64)
-        .bind(code)
-        .bind(transition)
-        .bind(stagger)
-        .bind(duration)
-        .bind(sname)
-        .bind(highlights_json)
-        .bind(section_id)
+        .bind(&slide.code)
+        .bind(slide.transition_duration)
+        .bind(slide.stagger)
+        .bind(slide.duration)
+        .bind(&slide.name)
+        .bind(&slide.highlights_json)
+        .bind(&slide.section_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| CommandError::Failed(format!("Failed to insert slide: {e}")))?;
