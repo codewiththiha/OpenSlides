@@ -1,16 +1,17 @@
-name: Release Tauri App
+name: Release
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   extract-notes:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.notes.outputs.version }}
       payloadJson: ${{ steps.notes.outputs.payloadJson }}
@@ -35,26 +36,32 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ── macOS (universal binary) ──
-          - runner: macos-latest
-            args: --target universal-apple-darwin
-            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+          # ── macOS Apple Silicon ──
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin
 
-          # ── Windows ──
-          - runner: windows-latest
+          # ── macOS Intel ──
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            rust_targets: x86_64-apple-darwin
+
+          # ── Windows x64 ──
+          - platform: windows-latest
             args: ""
             rust_targets: ""
 
-          - runner: windows-latest
+          # ── Windows ARM64 ──
+          - platform: windows-latest
             args: --target aarch64-pc-windows-msvc
             rust_targets: aarch64-pc-windows-msvc
 
-          # ── Linux (x86_64) ──
-          - runner: ubuntu-22.04
+          # ── Linux x86_64 (deb, rpm, AppImage) ──
+          - platform: ubuntu-22.04
             args: ""
             rust_targets: ""
 
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -62,9 +69,8 @@ jobs:
         with:
           bun-version: latest
 
-      # ── Linux system dependencies ──
       - name: Install Linux dependencies
-        if: matrix.runner == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -80,11 +86,18 @@ jobs:
             librsvg2-dev \
             patchelf
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_targets }}
 
-      - run: bun install --frozen-lockfile
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+          key: ${{ matrix.platform }}-${{ matrix.rust_targets }}-${{ matrix.args }}
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
 
       - name: Build, bundle, and attach release artifacts
         uses: tauri-apps/tauri-action@v0.6.1
@@ -99,9 +112,58 @@ jobs:
           args: ${{ matrix.args }}
           tauriScript: bun run tauri
 
+      # Strip the bundled libwayland-* libs from the AppImage so it loads the
+      # host copies at runtime. Ubuntu 22.04 ships older libwayland than recent
+      # Mesa needs; AppImage puts bundled libs first on the search path, so the
+      # stale copy wins and EGL can fail. Removing them redirects resolution to
+      # the host copy present on every GTK-capable system.
+      - name: Fix AppImage wayland libs
+        if: matrix.platform == 'ubuntu-22.04' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          APPIMAGE=$(ls src-tauri/target/release/bundle/appimage/*.AppImage | head -n1)
+          BASENAME=$(basename "$APPIMAGE")
+          echo "Patching: $APPIMAGE"
+
+          WORK=$(mktemp -d)
+          cp "$APPIMAGE" "$WORK/"
+          pushd "$WORK" >/dev/null
+          chmod +x "./$BASENAME"
+          "./$BASENAME" --appimage-extract >/dev/null
+
+          for lib in libwayland-client.so.0 libwayland-egl.so.1 libwayland-cursor.so.0; do
+            if [ -e "squashfs-root/usr/lib/$lib" ]; then
+              rm -f "squashfs-root/usr/lib/$lib"
+            fi
+          done
+          rm -f squashfs-root/usr/lib/libwayland-server.so.0 || true
+
+          curl -fsSL -o appimagetool.AppImage \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          chmod +x appimagetool.AppImage
+          ARCH=x86_64 ./appimagetool.AppImage --appimage-extract-and-run squashfs-root "$BASENAME"
+
+          rm -rf squashfs-root
+          chmod +x "./$BASENAME"
+          "./$BASENAME" --appimage-extract >/dev/null
+          test -x squashfs-root/usr/bin/openslides \
+            || test -x squashfs-root/usr/bin/OpenSlides \
+            || { echo "openslides binary missing from repacked AppImage"; ls -la squashfs-root/usr/bin/ || true; exit 1; }
+          popd >/dev/null
+
+          cp "$WORK/$BASENAME" "$APPIMAGE"
+
+          TAG="${GITHUB_REF_NAME}"
+          gh release upload "$TAG" "$APPIMAGE" \
+            --clobber --repo "$GITHUB_REPOSITORY"
+
   update-marketing-site:
     needs: [extract-notes, build-tauri]
-    runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
     steps:
       - name: Send release notes to the marketing site
         uses: actions/github-script@v7

@@ -24,6 +24,7 @@ export const FALLBACK_SUPPORTED_LANGUAGES: readonly LanguageOption[] = [
   { value: "yaml", label: "YAML" },
   { value: "sql", label: "SQL" },
   { value: "bash", label: "Bash/Shell" },
+  { value: "powershell", label: "PowerShell" },
   { value: "markdown", label: "Markdown" },
   { value: "merustmar", label: "Merustmar" },
 ] as const;

@@ -48,13 +48,14 @@ Prebuilt installers for macOS, Windows, and Linux are available from the [OpenSl
 
 ### Platform packages
 
-- **macOS:** Apple Silicon, Intel, and Universal builds
+- **macOS:** separate Apple Silicon (`aarch64`) and Intel (`x64`) builds
 - **Windows:** x64 and ARM64 builds
-- **Linux:** `.deb` and `.rpm` packages
+- **Linux:** `.deb`, `.rpm`, and AppImage
+- **Nix:** flake package for `x86_64-linux`, `x86_64-darwin`, and `aarch64-darwin`
 
 ### Linux installation
 
-OpenSlides release builds include Linux packages in `.deb` and `.rpm` formats.
+OpenSlides release builds include Linux packages in `.deb`, `.rpm`, and AppImage formats.
 
 - **Debian / Ubuntu / Linux Mint / Pop!\_OS**
 
@@ -76,7 +77,19 @@ sudo dnf install -y webkit2gtk4.1 gtk3 libappindicator-gtk3 librsvg2
 sudo dnf install -y ./OpenSlides-<version>-1.x86_64.rpm
 ```
 
-If your distribution prefers a different workflow, read the package manager guidance in your distro docs first. AppImage is intentionally not documented yet.
+- **AppImage**
+
+Needs FUSE. Without it: `./OpenSlides_*.AppImage --appimage-extract-and-run`. On Wayland with rendering glitches, try `WEBKIT_DISABLE_DMABUF_RENDERER=1`. Otherwise the `.deb` / `.rpm` packages link against the system GTK stack and tend to be smoother.
+
+- **NixOS / Nix**
+
+```bash
+nix profile install github:codewiththiha/OpenSlides
+```
+
+On NixOS you can also import the flake and add `inputs.openslides.packages.${pkgs.system}.openslides` to `environment.systemPackages`, or use the `nixosModules.openslides` output. After each published release, `nix/sources.json` is refreshed automatically so the flake points at the matching installer hashes.
+
+If your distribution prefers a different workflow, read the package manager guidance in your distro docs first.
 
 ## Tech stack
 

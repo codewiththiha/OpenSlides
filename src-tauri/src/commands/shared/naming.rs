@@ -43,6 +43,7 @@ const SUPPORTED_LANGUAGES: &[SupportedLanguageOption] = &[
     SupportedLanguageOption { value: "yaml", label: "YAML" },
     SupportedLanguageOption { value: "sql", label: "SQL" },
     SupportedLanguageOption { value: "bash", label: "Bash/Shell" },
+    SupportedLanguageOption { value: "powershell", label: "PowerShell" },
     SupportedLanguageOption { value: "markdown", label: "Markdown" },
     SupportedLanguageOption { value: "merustmar", label: "Merustmar" },
 ];

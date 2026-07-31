@@ -1,6 +1,6 @@
 [package]
 name = "openslides"
-version = "1.2.1"
+version = "1.2.2"
 description = "OpenSlides — offline-first code presentation desktop app"
 authors = ["codewiththiha"]
 edition = "2024"
@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
@@ -32,9 +32,12 @@ thiserror = "2"
 once_cell = "1"
 aho-corasick = "1"
 
+[profile.dev]
+incremental = true
+
 [profile.release]
 opt-level = "z"   # Optimize strictly for binary size
-lto = true         # Link-Time Optimization across dependencies
+lto = "fat"        # Link-Time Optimization across dependencies
 codegen-units = 1  # Maximize LTO effectiveness
 panic = "abort"   # Strip stack unwinding logic
 strip = true       # Strip debug symbols and tables
