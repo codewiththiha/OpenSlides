@@ -1,6 +1,6 @@
 { lib, stdenv, fetchurl
-, dpkg, autoPatchelfHook, makeWrapper, wrapGAppsHook3
-, gtk3, gdk-pixbuf, cairo, glib, webkitgtk_4_1, libsoup_3, libgcc, gst_all_1
+, dpkg, autoPatchelfHook, wrapGAppsHook3
+, gtk3, gdk-pixbuf, cairo, glib, webkitgtk_4_1, libsoup_3, libgcc, dbus
 }:
 
 let
@@ -36,22 +36,21 @@ stdenv.mkDerivation {
   src = srcMap.${sys};
 
   nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [
-    dpkg autoPatchelfHook makeWrapper wrapGAppsHook3
+    dpkg autoPatchelfHook wrapGAppsHook3
   ];
 
+  # Match the dynamic libs the shipped Linux binary actually NEEDs
+  # (gtk/webkit stack). No GStreamer — OpenSlides has no A/V playback.
   buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
-    gtk3 gdk-pixbuf cairo glib webkitgtk_4_1 libsoup_3 libgcc
-    gst_all_1.gstreamer gst_all_1.gst-plugins-base
-    gst_all_1.gst-plugins-good gst_all_1.gst-plugins-bad
+    gtk3
+    gdk-pixbuf
+    cairo
+    glib
+    webkitgtk_4_1
+    libsoup_3
+    libgcc
+    dbus
   ];
-
-  GST_PLUGIN_SYSTEM_PATH = lib.optionalString stdenv.hostPlatform.isLinux
-    "${gst_all_1.gst-plugins-base}/lib/gstreamer-1.0:${gst_all_1.gst-plugins-good}/lib/gstreamer-1.0:${gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0";
-
-  # wrapGAppsHook3 would auto-wrap the binary in postFixup; we wrap it manually
-  # to add the GStreamer path, so disable the auto-wrap and splice the hook's
-  # GApps args into our single wrapper instead of nesting two wrappers.
-  dontWrapGApps = true;
 
   unpackPhase = if stdenv.hostPlatform.isLinux then "dpkg -x $src ." else "tar xzf $src";
 
@@ -59,10 +58,6 @@ stdenv.mkDerivation {
     mkdir -p $out/bin $out/share
     cp -r usr/share/* $out/share/
     install -Dm755 usr/bin/openslides $out/bin/openslides
-
-    wrapProgram $out/bin/openslides \
-      "''${gappsWrapperArgs[@]}" \
-      --prefix GST_PLUGIN_SYSTEM_PATH : "$GST_PLUGIN_SYSTEM_PATH"
   '' else ''
     mkdir -p $out/Applications
     cp -r *.app $out/Applications/
