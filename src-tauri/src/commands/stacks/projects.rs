@@ -74,7 +74,7 @@ pub async fn stack_projects(
         next_order += 1;
     }
 
-    clean_up_single_item_project_groups(&mut *tx).await?;
+    clean_up_single_item_project_groups(&mut tx).await?;
 
     tx.commit()
         .await
@@ -106,7 +106,7 @@ pub async fn unstack_projects(
             .map_err(|e| format!("Failed to unstack project {id}: {e}"))?;
     }
 
-    clean_up_single_item_project_groups(&mut *tx).await?;
+    clean_up_single_item_project_groups(&mut tx).await?;
 
     tx.commit()
         .await

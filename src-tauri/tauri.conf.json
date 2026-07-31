@@ -1,17 +1,19 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "OpenSlides",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "identifier": "com.codewiththiha.openslides",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "bun run build",
-    "frontendDist": "../dist"
+    "frontendDist": "../dist",
+    "removeUnusedCommands": true
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "OpenSlides",
         "width": 1400,
         "height": 900,
@@ -24,14 +26,23 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
     },
     "macOSPrivateApi": false
   },
   "bundle": {
     "active": true,
-    "publisher": "codewiththiha",
     "targets": "all",
+    "copyright": "Copyright 2026 CodeWithThiha",
+    "license": "MIT",
+    "publisher": "codewiththiha",
+    "category": "Education",
+    "shortDescription": "Offline-first code presentation desktop app",
+    "longDescription": "OpenSlides — a free, open-source, offline desktop app for turning code into polished slides with smooth step-by-step transitions.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -40,7 +51,37 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    },
+    "linux": {
+      "deb": {
+        "section": "education",
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "gtk3"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      }
     }
   }
 }

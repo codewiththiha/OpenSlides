@@ -110,7 +110,7 @@ pub async fn stack_slides(
             .map_err(|e| format!("Failed to position source {sid}: {e}"))?;
     }
 
-    clean_up_single_item_slide_sections(&mut *tx, &project_id).await?;
+    clean_up_single_item_slide_sections(&mut tx, &project_id).await?;
 
     tx.commit()
         .await
@@ -152,7 +152,7 @@ pub async fn unstack_slides(
             .map_err(|e| format!("Failed to unstack slide {id}: {e}"))?;
     }
 
-    clean_up_single_item_slide_sections(&mut *tx, &project_id).await?;
+    clean_up_single_item_slide_sections(&mut tx, &project_id).await?;
 
     tx.commit()
         .await

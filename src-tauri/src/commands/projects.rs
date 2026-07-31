@@ -89,8 +89,10 @@ pub async fn create_project(pool: State<'_, DbPool>, name: String) -> CommandRes
         name.trim().to_string()
     };
 
-    let mut settings = ProjectSettings::default();
-    settings.current_slide_id = Some(slide_id.clone());
+    let settings = ProjectSettings {
+        current_slide_id: Some(slide_id.clone()),
+        ..Default::default()
+    };
     let settings_json = settings_to_json(&settings)?;
 
     let mut tx = pool
