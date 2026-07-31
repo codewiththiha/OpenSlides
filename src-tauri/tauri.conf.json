@@ -29,7 +29,9 @@
       "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     },
     "macOSPrivateApi": false
@@ -42,7 +44,7 @@
     "publisher": "codewiththiha",
     "category": "Education",
     "shortDescription": "Offline-first code presentation desktop app",
-    "longDescription": "OpenSlides — a free, open-source, offline desktop app for turning code into polished slides with smooth step-by-step transitions.",
+    "longDescription": "OpenSlides \u2014 a free, open-source, offline desktop app for turning code into polished slides with smooth step-by-step transitions.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -69,7 +71,7 @@
         ]
       },
       "appimage": {
-        "bundleMediaFramework": true
+        "bundleMediaFramework": false
       }
     },
     "windows": {
@@ -78,7 +80,9 @@
       },
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "displayLanguageSelector": false,
         "installerIcon": "icons/icon.ico"
       }
